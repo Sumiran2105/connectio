@@ -9,6 +9,9 @@ import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-p
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
 import { SuperAdminAuthPage } from "@/features/super-admin-auth/pages/super-admin-auth-page";
 import { SuperAdminDashboardPage } from "@/features/super-admin-dashboard/pages/super-admin-dashboard-page";
+import { SendNotificationsPage } from "@/features/super-admin-dashboard/pages/send-notifications-page";
+import { AnalyticsPage } from "@/features/super-admin-dashboard/pages/analytics-page";
+import { SettingsPage } from "@/features/super-admin-dashboard/pages/settings-page";
 import { useAuthStore } from "@/store/auth-store";
 
 function ProtectedSuperAdminRoute({ children }) {
@@ -102,6 +105,30 @@ export function AppRouter() {
           element={
             <ProtectedSuperAdminRoute>
               <AddAdminPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/notifications"
+          element={
+            <ProtectedSuperAdminRoute>
+              <SendNotificationsPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/analytics"
+          element={
+            <ProtectedSuperAdminRoute>
+              <AnalyticsPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/settings"
+          element={
+            <ProtectedSuperAdminRoute>
+              <SettingsPage />
             </ProtectedSuperAdminRoute>
           }
         />
