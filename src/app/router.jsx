@@ -1,5 +1,6 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
-
+import { AddCompanyAdminPage } from "@/features/super-admin-dashboard/pages/add-company-admin-page";
+import { CreateCompanyPage } from "@/features/super-admin-dashboard/pages/create-company-page";
 import { AdminDashboardPage } from "@/features/admin-dashboard/pages/admin-dashboard-page";
 import { AdminLoginPage } from "@/features/admin-auth/pages/admin-login-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
@@ -74,6 +75,22 @@ export function AppRouter() {
           element={
             <ProtectedSuperAdminRoute>
               <SuperAdminDashboardPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/companies/create"
+          element={
+            <ProtectedSuperAdminRoute>
+              <CreateCompanyPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/admins/create"
+          element={
+            <ProtectedSuperAdminRoute>
+              <AddCompanyAdminPage />
             </ProtectedSuperAdminRoute>
           }
         />
