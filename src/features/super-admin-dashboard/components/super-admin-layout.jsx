@@ -1,21 +1,14 @@
 import {
-  Activity,
-  ArrowUpRight,
-  BadgeIndianRupee,
   BellRing,
   Building2,
   ChevronRight,
   CreditCard,
   FileBarChart2,
   LayoutGrid,
-  LifeBuoy,
   LogOut,
-  MonitorCog,
   Plus,
   Settings2,
-  Shield,
   UserRoundCog,
-  Users,
 } from "lucide-react";
 import { useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -45,6 +38,7 @@ export function SuperAdminLayout({ children }) {
       title: "Operations",
       items: [
         { label: "Analytics", icon: FileBarChart2, path: "/super-admin/dashboard/analytics" },
+        { label: "Billing", icon: CreditCard, path: "/super-admin/dashboard/billing" },
         // { label: "Monitoring", icon: MonitorCog, path: "/super-admin/dashboard/monitoring" },
         // { label: "Security", icon: Shield, path: "/super-admin/dashboard/security" },
       ],

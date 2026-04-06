@@ -3,10 +3,12 @@ import { AddAdminPage } from "@/features/super-admin-dashboard/pages/add-admin";
 import { AddCompanyPage } from "@/features/super-admin-dashboard/pages/add-company";
 import { ActivateAdminPage } from "@/features/super-admin-dashboard/pages/activate-admin";
 import { CompaniesPage } from "@/features/super-admin-dashboard/pages/companies";
+import { CompanyAdminsPage } from "@/features/super-admin-dashboard/pages/company-admins";
 import { AdminDashboardPage } from "@/features/admin-dashboard/pages/admin-dashboard-page";
 import { AdminLoginPage } from "@/features/admin-auth/pages/admin-login-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
+import { BillingPage } from "@/features/super-admin-dashboard/pages/billing";
 import { SuperAdminAuthPage } from "@/features/super-admin-auth/pages/super-admin-auth-page";
 import { SuperAdminDashboardPage } from "@/features/super-admin-dashboard/pages/super-admin-dashboard-page";
 import { SendNotificationsPage } from "@/features/super-admin-dashboard/pages/send-notifications-page";
@@ -101,10 +103,26 @@ export function AppRouter() {
           }
         />
         <Route
+          path="/super-admin/dashboard/admins"
+          element={
+            <ProtectedSuperAdminRoute>
+              <CompanyAdminsPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
           path="/super-admin/dashboard/admins/create"
           element={
             <ProtectedSuperAdminRoute>
               <AddAdminPage />
+            </ProtectedSuperAdminRoute>
+          }
+        />
+        <Route
+          path="/super-admin/dashboard/billing"
+          element={
+            <ProtectedSuperAdminRoute>
+              <BillingPage />
             </ProtectedSuperAdminRoute>
           }
         />
