@@ -1,5 +1,11 @@
 import { Route, Navigate } from "react-router-dom";
 import { AdminDashboardPage } from "./pages/admin-dashboard-page";
+import { ChannelsPage } from "./pages/channels-page";
+import { MeetingsPage } from "./pages/meetings-page";
+import { TeamsPage } from "./pages/teams-page";
+import { CompanyApprovals } from "./pages/company-approvals";
+import { CompanyUsers } from "./pages/company-users";
+import { InviteUser } from "./pages/invite-user";
 import { AdminLoginPage } from "@/features/admin-auth/pages/admin-login-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
@@ -56,7 +62,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/users"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <CompanyUsers />
         </ProtectedAdminRoute>
       }
     />
@@ -64,7 +70,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/approvals"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <CompanyApprovals />
         </ProtectedAdminRoute>
       }
     />
@@ -72,7 +78,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/invite"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <InviteUser />
         </ProtectedAdminRoute>
       }
     />
@@ -80,7 +86,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/channels"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <ChannelsPage />
         </ProtectedAdminRoute>
       }
     />
@@ -88,7 +94,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/teams"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <TeamsPage />
         </ProtectedAdminRoute>
       }
     />
@@ -96,7 +102,7 @@ export const AdminRoutes = (
       path="/admin/dashboard/meetings"
       element={
         <ProtectedAdminRoute>
-          <AdminDashboardPage />
+          <MeetingsPage />
         </ProtectedAdminRoute>
       }
     />

@@ -1,5 +1,5 @@
 import {
-  BellRing,
+  Bell,
   Calendar,
   ChevronRight,
   ClipboardCheck,
@@ -12,12 +12,17 @@ import {
   Users2,
   Menu,
   X,
+  Search,
+  BarChart3,
+  History,
+  ShieldCheck,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
+import { AssistiveTouch } from "./assistive-touch";
 
 export function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -101,9 +106,8 @@ export function AdminLayout({ children }) {
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col lg:flex-row">
         {/* Sidebar */}
         <aside
-          className={`${
-            isMobileMenuOpen ? "flex" : "hidden"
-          } fixed inset-0 z-50 flex-col bg-brand-primary text-white lg:static lg:z-auto lg:flex lg:w-[292px] lg:border-r lg:border-brand-line`}
+          className={`${isMobileMenuOpen ? "flex" : "hidden"
+            } fixed inset-0 z-50 flex-col bg-brand-primary text-white lg:static lg:z-auto lg:flex lg:w-[292px] lg:border-r lg:border-brand-line`}
         >
           {/* Mobile Close Button */}
           <div className="flex items-center justify-end p-4 lg:hidden">
@@ -170,11 +174,10 @@ export function AdminLayout({ children }) {
                             navigate(item.path);
                             setIsMobileMenuOpen(false);
                           }}
-                          className={`group flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left text-sm font-medium transition-all duration-200 ${
-                            isActive
-                              ? "bg-brand-neutral text-brand-primary shadow-[0_4px_20px_rgba(0,0,0,0.1)] ring-1 ring-white/20"
-                              : "text-white/60 hover:bg-white/10 hover:text-white"
-                          }`}
+                          className={`group flex w-full items-center justify-between rounded-2xl px-4 py-3.5 text-left text-sm font-medium transition-all duration-200 ${isActive
+                            ? "bg-brand-neutral text-brand-primary shadow-[0_4px_20px_rgba(0,0,0,0.1)] ring-1 ring-white/20"
+                            : "text-white/60 hover:bg-white/10 hover:text-white"
+                            }`}
                         >
                           <span className="flex items-center gap-3.5">
                             <Icon className={`size-[18px] transition-transform duration-300 ${isActive ? "scale-110" : "group-hover:scale-110"}`} />
@@ -213,11 +216,81 @@ export function AdminLayout({ children }) {
         )}
 
         {/* Content Area */}
-        <section className="relative flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
-          <div className="mx-auto max-w-[1200px]">
-            {children}
+        <section className="relative flex-1 flex flex-col min-h-screen overflow-hidden">
+          {/* Top Navigation Bar */}
+          <header className="h-20 bg-white/40 backdrop-blur-md border-b border-brand-line/10 px-6 lg:px-10 flex items-center justify-between gap-4 sticky top-0 z-30">
+            {/* Breadcrumbs */}
+            <div className="hidden md:flex items-center gap-2 overflow-hidden whitespace-nowrap">
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-ink/40 leading-none">Admin</span>
+
+              {(() => {
+                const activeGroup = sidebarGroups.find(group =>
+                  group.items.some(item => location.pathname === item.path)
+                );
+                const activeItem = activeGroup?.items.find(item => location.pathname === item.path);
+
+                if (!activeGroup || !activeItem) return null;
+
+                return (
+                  <>
+                    <ChevronRight className="size-3 text-brand-ink/20" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-ink/40 leading-none">
+                      {activeGroup.title}
+                    </span>
+                    <ChevronRight className="size-3 text-brand-ink/20" />
+                    <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-primary leading-none">
+                      {activeItem.label}
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex-1 max-w-md relative group">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-brand-ink/30 group-focus-within:text-brand-primary transition-colors" />
+              <input
+                type="text"
+                placeholder="Quick search..."
+                className="w-full bg-[#EBF1F2]/60 border-none rounded-2xl py-2.5 pl-11 pr-4 text-sm focus:ring-2 focus:ring-brand-primary/10 transition-all placeholder:text-brand-ink/30"
+              />
+            </div>
+
+            {/* Right Actions */}
+            <div className="flex items-center gap-4 lg:gap-6">
+              {/* Notification Toggle */}
+              <button className="relative p-2 rounded-xl bg-white shadow-sm border border-brand-line/20 hover:bg-brand-soft transition-colors">
+                <Bell className="size-5 text-brand-ink/70" />
+                <span className="absolute top-2 right-2 size-2 bg-red-500 border-2 border-white rounded-full" />
+              </button>
+
+              {/* Vertical Divider */}
+              <div className="h-8 w-px bg-brand-line/30 hidden sm:block" />
+
+              {/* User Profile */}
+              <div className="flex items-center gap-3 cursor-pointer group">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-brand-ink leading-none group-hover:text-brand-primary transition-colors">{identity.displayName}</p>
+                  <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Super Admin</p>
+                </div>
+                <div className="size-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-brand-soft transition-transform group-hover:scale-105">
+                  <img
+                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop"
+                    alt="Profile"
+                    className="size-full object-cover"
+                  />
+                </div>
+              </div>
+            </div>
+          </header>
+
+          <div className="flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10 overflow-y-auto">
+            <div className="mx-auto max-w-[1200px]">
+              {children}
+            </div>
           </div>
         </section>
+        <AssistiveTouch />
       </div>
     </main>
   );
