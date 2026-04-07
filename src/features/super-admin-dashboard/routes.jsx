@@ -9,7 +9,6 @@ import { SendNotificationsPage } from "./pages/send-notifications-page";
 import { AnalyticsPage } from "./pages/analytics-page";
 import { SettingsPage } from "./pages/settings-page";
 import { BillingPage } from "./pages/billing";
-import { SuperAdminAuthPage } from "@/features/super-admin-auth/pages/super-admin-auth-page";
 import { ActivateAdminPage } from "./pages/activate-admin";
 import { useAuthStore } from "@/store/auth-store";
 
@@ -25,7 +24,7 @@ function ProtectedSuperAdminRoute({ children }) {
 
 export const SuperAdminRoutes = (
   <>
-    <Route path="/super-admin/auth" element={<SuperAdminAuthPage />} />
+    <Route path="/super-admin/auth" element={<Navigate to="/login?mode=super-admin" replace />} />
     <Route path="/auth/activate" element={<ActivateAdminPage />} />
     <Route
       path="/super-admin/dashboard"

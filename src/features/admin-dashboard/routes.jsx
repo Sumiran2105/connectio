@@ -6,7 +6,6 @@ import { TeamsPage } from "./pages/teams-page";
 import { CompanyApprovals } from "./pages/company-approvals";
 import { CompanyUsers } from "./pages/company-users";
 import { InviteUser } from "./pages/invite-user";
-import { AdminLoginPage } from "@/features/admin-auth/pages/admin-login-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
 import { useAuthStore } from "@/store/auth-store";
@@ -33,7 +32,7 @@ function PendingMfaRoute({ children }) {
 
 export const AdminRoutes = (
   <>
-    <Route path="/admin/auth" element={<AdminLoginPage />} />
+    <Route path="/admin/auth" element={<Navigate to="/login?mode=workspace" replace />} />
     <Route
       path="/admin/mfa/setup"
       element={
