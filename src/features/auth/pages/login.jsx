@@ -26,6 +26,10 @@ export function LoginPage() {
       return <Navigate to="/super-admin/dashboard" replace />;
     }
 
+    if (session.role === "USER") {
+      return <Navigate to="/user/dashboard" replace />;
+    }
+
     return <Navigate to="/admin/dashboard" replace />;
   }
 

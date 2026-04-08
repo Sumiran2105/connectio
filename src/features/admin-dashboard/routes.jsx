@@ -14,7 +14,11 @@ import { useAuthStore } from "@/store/auth-store";
 function ProtectedAdminRoute({ children }) {
   const session = useAuthStore((state) => state.session);
 
-  if (!session?.accessToken || session?.role === "SUPER_ADMIN") {
+  if (
+    !session?.accessToken ||
+    session?.role === "SUPER_ADMIN" ||
+    session?.role === "USER"
+  ) {
     return <Navigate to="/admin/auth" replace />;
   }
 

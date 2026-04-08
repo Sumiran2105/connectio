@@ -21,8 +21,8 @@ import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
+import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { useAuthStore } from "@/store/auth-store";
-import { AssistiveTouch } from "./assistive-touch";
 
 export function AdminLayout({ children }) {
   const navigate = useNavigate();
@@ -78,6 +78,27 @@ export function AdminLayout({ children }) {
     };
   }, [session]);
 
+  const quickActions = [
+    {
+      icon: Calendar,
+      label: "Meetings",
+      color: "bg-blue-500/15 text-blue-600",
+      path: "/admin/dashboard/meetings",
+    },
+    {
+      icon: Hash,
+      label: "Channels",
+      color: "bg-emerald-500/15 text-emerald-600",
+      path: "/admin/dashboard/channels",
+    },
+    {
+      icon: ClipboardCheck,
+      label: "Approvals",
+      color: "bg-violet-500/15 text-violet-600",
+      path: "/admin/dashboard/approvals",
+    },
+  ];
+
   function handleSignOut() {
     clearSession();
     navigate("/admin/auth", { replace: true });
@@ -121,7 +142,7 @@ export function AdminLayout({ children }) {
 
           <div className="flex h-full flex-col px-5 py-6 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
             {/* Workspace Header */}
-            <div
+            {/* <div
               className="group cursor-pointer rounded-[28px] border border-white/[0.12] bg-white/[0.08] p-5 transition-all duration-300 hover:bg-white/10 hover:shadow-lg hover:shadow-brand-primary/20"
               onClick={() => {
                 navigate("/admin/dashboard");
@@ -137,7 +158,7 @@ export function AdminLayout({ children }) {
               <p className="mt-2 text-xs leading-5 text-white/[0.6] line-clamp-2">
                 Manage users, channels, and team operations across the organization.
               </p>
-            </div>
+            </div> */}
 
             {/* Profile Section */}
             <div className="mt-8 flex items-center gap-3 rounded-[24px] border border-white/[0.12] bg-white/[0.08] p-4 transition-colors hover:bg-white/10">
@@ -290,7 +311,7 @@ export function AdminLayout({ children }) {
             </div>
           </div>
         </section>
-        <AssistiveTouch />
+        <FloatingActionMenu items={quickActions} />
       </div>
     </main>
   );

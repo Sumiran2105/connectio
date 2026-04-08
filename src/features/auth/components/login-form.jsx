@@ -15,6 +15,15 @@ const defaultValues = {
   password: "",
 };
 
+const demoUser = {
+  email: "user@demo.com",
+  password: "User@12345",
+  user_role: "USER",
+  access_token: "demo-user-access-token",
+  refresh_token: "demo-user-refresh-token",
+  expires_in: 86400,
+};
+
 export function LoginForm({ audience = "workspace" }) {
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
@@ -32,6 +41,14 @@ export function LoginForm({ audience = "workspace" }) {
 
   const loginMutation = useMutation({
     mutationFn: async (payload) => {
+      if (
+        audience === "workspace" &&
+        payload.email.trim().toLowerCase() === demoUser.email &&
+        payload.password === demoUser.password
+      ) {
+        return demoUser;
+      }
+
       const response = await apiClient.post(AUTH_LOGIN, null, {
         params: {
           email: payload.email,
@@ -81,7 +98,7 @@ export function LoginForm({ audience = "workspace" }) {
         });
 
         toast.success("Signed in successfully.");
-        navigate("/admin/dashboard", { replace: true });
+        navigate(role === "USER" ? "/user/dashboard" : "/admin/dashboard", { replace: true });
         return;
       }
 
@@ -216,6 +233,19 @@ export function LoginForm({ audience = "workspace" }) {
           )}
         </Button>
       </form>
+
+      {!isSuperAdmin ? (
+        <div className="mt-6 rounded-2xl border border-brand-line bg-brand-neutral p-4 text-sm text-brand-secondary">
+          Demo user:
+          <code className="mx-1 rounded bg-white px-1.5 py-0.5 text-xs text-brand-ink">
+            user@demo.com
+          </code>
+          /
+          <code className="ml-1 rounded bg-white px-1.5 py-0.5 text-xs text-brand-ink">
+            User@12345
+          </code>
+        </div>
+      ) : null}
     </div>
   );
 }
