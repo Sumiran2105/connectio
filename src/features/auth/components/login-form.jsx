@@ -143,7 +143,7 @@ export function LoginForm({ audience = "workspace" }) {
   const isSuperAdmin = audience === "super-admin";
 
   return (
-    <div className="w-full max-w-md rounded-[30px] border border-white/80 bg-white/[0.92] p-6 shadow-[0_30px_80px_rgba(92,122,145,0.16)] backdrop-blur xl:p-8">
+    <div className="w-full max-w-md rounded-[30px] border border-white/80 bg-white/[0.92] p-5 shadow-[0_30px_80px_rgba(92,122,145,0.16)] backdrop-blur sm:p-6 xl:p-8">
       <div className="mb-8 flex items-start justify-between gap-4">
         <div className="space-y-3">
           <span className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
@@ -151,7 +151,7 @@ export function LoginForm({ audience = "workspace" }) {
             {isSuperAdmin ? "Platform Access" : "Workspace Access"}
           </span>
           <div className="space-y-2">
-            <h1 className="text-3xl font-semibold tracking-tight text-brand-ink">
+            <h1 className="text-2xl font-semibold tracking-tight text-brand-ink sm:text-3xl">
               {isSuperAdmin ? "Super admin sign in" : "User sign in"}
             </h1>
             <p className="max-w-sm text-sm leading-6 text-brand-secondary">
@@ -162,7 +162,7 @@ export function LoginForm({ audience = "workspace" }) {
           </div>
         </div>
 
-        <div className="flex size-12 shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
+        <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-white shadow-lg shadow-brand-primary/20 sm:size-12">
           <LockKeyhole className="size-5" />
         </div>
       </div>

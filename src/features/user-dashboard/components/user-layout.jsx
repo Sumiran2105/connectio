@@ -110,7 +110,7 @@ export function UserLayout({ children }) {
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col lg:flex-row">
         <aside
           className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
-            } fixed inset-y-0 left-0 z-50 flex w-[72px] flex-col border-r bg-[#f0f4f5] text-brand-ink transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:flex lg:h-screen lg:translate-x-0`}
+            } fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r bg-[#f0f4f5] text-brand-ink transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:w-[72px] lg:h-screen lg:translate-x-0`}
         >
           <div className="flex h-full flex-col items-center py-4 [scrollbar-width:thin]">
             {/* Teams-like Top Icon */}
@@ -127,7 +127,7 @@ export function UserLayout({ children }) {
             </div>
 
             {/* Navigation Rail */}
-            <nav className="flex flex-1 flex-col items-center space-y-1 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/10 hover:[&::-webkit-scrollbar-thumb]:bg-black/20">
+            <nav className="flex w-full flex-1 flex-col items-center space-y-1 overflow-y-auto [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-black/10 hover:[&::-webkit-scrollbar-thumb]:bg-black/20">
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = item.path === "/user/dashboard"
@@ -142,9 +142,9 @@ export function UserLayout({ children }) {
                       navigate(item.path);
                       setIsMobileMenuOpen(false);
                     }}
-                    className={`group relative flex w-full flex-col items-center gap-1.5 py-2 transition-all duration-200 ${isActive
-                      ? "text-indigo-600"
-                      : "text-brand-ink/70 hover:bg-black/5 hover:text-brand-ink"
+                    className={`group relative flex w-full items-center gap-3 px-4 py-3 transition-all duration-200 lg:flex-col lg:gap-1.5 lg:px-0 lg:py-2 ${isActive
+                      ? "bg-indigo-50 text-indigo-600 lg:bg-transparent"
+                      : "text-brand-ink/70 hover:bg-black/5 hover:text-brand-ink lg:hover:bg-transparent"
                       }`}
                   >
                     {/* Active Indicator Rail */}
@@ -153,7 +153,7 @@ export function UserLayout({ children }) {
                     )}
 
                     <Icon className={`size-6 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-105"}`} />
-                    <span className={`text-[10px] font-medium leading-none transition-all duration-200 ${isActive ? "opacity-100" : "opacity-80"}`}>
+                    <span className={`text-sm font-medium leading-none transition-all duration-200 lg:text-[10px] ${isActive ? "opacity-100" : "opacity-80"}`}>
                       {item.label}
                     </span>
                   </button>

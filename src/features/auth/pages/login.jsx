@@ -36,17 +36,17 @@ export function LoginPage() {
   const selectedMode = modeContent[mode];
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[linear-gradient(180deg,_#b9dcf8_0%,_#d7ebfb_24%,_#edf6ff_58%,_#f8fbff_100%)]">
+    <main className="relative min-h-screen overflow-x-hidden overflow-y-auto bg-[linear-gradient(180deg,_#b9dcf8_0%,_#d7ebfb_24%,_#edf6ff_58%,_#f8fbff_100%)]">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.65),_transparent_48%)]" />
       <div className="absolute inset-x-0 bottom-0 h-[42%] bg-[linear-gradient(180deg,rgba(255,255,255,0)_0%,rgba(255,255,255,0.92)_100%)]" />
       <div className="absolute left-[8%] top-[18%] size-48 rounded-full bg-white/40 blur-3xl" />
       <div className="absolute right-[10%] top-[24%] size-56 rounded-full bg-white/30 blur-3xl" />
       <div className="absolute bottom-[12%] left-[12%] h-36 w-60 rounded-full bg-white/55 blur-2xl" />
       <div className="absolute bottom-[10%] right-[14%] h-40 w-72 rounded-full bg-white/50 blur-2xl" />
-      <div className="absolute left-1/2 top-[57%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45" />
-      <div className="absolute left-1/2 top-[57%] h-[760px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30" />
+      <div className="absolute left-1/2 top-[57%] hidden h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/45 sm:block" />
+      <div className="absolute left-1/2 top-[57%] hidden h-[760px] w-[760px] -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/30 sm:block" />
 
-      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-6 py-8 lg:px-10">
+      <div className="relative mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
         <div className="flex items-center justify-between">
           <Link
             to="/"
@@ -68,11 +68,11 @@ export function LoginPage() {
         <div className="flex flex-1 items-center justify-center">
           <section className="w-full max-w-xl space-y-5">
             <div className="flex justify-center">
-              <div className="inline-flex rounded-full border border-brand-line/70 bg-white/90 p-1 shadow-[0_14px_40px_rgba(92,122,145,0.12)]">
+              <div className="inline-flex max-w-full rounded-full border border-brand-line/70 bg-white/90 p-1 shadow-[0_14px_40px_rgba(92,122,145,0.12)]">
                 <Button
                   type="button"
                   variant="ghost"
-                  className={`rounded-full px-5 text-sm ${mode === "workspace" ? "bg-brand-primary text-white hover:bg-brand-primary/90 hover:text-white" : "text-brand-secondary hover:bg-brand-soft"}`}
+                  className={`rounded-full px-4 text-sm sm:px-5 ${mode === "workspace" ? "bg-brand-primary text-white hover:bg-brand-primary/90 hover:text-white" : "text-brand-secondary hover:bg-brand-soft"}`}
                   onClick={() => setSearchParams({ mode: "workspace" })}
                 >
                   User
@@ -80,7 +80,7 @@ export function LoginPage() {
                 <Button
                   type="button"
                   variant="ghost"
-                  className={`rounded-full px-5 text-sm ${mode === "super-admin" ? "bg-brand-primary text-white hover:bg-brand-primary/90 hover:text-white" : "text-brand-secondary hover:bg-brand-soft"}`}
+                  className={`rounded-full px-4 text-sm sm:px-5 ${mode === "super-admin" ? "bg-brand-primary text-white hover:bg-brand-primary/90 hover:text-white" : "text-brand-secondary hover:bg-brand-soft"}`}
                   onClick={() => setSearchParams({ mode: "super-admin" })}
                 >
                   Super Admin

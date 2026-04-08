@@ -6,12 +6,14 @@ import {
   FileBarChart2,
   LayoutGrid,
   LogOut,
+  Menu,
   Plus,
   Search,
   Settings2,
   UserRoundCog,
+  X,
 } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -24,6 +26,7 @@ export function SuperAdminLayout({ children }) {
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
   const clearSession = useAuthStore((state) => state.clearSession);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const sidebarGroups = [
     {
@@ -97,8 +100,29 @@ export function SuperAdminLayout({ children }) {
 
   return (
     <main className="h-screen overflow-hidden bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink">
+      <div className="flex items-center justify-between border-b border-brand-line/10 bg-white px-4 py-4 shadow-sm lg:hidden">
+        <div className="flex items-center gap-3">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-brand-primary text-white shadow-sm">
+            <LayoutGrid className="size-4.5" />
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-brand-ink">Super Admin</p>
+            <p className="text-[11px] text-brand-secondary">Control center</p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsMobileMenuOpen((current) => !current)}
+          className="rounded-lg border border-brand-line/20 bg-brand-soft p-2 text-brand-ink transition-transform active:scale-95"
+        >
+          {isMobileMenuOpen ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </div>
+
       <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row">
-        <aside className="w-full border-b border-[#1f4f3e] bg-[#0f5b41] text-white lg:sticky lg:top-0 lg:h-screen lg:w-[292px] lg:border-b-0 lg:border-r">
+        <aside
+          className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[292px] border-r border-[#1f4f3e] bg-[#0f5b41] text-white transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0`}
+        >
           <div className="flex h-full flex-col overflow-hidden px-5 py-6">
             {/* <div
               className="cursor-pointer rounded-[24px] border border-white/10 bg-[#124f3d] p-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)] transition hover:bg-[#155641]"
@@ -140,7 +164,10 @@ export function SuperAdminLayout({ children }) {
                           <button
                             key={item.label}
                             type="button"
-                            onClick={() => navigate(item.path)}
+                            onClick={() => {
+                              navigate(item.path);
+                              setIsMobileMenuOpen(false);
+                            }}
                             className={`flex w-full items-center justify-between rounded-2xl px-3 py-3 text-left text-sm transition ${isActive
                               ? "bg-white text-brand-ink shadow-sm"
                               : "text-white/[0.78] hover:bg-white/8 hover:text-white"
@@ -172,6 +199,13 @@ export function SuperAdminLayout({ children }) {
           </div>
         </aside>
 
+        {isMobileMenuOpen ? (
+          <div
+            className="fixed inset-0 z-40 bg-brand-ink/60 backdrop-blur-sm lg:hidden"
+            onClick={() => setIsMobileMenuOpen(false)}
+          />
+        ) : null}
+
         <section className="flex-1 overflow-y-auto lg:h-screen">
           <div className="sticky top-0 z-30 border-b border-brand-line bg-white px-5 py-4 shadow-[0_6px_24px_rgba(68,83,74,0.05)] sm:px-6 lg:px-8">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -186,7 +220,7 @@ export function SuperAdminLayout({ children }) {
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="relative min-w-[240px]">
+                <div className="relative w-full sm:min-w-[240px] sm:max-w-[320px]">
                   <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-brand-secondary" />
                   <Input
                     placeholder="Search modules, companies, admins"
@@ -202,8 +236,8 @@ export function SuperAdminLayout({ children }) {
                   <span className="absolute right-3 top-3 size-2 rounded-full bg-red-500" />
                 </button>
 
-                <div className="flex items-center gap-3 rounded-2xl border border-brand-line bg-brand-neutral px-3 py-2">
-                  <div className="text-right">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-brand-line bg-brand-neutral px-3 py-2 sm:justify-start">
+                  <div className="text-left sm:text-right">
                     <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
                       Super Admin
                     </p>
