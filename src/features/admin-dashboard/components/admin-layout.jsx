@@ -107,7 +107,7 @@ export function AdminLayout({ children }) {
         {/* Sidebar */}
         <aside
           className={`${isMobileMenuOpen ? "flex" : "hidden"
-            } fixed inset-0 z-50 flex-col bg-brand-primary text-white lg:static lg:z-auto lg:flex lg:w-[292px] lg:border-r lg:border-brand-line`}
+            } fixed inset-0 z-50 flex-col bg-brand-primary text-white lg:sticky lg:top-0 lg:z-auto lg:flex lg:h-screen lg:w-[292px] lg:border-r lg:border-brand-line`}
         >
           {/* Mobile Close Button */}
           <div className="flex items-center justify-end p-4 lg:hidden">
@@ -119,7 +119,7 @@ export function AdminLayout({ children }) {
             </button>
           </div>
 
-          <div className="flex h-full flex-col px-5 py-6 overflow-y-auto lg:overflow-visible">
+          <div className="flex h-full flex-col px-5 py-6 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(255,255,255,0.1)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20">
             {/* Workspace Header */}
             <div
               className="group cursor-pointer rounded-[28px] border border-white/[0.12] bg-white/[0.08] p-5 transition-all duration-300 hover:bg-white/10 hover:shadow-lg hover:shadow-brand-primary/20"

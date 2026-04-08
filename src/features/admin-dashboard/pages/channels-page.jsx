@@ -154,7 +154,7 @@ export function ChannelsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex h-[calc(100vh-180px)] min-h-[600px] overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_32px_120px_rgba(68,83,74,0.12)] relative">
+      <div className="flex h-[calc(100vh-120px)] md:h-[calc(100vh-180px)] min-h-[600px] overflow-hidden rounded-2xl md:rounded-[32px] border border-brand-line bg-white shadow-[0_32px_120px_rgba(68,83,74,0.12)] relative">
 
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
@@ -178,16 +178,16 @@ export function ChannelsPage() {
                     <Plus className="size-5" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border-none bg-white p-0 shadow-2xl">
-                  <DialogHeader className="px-8 pt-8 pb-4">
-                    <DialogTitle className="text-2xl font-bold text-brand-ink">Create a Channel</DialogTitle>
-                    <DialogDescription className="text-brand-secondary">
+                <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto rounded-3xl md:rounded-[40px] border-none bg-white p-0 shadow-2xl md:left-[60%]">
+                  <DialogHeader className="px-6 md:px-12 pt-10 md:pt-14 pb-6">
+                    <DialogTitle className="text-3xl md:text-4xl font-black tracking-tight text-brand-ink">Create a Channel</DialogTitle>
+                    <DialogDescription className="text-base md:text-lg text-brand-secondary mt-2">
                       Channels are where your team communicates. They're best when organized around a topic.
                     </DialogDescription>
                   </DialogHeader>
 
-                  <form onSubmit={handleSubmit(onSubmit)} className="px-8 pb-8 space-y-6">
-                    <div className="grid grid-cols-2 gap-6">
+                  <form onSubmit={handleSubmit(onSubmit)} className="px-6 md:px-12 pb-12 space-y-8 md:space-y-10">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                       <div className="space-y-2">
                         <Label htmlFor="name" className="text-brand-ink font-semibold">Name</Label>
                         <div className="relative">
@@ -214,17 +214,17 @@ export function ChannelsPage() {
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="description" className="text-brand-ink font-semibold">Description (Optional)</Label>
+                    <div className="space-y-3">
+                      <Label htmlFor="description" className="text-brand-ink font-bold text-lg">Description (Optional)</Label>
                       <Textarea
                         id="description"
                         placeholder="What is this channel about?"
-                        className="rounded-xl border-brand-line focus:ring-brand-primary/20 min-h-[80px]"
+                        className="rounded-2xl border-brand-line focus:ring-brand-primary/20 min-h-[120px] text-base p-4"
                         {...register("description")}
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                       <div className="space-y-2">
                         <Label htmlFor="topic" className="text-brand-ink font-semibold">Topic</Label>
                         <Input
@@ -245,73 +245,73 @@ export function ChannelsPage() {
                       </div>
                     </div>
 
-                    <Separator className="bg-brand-line/50" />
+                    <Separator className="bg-brand-line/50 my-6" />
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="flex items-center gap-3 p-4 rounded-2xl border border-brand-line bg-brand-soft/10">
-                        <div className={cn("p-2 rounded-lg", watch("is_private") ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600")}>
-                          {watch("is_private") ? <Lock className="size-4" /> : <Globe className="size-4" />}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="flex items-center gap-4 p-5 rounded-3xl border-2 border-brand-line bg-brand-soft/5 transition-colors hover:bg-brand-soft/10 group cursor-pointer">
+                        <div className={cn("p-3 rounded-2xl transition-colors", watch("is_private") ? "bg-amber-100 text-amber-600" : "bg-blue-100 text-blue-600")}>
+                          {watch("is_private") ? <Lock className="size-6" /> : <Globe className="size-6" />}
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-brand-ink">Private Channel</p>
-                          <p className="text-[10px] text-brand-secondary">Invite only access</p>
+                          <p className="text-base font-black text-brand-ink">Private Channel</p>
+                          <p className="text-xs text-brand-secondary">Invite only access</p>
                         </div>
                         <input
                           type="checkbox"
-                          className="size-5 rounded-md border-brand-line text-brand-primary focus:ring-brand-primary/20"
+                          className="size-6 rounded-lg border-2 border-brand-line text-brand-primary focus:ring-brand-primary/20"
                           {...register("is_private")}
                         />
                       </div>
 
-                      <div className="flex items-center gap-3 p-4 rounded-2xl border border-brand-line bg-brand-soft/10">
-                        <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
-                          <Users className="size-4" />
+                      <div className="flex items-center gap-4 p-5 rounded-3xl border-2 border-brand-line bg-brand-soft/5 transition-colors hover:bg-brand-soft/10 group cursor-pointer">
+                        <div className="p-3 rounded-2xl bg-purple-100 text-purple-600">
+                          <Users className="size-6" />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm font-bold text-brand-ink">Cross Team</p>
-                          <p className="text-[10px] text-brand-secondary">Allow shared access</p>
+                          <p className="text-base font-black text-brand-ink">Cross Team</p>
+                          <p className="text-xs text-brand-secondary">Allow shared access</p>
                         </div>
                         <input
                           type="checkbox"
-                          className="size-5 rounded-md border-brand-line text-brand-primary focus:ring-brand-primary/20"
+                          className="size-6 rounded-lg border-2 border-brand-line text-brand-primary focus:ring-brand-primary/20"
                           {...register("is_cross_team")}
                         />
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-6">
-                      <div className="space-y-2">
-                        <Label className="text-brand-ink font-semibold">Retention (Days)</Label>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
+                      <div className="space-y-3">
+                        <Label className="text-brand-ink font-bold text-lg">Retention (Days)</Label>
                         <Input
                           type="number"
-                          className="rounded-xl border-brand-line"
+                          className="rounded-2xl border-brand-line h-12"
                           {...register("message_retention_days", { valueAsNumber: true })}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label className="text-brand-ink font-semibold">Max Members</Label>
+                      <div className="space-y-3">
+                        <Label className="text-brand-ink font-bold text-lg">Max Members</Label>
                         <Input
                           type="number"
-                          className="rounded-xl border-brand-line"
+                          className="rounded-2xl border-brand-line h-12"
                           {...register("max_members", { valueAsNumber: true })}
                         />
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-bold text-brand-ink uppercase tracking-wider">Channel Settings</h3>
-                      <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-6">
+                      <h3 className="text-xs font-black text-brand-secondary uppercase tracking-[0.2em]">Channel Permissions</h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         {[
                           { name: "settings.allow_mentions", label: "Allow @mentions" },
                           { name: "settings.allow_file_uploads", label: "File Uploads" },
                           { name: "settings.allow_link_previews", label: "Link Previews" },
                           { name: "settings.allow_bots", label: "Allow Bots" },
                         ].map((field) => (
-                          <div key={field.name} className="flex items-center justify-between p-3 rounded-xl bg-brand-soft/5 border border-brand-line/50">
-                            <span className="text-sm text-brand-ink/80">{field.label}</span>
+                          <div key={field.name} className="flex items-center justify-between p-4 rounded-2xl bg-brand-soft/5 border border-brand-line/50 hover:bg-white hover:shadow-sm transition-all group">
+                            <span className="text-sm font-bold text-brand-ink/80">{field.label}</span>
                             <input
                               type="checkbox"
-                              className="size-4 rounded border-brand-line text-brand-primary"
+                              className="size-5 rounded border-2 border-brand-line text-brand-primary transition-transform group-hover:scale-110"
                               {...register(field.name)}
                             />
                           </div>
@@ -319,19 +319,19 @@ export function ChannelsPage() {
                       </div>
                     </div>
 
-                    <DialogFooter className="pt-4">
+                    <DialogFooter className="pt-8 gap-4 sm:gap-2">
                       <Button
                         type="button"
                         variant="ghost"
                         onClick={() => setIsDialogOpen(false)}
-                        className="rounded-xl"
+                        className="rounded-2xl h-14 px-8 text-base font-bold"
                       >
                         Cancel
                       </Button>
                       <Button
                         type="submit"
                         disabled={isSubmitting}
-                        className="rounded-xl bg-brand-primary hover:bg-brand-primary/90 px-8"
+                        className="rounded-2xl bg-brand-primary hover:bg-brand-primary/90 px-10 h-14 text-base font-black shadow-xl shadow-brand-primary/20 transition-all hover:-translate-y-0.5"
                       >
                         {isSubmitting ? "Creating..." : "Create Channel"}
                       </Button>
