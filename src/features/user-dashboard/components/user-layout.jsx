@@ -23,6 +23,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/store/auth-store";
+import { UserProfileCard } from "./user-profile-card";
 
 export function UserLayout({ children }) {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ export function UserLayout({ children }) {
   const session = useAuthStore((state) => state.session);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
 
   const sidebarItems = [
     { label: "Home", icon: Home, path: "/user/dashboard" },
@@ -73,7 +75,7 @@ export function UserLayout({ children }) {
     {
       icon: Video,
       label: "Meet",
-      color: "bg-blue-500/15 text-blue-600",
+      color: "bg-brand-primary/15 text-brand-primary",
       path: "/user/dashboard/meet",
     },
     {
@@ -93,7 +95,7 @@ export function UserLayout({ children }) {
     <main className="min-h-screen bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink">
       <div className="flex items-center justify-between border-b border-brand-line/10 bg-white p-4 shadow-sm lg:hidden">
         <div className="flex items-center gap-2">
-          <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-600 shadow-sm">
+          <div className="flex size-9 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
             <Users2 className="size-5 text-white" />
           </div>
           <span className="font-bold tracking-tight text-brand-ink">Connectio</span>
@@ -118,10 +120,10 @@ export function UserLayout({ children }) {
               className="mb-4 flex size-12 cursor-pointer items-center justify-center rounded-xl transition-all duration-200 hover:bg-black/5"
               onClick={() => navigate("/user/dashboard")}
             >
-              <div className="relative flex size-10 items-center justify-center rounded-lg bg-indigo-600 shadow-lg">
+              <div className="relative flex size-10 items-center justify-center rounded-lg bg-brand-primary shadow-lg">
                 <Users2 className="size-6 text-white" />
                 <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-sm bg-white p-0.5 animate-pulse">
-                  <span className="text-[8px] font-bold text-indigo-600">T</span>
+                  <span className="text-[8px] font-bold text-brand-primary">T</span>
                 </div>
               </div>
             </div>
@@ -149,7 +151,7 @@ export function UserLayout({ children }) {
                   >
                     {/* Active Indicator Rail */}
                     {isActive && (
-                      <div className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-indigo-600" />
+                      <div className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-brand-primary" />
                     )}
 
                     <Icon className={`size-6 transition-transform duration-200 ${isActive ? "scale-110" : "group-hover:scale-105"}`} />
@@ -210,18 +212,31 @@ export function UserLayout({ children }) {
 
               <div className="hidden h-8 w-px bg-brand-line/30 sm:block" />
 
-              <div className="group flex cursor-pointer items-center gap-3">
-                <div className="hidden text-right sm:block">
-                  <p className="text-sm font-bold leading-none text-brand-ink transition-colors group-hover:text-brand-primary">
-                    {identity.displayName}
-                  </p>
-                  <p className="mt-1 text-[10px] font-bold uppercase tracking-tight text-brand-ink/40">
-                    User Access
-                  </p>
+              <div className="relative">
+                <div
+                  className="group flex cursor-pointer items-center gap-3"
+                  onClick={() => setIsProfileCardOpen(!isProfileCardOpen)}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="hidden text-right sm:block">
+                    <p className="text-sm font-bold leading-none text-brand-ink transition-colors group-hover:text-brand-primary">
+                      {identity.displayName}
+                    </p>
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-tight text-brand-ink/40">
+                      User Access
+                    </p>
+                  </div>
+                  <div className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-brand-soft font-semibold text-brand-primary shadow-md">
+                    {identity.displayName.charAt(0)}
+                  </div>
                 </div>
-                <div className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-brand-soft font-semibold text-brand-primary shadow-md">
-                  {identity.displayName.charAt(0)}
-                </div>
+                <UserProfileCard
+                  identity={identity}
+                  isOpen={isProfileCardOpen}
+                  onClose={() => setIsProfileCardOpen(false)}
+                  onSignOut={handleSignOut}
+                />
               </div>
             </div>
           </header>
@@ -231,7 +246,7 @@ export function UserLayout({ children }) {
           </div>
         </section>
 
-        <FloatingActionMenu items={quickActions} />
+        {/* <FloatingActionMenu items={quickActions} /> */}
       </div>
     </main>
   );

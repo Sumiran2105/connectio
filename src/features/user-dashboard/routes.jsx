@@ -5,6 +5,7 @@ import { UserDashboardPage } from "./pages/user-dashboard-page";
 import { UserPlaceholderPage } from "./pages/user-placeholder-page";
 import { FilesPage } from "./pages/files-page";
 import { ChatPage } from "./pages/chat-page";
+import { MeetPage } from "./pages/meet-page";
 import { CalendarPage } from "./pages/calendar-page";
 import { AiPage } from "./pages/ai-page";
 import { TeamsPage } from "./pages/teams-page";
@@ -42,10 +43,7 @@ export const UserRoutes = (
       path="/user/dashboard/meet"
       element={
         <ProtectedUserRoute>
-          <UserPlaceholderPage
-            title="Meet"
-            description="This page is ready for meetings and video collaboration."
-          />
+          <MeetPage />
         </ProtectedUserRoute>
       }
     />
