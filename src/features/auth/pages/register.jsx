@@ -1,10 +1,25 @@
-import { Building2, CheckCircle2, Mail, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import {
+  Building2,
+  CheckCircle2,
+  Eye,
+  EyeOff,
+  Mail,
+  ShieldCheck,
+  Sparkles,
+  UserRound,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  AUTH_ADMIN_REGISTER,
+  AUTH_RESEND_OTP,
+  AUTH_VERIFY_OTP,
+} from "@/config/api";
+import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 
 const defaultAdminForm = {
@@ -37,10 +52,15 @@ export function RegisterPage() {
   const [adminForm, setAdminForm] = useState(defaultAdminForm);
   const [userForm, setUserForm] = useState(defaultUserForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isVerifyingDomain, setIsVerifyingDomain] = useState(false);
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
   const [isOtpSent, setIsOtpSent] = useState(false);
   const [adminOtp, setAdminOtp] = useState("");
   const [isDomainVerified, setIsDomainVerified] = useState(false);
+  const [registeredCompanyId, setRegisteredCompanyId] = useState("");
+  const [isUserPasswordVisible, setIsUserPasswordVisible] = useState(false);
+  const [isUserConfirmPasswordVisible, setIsUserConfirmPasswordVisible] = useState(false);
 
   if (session?.accessToken) {
     if (session.role === "SUPER_ADMIN") {
@@ -65,6 +85,7 @@ export function RegisterPage() {
       setIsDomainVerified(false);
       setIsOtpSent(false);
       setAdminOtp("");
+      setRegisteredCompanyId("");
     }
   }
 
@@ -97,7 +118,7 @@ export function RegisterPage() {
     }
 
     if (!isDomainVerified) {
-      toast.error("Verify the domain before submitting the admin registration.");
+      toast.error("Verify the OTP before completing the admin registration flow.");
       return;
     }
 
@@ -119,12 +140,21 @@ export function RegisterPage() {
     setIsDomainVerified(false);
     setIsOtpSent(false);
     setAdminOtp("");
+    setRegisteredCompanyId("");
     setIsSubmitting(false);
   }
 
-  async function handleSendDomainOtp() {
-    if (!adminForm.companyDomain.trim() || !adminForm.adminEmail.trim()) {
-      toast.error("Enter the domain and admin email before verification.");
+  async function handleSendDomainOtp(event) {
+    event.preventDefault();
+
+    if (
+      !adminForm.name.trim() ||
+      !adminForm.companyName.trim() ||
+      !adminForm.companyDomain.trim() ||
+      !adminForm.adminEmail.trim() ||
+      !adminForm.phoneNumber.trim()
+    ) {
+      toast.error("Complete all admin registration fields before sending OTP.");
       return;
     }
 
@@ -138,14 +168,35 @@ export function RegisterPage() {
       return;
     }
 
-    setIsVerifyingDomain(true);
-    await new Promise((resolve) => window.setTimeout(resolve, 900));
-    setIsVerifyingDomain(false);
-    setIsOtpSent(true);
-    toast.success(`OTP sent to ${adminForm.adminEmail.trim().toLowerCase()}.`);
+    try {
+      setIsSendingOtp(true);
+
+      const response = await apiClient.post(AUTH_ADMIN_REGISTER, null, {
+        params: {
+          name: adminForm.name.trim(),
+          company_name: adminForm.companyName.trim(),
+          domain: adminForm.companyDomain.trim().toLowerCase().replace(/^@/, ""),
+          email: adminForm.adminEmail.trim().toLowerCase(),
+          phone_number: adminForm.phoneNumber.trim(),
+        },
+      });
+
+      setRegisteredCompanyId(response.data?.company_id || "");
+      setIsOtpSent(true);
+      toast.success(response.data?.message || `OTP sent to ${adminForm.adminEmail.trim().toLowerCase()}.`);
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to send OTP right now.";
+
+      toast.error(message);
+    } finally {
+      setIsSendingOtp(false);
+    }
   }
 
-  function handleVerifyAdminOtp() {
+  async function handleVerifyAdminOtp() {
     if (!adminOtp.trim()) {
       toast.error("Enter the OTP sent to the admin email.");
       return;
@@ -156,8 +207,56 @@ export function RegisterPage() {
       return;
     }
 
-    setIsDomainVerified(true);
-    toast.success("Verified domain.");
+    if (!registeredCompanyId) {
+      toast.error("Company registration reference is missing. Send OTP again.");
+      return;
+    }
+
+    try {
+      setIsVerifyingOtp(true);
+
+      const response = await apiClient.post(AUTH_VERIFY_OTP(registeredCompanyId), null, {
+        params: {
+          otp: adminOtp.trim(),
+        },
+      });
+
+      setIsDomainVerified(true);
+      toast.success(response.data?.message || "Verified domain.");
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to verify OTP right now.";
+
+      toast.error(message);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  }
+
+  async function handleResendOtp() {
+    if (!registeredCompanyId) {
+      toast.error("Company registration reference is missing. Submit again.");
+      return;
+    }
+
+    try {
+      setIsResendingOtp(true);
+
+      const response = await apiClient.post(AUTH_RESEND_OTP(registeredCompanyId));
+
+      toast.success(response.data?.message || "OTP resent successfully.");
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to resend OTP right now.";
+
+      toast.error(message);
+    } finally {
+      setIsResendingOtp(false);
+    }
   }
 
   async function handleUserSubmit(event) {
@@ -238,7 +337,7 @@ export function RegisterPage() {
         </div>
 
         <div className="flex flex-1 items-start justify-center py-8 sm:items-center">
-          <section className="w-full max-w-xl space-y-5">
+          <section className="w-full max-w-5xl space-y-5">
             <div className="flex justify-center">
               <div className="inline-flex rounded-full border border-brand-line/70 bg-white/90 p-1 shadow-[0_14px_40px_rgba(92,122,145,0.12)]">
                 <Button
@@ -261,8 +360,8 @@ export function RegisterPage() {
             </div>
 
             <div className="flex justify-center">
-              <div className="w-full max-w-md rounded-[30px] border border-white/80 bg-white/[0.92] p-6 shadow-[0_30px_80px_rgba(92,122,145,0.16)] backdrop-blur xl:p-8">
-                <div className="mb-8 flex items-start justify-between gap-4">
+              <div className="w-full max-w-4xl rounded-[30px] border border-white/80 bg-white/[0.92] p-5 shadow-[0_30px_80px_rgba(92,122,145,0.16)] backdrop-blur md:p-6 xl:p-7">
+                <div className="mb-6 flex items-start justify-between gap-4">
                   <div className="space-y-3">
                     <span className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
                       <ShieldCheck className="size-3.5" />
@@ -272,7 +371,7 @@ export function RegisterPage() {
                       <h1 className="text-3xl font-semibold tracking-tight text-brand-ink">
                         {mode === "admin" ? "Register as admin" : "Register as user"}
                       </h1>
-                      <p className="max-w-sm text-sm leading-6 text-brand-secondary">
+                      <p className="max-w-2xl text-sm leading-6 text-brand-secondary">
                         {mode === "admin"
                           ? "Create a company registration request that will be reviewed by super admin."
                           : "Create a user registration request that can be routed to the matching company admin."}
@@ -286,8 +385,9 @@ export function RegisterPage() {
                 </div>
 
                 {mode === "admin" ? (
-                  <form className="space-y-5" onSubmit={handleAdminSubmit}>
-                    <div className="space-y-2">
+                  <form className="space-y-4" onSubmit={handleAdminSubmit}>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
                       <label className="text-sm font-medium text-brand-ink">Name</label>
                       <Input
                         value={adminForm.name}
@@ -295,9 +395,9 @@ export function RegisterPage() {
                         placeholder="Enter your full name"
                         className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                       />
-                    </div>
+                      </div>
 
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       <label className="text-sm font-medium text-brand-ink">Company name</label>
                       <Input
                         value={adminForm.companyName}
@@ -305,65 +405,71 @@ export function RegisterPage() {
                         placeholder="Enter company name"
                         className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                       />
-                    </div>
+                      </div>
 
-                    <div className="space-y-2">
+                      <div className="space-y-2">
                       <label className="text-sm font-medium text-brand-ink">Company domain</label>
-                      <div className="flex flex-col gap-3 sm:flex-row">
                         <Input
                           value={adminForm.companyDomain}
                           onChange={(event) => updateAdminField("companyDomain", event.target.value)}
                           placeholder="Enter company domain"
                           className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                         />
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="h-12 rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                          disabled={isVerifyingDomain}
-                          onClick={handleSendDomainOtp}
-                        >
-                          {isVerifyingDomain ? "Sending OTP..." : "Verify domain"}
-                        </Button>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Phone no</label>
+                        <Input
+                          value={adminForm.phoneNumber}
+                          onChange={(event) => updateAdminField("phoneNumber", event.target.value)}
+                          placeholder="Enter phone number"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Admin email ID</label>
+                        <Input
+                          type="email"
+                          value={adminForm.adminEmail}
+                          onChange={(event) => updateAdminField("adminEmail", event.target.value)}
+                          placeholder="Enter admin email"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
                       </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Admin email ID</label>
-                      <Input
-                        type="email"
-                        value={adminForm.adminEmail}
-                        onChange={(event) => updateAdminField("adminEmail", event.target.value)}
-                        placeholder="Enter admin email"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Phone no</label>
-                      <Input
-                        value={adminForm.phoneNumber}
-                        onChange={(event) => updateAdminField("phoneNumber", event.target.value)}
-                        placeholder="Enter phone number"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
-                    </div>
+                    {!isOtpSent ? (
+                      <div className="flex justify-center">
+                        <Button
+                          type="button"
+                          size="lg"
+                          className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90 md:w-auto md:min-w-56 md:px-8"
+                          disabled={isSendingOtp}
+                          onClick={handleSendDomainOtp}
+                        >
+                          {isSendingOtp ? "Sending OTP..." : "Send OTP"}
+                        </Button>
+                      </div>
+                    ) : null}
 
                     {isOtpSent ? (
-                      <div className="space-y-3 rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                      <div className="space-y-4 rounded-[24px] border border-brand-line bg-brand-neutral p-4 md:p-5">
                         <div className="flex items-start gap-3">
                           <div className="flex size-10 items-center justify-center rounded-2xl bg-brand-soft text-brand-primary">
                             <Mail className="size-4.5" />
                           </div>
                           <div>
-                            <p className="text-sm font-semibold text-brand-ink">Domain verification OTP</p>
+                            <p className="text-sm font-semibold text-brand-ink">OTP verification</p>
                             <p className="mt-1 text-sm leading-6 text-brand-secondary">
-                              We sent an OTP to <span className="font-medium text-brand-ink">{adminForm.adminEmail}</span>. Enter it below to verify the domain.
+                              We sent an OTP to the admin email{" "}
+                              <span className="font-medium text-brand-ink">{adminForm.adminEmail}</span>. Enter it
+                              below to verify the domain and activate the registration request.
                             </p>
                           </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 sm:flex-row">
+                        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_auto_auto] md:items-center">
                           <Input
                             value={adminOtp}
                             onChange={(event) => setAdminOtp(event.target.value)}
@@ -373,9 +479,19 @@ export function RegisterPage() {
                           <Button
                             type="button"
                             className="h-12 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
+                            disabled={isVerifyingOtp}
                             onClick={handleVerifyAdminOtp}
                           >
-                            Verify OTP
+                            {isVerifyingOtp ? "Verifying..." : "Verify OTP"}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            className="h-12 rounded-2xl px-4 text-brand-secondary hover:bg-white hover:text-brand-ink"
+                            disabled={isResendingOtp}
+                            onClick={handleResendOtp}
+                          >
+                            {isResendingOtp ? "Resending..." : "Resend OTP"}
                           </Button>
                         </div>
 
@@ -395,79 +511,117 @@ export function RegisterPage() {
                     ) : null}
 
                     {isDomainVerified ? (
-                      <Button
-                        type="submit"
-                        size="lg"
-                        className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? "Submitting..." : "Submit admin registration"}
-                      </Button>
+                      <div className="flex justify-center">
+                        <Button
+                          type="submit"
+                          size="lg"
+                          className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90 md:w-auto md:min-w-64 md:px-8"
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? "Submitting..." : "Complete registration"}
+                        </Button>
+                      </div>
                     ) : null}
                   </form>
                 ) : (
-                  <form className="space-y-5" onSubmit={handleUserSubmit}>
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Full name</label>
-                      <Input
-                        value={userForm.full_name}
-                        onChange={(event) => updateUserField("full_name", event.target.value)}
-                        placeholder="Enter your full name"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
+                  <form className="space-y-4" onSubmit={handleUserSubmit}>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Full name</label>
+                        <Input
+                          value={userForm.full_name}
+                          onChange={(event) => updateUserField("full_name", event.target.value)}
+                          placeholder="Enter your full name"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Email</label>
+                        <Input
+                          type="email"
+                          value={userForm.email}
+                          onChange={(event) => updateUserField("email", event.target.value)}
+                          placeholder="user@example.com"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Mobile number</label>
+                        <Input
+                          value={userForm.mobile_number}
+                          onChange={(event) => updateUserField("mobile_number", event.target.value)}
+                          placeholder="Enter mobile number"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Password</label>
+                        <div className="relative">
+                          <Input
+                            type={isUserPasswordVisible ? "text" : "password"}
+                            value={userForm.password}
+                            onChange={(event) => updateUserField("password", event.target.value)}
+                            placeholder="Enter password"
+                            className="h-12 rounded-2xl border-brand-line bg-brand-neutral pr-12"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full text-brand-secondary hover:bg-white hover:text-brand-ink"
+                            onClick={() => setIsUserPasswordVisible((current) => !current)}
+                          >
+                            {isUserPasswordVisible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            <span className="sr-only">
+                              {isUserPasswordVisible ? "Hide password" : "Show password"}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Confirm password</label>
+                        <div className="relative">
+                          <Input
+                            type={isUserConfirmPasswordVisible ? "text" : "password"}
+                            value={userForm.confirm_password}
+                            onChange={(event) => updateUserField("confirm_password", event.target.value)}
+                            placeholder="Confirm password"
+                            className="h-12 rounded-2xl border-brand-line bg-brand-neutral pr-12"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full text-brand-secondary hover:bg-white hover:text-brand-ink"
+                            onClick={() => setIsUserConfirmPasswordVisible((current) => !current)}
+                          >
+                            {isUserConfirmPasswordVisible ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                            <span className="sr-only">
+                              {isUserConfirmPasswordVisible ? "Hide confirm password" : "Show confirm password"}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Email</label>
-                      <Input
-                        type="email"
-                        value={userForm.email}
-                        onChange={(event) => updateUserField("email", event.target.value)}
-                        placeholder="user@example.com"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
+                    <div className="flex justify-center">
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90 md:w-auto md:min-w-64 md:px-8"
+                        disabled={isSubmitting}
+                      >
+                        {isSubmitting ? "Submitting..." : "Submit user registration"}
+                      </Button>
                     </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Mobile number</label>
-                      <Input
-                        value={userForm.mobile_number}
-                        onChange={(event) => updateUserField("mobile_number", event.target.value)}
-                        placeholder="Enter mobile number"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Password</label>
-                      <Input
-                        type="password"
-                        value={userForm.password}
-                        onChange={(event) => updateUserField("password", event.target.value)}
-                        placeholder="Enter password"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Confirm password</label>
-                      <Input
-                        type="password"
-                        value={userForm.confirm_password}
-                        onChange={(event) => updateUserField("confirm_password", event.target.value)}
-                        placeholder="Confirm password"
-                        className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
-                      />
-                    </div>
-
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90"
-                      disabled={isSubmitting}
-                    >
-                      {isSubmitting ? "Submitting..." : "Submit user registration"}
-                    </Button>
                   </form>
                 )}
               </div>

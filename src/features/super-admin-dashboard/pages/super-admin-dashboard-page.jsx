@@ -1,42 +1,54 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  ArrowRight,
   BadgeIndianRupee,
   BellRing,
   Building2,
   CalendarClock,
+  CheckCheck,
   CircleAlert,
   CreditCard,
+  LoaderCircle,
   Plus,
   Shield,
   UserRoundCog,
   Users,
+  XCircle,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  SUPERADMIN_COMPANIES,
+  SUPERADMIN_COMPANY_ADMINS,
+  SUPERADMIN_INVITE_COMPANY_ADMIN,
+  SUPERADMIN_PENDING_COMPANIES,
+  SUPERADMIN_REJECT_COMPANY,
+} from "@/config/api";
+import { apiClient } from "@/lib/client";
+import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
 
-const overviewCards = [
+const staticOverviewCards = [
   {
-    label: "Total Companies",
-    value: "24",
-    note: "4 added this week",
-    icon: Building2,
-  },
-  {
-    label: "Company Admins",
-    value: "41",
-    note: "5 pending activation",
-    icon: UserRoundCog,
-  },
-  {
+    key: "billing",
     label: "Billing Collected",
     value: "Rs. 1.38L",
     note: "This month across all plans",
     icon: BadgeIndianRupee,
   },
   {
+    key: "health",
     label: "Platform Health",
     value: "98.6%",
     note: "No critical alerts today",
@@ -44,66 +56,66 @@ const overviewCards = [
   },
 ];
 
-const recentCompanies = [
-  { name: "Levitica", domain: "leviticatechnologies.com", createdOn: "07 Apr 2026", status: "Active" },
-  { name: "PNSR", domain: "pnsr.com", createdOn: "06 Apr 2026", status: "Pending" },
-  { name: "Sonic Solutions", domain: "sonicsolutions.com", createdOn: "05 Apr 2026", status: "Active" },
-  { name: "Sai Systems", domain: "saisystems.com", createdOn: "03 Apr 2026", status: "Draft" },
-];
-
-const recentAdmins = [
-  { name: "Akhil Reddy", email: "akhil@leviticatechnologies.com", company: "Levitica", status: "Active" },
-  { name: "Sumiran DSM", email: "sumiran.dsm@gmail.com", company: "Pexpo", status: "Pending" },
-  { name: "Meera Shah", email: "meera@sonicsolutions.com", company: "Sonic Solutions", status: "Active" },
-  { name: "Rahul Varma", email: "rahul@pnsr.com", company: "PNSR", status: "Pending" },
-];
-
-const attentionItems = [
+const recentFollowUps = [
   {
-    title: "Company activations pending",
-    detail: "5 companies are waiting for company-admin activation and domain confirmation.",
-    tag: "High Priority",
-    icon: CircleAlert,
+    title: "Billing review with finance",
+    detail: "10 Apr 2026 at 11:30 AM",
   },
   {
-    title: "Admin invitations awaiting response",
-    detail: "3 invited admins have not yet completed the activation flow.",
-    tag: "Follow-up",
-    icon: Users,
+    title: "Pending activation follow-up",
+    detail: "11 Apr 2026 at 3:00 PM",
   },
   {
-    title: "Subscription renewals due",
-    detail: "2 premium plans and 1 enterprise plan are nearing billing renewal.",
-    tag: "Billing",
-    icon: CreditCard,
+    title: "Platform health check",
+    detail: "12 Apr 2026 at 9:30 AM",
   },
 ];
 
-const todayActions = [
-  {
-    title: "Create a new company",
-    description: "Provision a tenant and prepare its workspace domain for onboarding.",
-    onClick: (navigate) => navigate("/super-admin/dashboard/companies/create"),
-  },
-  {
-    title: "Invite company admin",
-    description: "Send the activation invite to the primary admin of a company.",
-    onClick: (navigate) => navigate("/super-admin/dashboard/admins/create"),
-  },
-  {
-    title: "Review billing records",
-    description: "Check plan details, payment IDs, and latest payment dates.",
-    onClick: (navigate) => navigate("/super-admin/dashboard/billing"),
-  },
-  {
-    title: "Open company admin list",
-    description: "Inspect all onboarded company admins from one place.",
-    onClick: (navigate) => navigate("/super-admin/dashboard/admins"),
-  },
-];
+function normalizeCollection(data, keys = []) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  for (const key of keys) {
+    if (Array.isArray(data?.[key])) {
+      return data[key];
+    }
+  }
+
+  return [];
+}
+
+function formatStatus(status) {
+  if (!status) {
+    return "Pending";
+  }
+
+  return String(status)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 function statusClass(status) {
-  if (status === "Active") {
+  if (status === "Active" || status === "Approved") {
     return "border-emerald-200 bg-emerald-50 text-emerald-700";
   }
 
@@ -111,11 +123,161 @@ function statusClass(status) {
     return "border-amber-200 bg-amber-50 text-amber-700";
   }
 
+  if (status === "Rejected") {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+
   return "border-brand-line bg-brand-neutral text-brand-secondary";
 }
 
 export function SuperAdminDashboardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useAuthStore((state) => state.session);
+  const [selectedCompanyForApproval, setSelectedCompanyForApproval] = useState(null);
+
+  const requestConfig = useMemo(
+    () => ({
+      headers: {
+        Authorization: `Bearer ${session?.accessToken}`,
+      },
+    }),
+    [session?.accessToken]
+  );
+
+  const companiesQuery = useQuery({
+    queryKey: ["super-admin-dashboard-companies"],
+    queryFn: async () => {
+      const response = await apiClient.get(SUPERADMIN_COMPANIES, requestConfig);
+      return normalizeCollection(response.data, ["companies"]);
+    },
+  });
+
+  const pendingCompaniesQuery = useQuery({
+    queryKey: ["super-admin-dashboard-pending-companies"],
+    queryFn: async () => {
+      const response = await apiClient.get(SUPERADMIN_PENDING_COMPANIES, requestConfig);
+      return normalizeCollection(response.data, ["companies", "pending_companies", "data"]);
+    },
+  });
+
+  const companyAdminsQuery = useQuery({
+    queryKey: ["super-admin-dashboard-company-admins"],
+    queryFn: async () => {
+      const response = await apiClient.get(SUPERADMIN_COMPANY_ADMINS, requestConfig);
+      return normalizeCollection(response.data, ["admins", "company_admins", "data"]);
+    },
+  });
+
+  const approveInviteMutation = useMutation({
+    mutationFn: async ({ companyId, adminEmail }) => {
+      return apiClient.post(
+        SUPERADMIN_INVITE_COMPANY_ADMIN(companyId),
+        null,
+        {
+          ...requestConfig,
+          params: {
+            admin_email: adminEmail,
+          },
+        }
+      );
+    },
+    onSuccess: (response) => {
+      toast.success(response.data?.message || "Company approved and invite sent.");
+      setSelectedCompanyForApproval(null);
+      queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-company-admins"] });
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to approve and invite right now.";
+
+      toast.error(message);
+    },
+  });
+
+  const rejectCompanyMutation = useMutation({
+    mutationFn: async (companyId) => {
+      return apiClient.post(SUPERADMIN_REJECT_COMPANY(companyId), null, requestConfig);
+    },
+    onSuccess: (response) => {
+      toast.success(response.data?.message || "Company request rejected.");
+      queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
+    },
+    onError: (error) => {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to reject the company request right now.";
+
+      toast.error(message);
+    },
+  });
+
+  const allCompanies = companiesQuery.data || [];
+  const allCompanyAdmins = companyAdminsQuery.data || [];
+  const pendingCompanies = useMemo(() => {
+    return (pendingCompaniesQuery.data || []).map((company, index) => ({
+      id: company.company_id || company.id || `pending-company-${index}`,
+      name: company.company_name || company.name || `Company ${index + 1}`,
+      domain: company.domain || company.company_domain || "Not available",
+      adminEmail: company.admin_email || company.email || company.owner_email || "",
+      phoneNumber: company.phone_number || company.phone || "Not available",
+      createdOn: formatDate(company.created_at || company.created_on || company.registered_at),
+      status: formatStatus(company.status || "Pending"),
+    }));
+  }, [pendingCompaniesQuery.data]);
+
+  const recentAdmins = useMemo(() => {
+    return (allCompanyAdmins || []).slice(0, 4).map((admin, index) => ({
+      id: admin.id || admin.user_id || admin.admin_id || `company-admin-${index}`,
+      name: admin.name || admin.full_name || "Unnamed admin",
+      email: admin.email || admin.admin_email || "Not available",
+      company: admin.company_name || admin.company?.name || admin.company || "Not assigned",
+      status: formatStatus(admin.status || admin.account_status || admin.invite_status || "Active"),
+    }));
+  }, [allCompanyAdmins]);
+
+  const overviewCards = [
+    {
+      label: "Total Companies",
+      value: String(allCompanies.length),
+      note: pendingCompanies.length
+        ? `${pendingCompanies.length} awaiting approval`
+        : "No approvals pending",
+      icon: Building2,
+    },
+    {
+      label: "Company Admins",
+      value: String(allCompanyAdmins.length),
+      note: pendingCompanies.length
+        ? `${pendingCompanies.length} invites to process`
+        : "Admin directory is up to date",
+      icon: UserRoundCog,
+    },
+    ...staticOverviewCards,
+  ];
+
+  const isDashboardLoading =
+    companiesQuery.isLoading || pendingCompaniesQuery.isLoading || companyAdminsQuery.isLoading;
+
+  function handleApproveIntent(company) {
+    setSelectedCompanyForApproval(company);
+  }
+
+  function handleConfirmApprove() {
+    if (!selectedCompanyForApproval) {
+      return;
+    }
+
+    approveInviteMutation.mutate({
+      companyId: selectedCompanyForApproval.id,
+      adminEmail: selectedCompanyForApproval.adminEmail,
+    });
+  }
 
   return (
     <SuperAdminLayout>
@@ -132,9 +294,8 @@ export function SuperAdminDashboardPage() {
                   Oversee onboarding, admins, billing, and platform activity from one command center.
                 </h1>
                 <p className="max-w-2xl text-sm leading-7 text-brand-secondary sm:text-base">
-                  This is the first screen after login for super admins. It gives a quick
-                  operational view of the whole platform, with shortcuts into companies,
-                  company admins, billing, and the flows that need attention today.
+                  Review new company registrations, approve and invite company admins, and keep
+                  the platform onboarding queue moving from a single dashboard.
                 </p>
               </div>
             </div>
@@ -187,84 +348,15 @@ export function SuperAdminDashboardPage() {
           })}
         </section>
 
-        {/* <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Quick Actions
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight text-brand-ink">
-                  Start the most common super admin tasks
-                </h2>
-              </div>
-              <ArrowRight className="size-5 text-brand-secondary" />
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {todayActions.map((action) => (
-                <button
-                  key={action.title}
-                  type="button"
-                  onClick={() => action.onClick(navigate)}
-                  className="rounded-[24px] border border-brand-line bg-brand-neutral p-5 text-left transition hover:border-brand-secondary/35 hover:bg-brand-soft"
-                >
-                  <p className="text-base font-semibold text-brand-ink">{action.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                    {action.description}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-brand-line bg-brand-tertiary p-6 text-white shadow-[0_16px_50px_rgba(145,68,64,0.18)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/72">
-              Needs Attention
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight">
-              Priority items for today
-            </h2>
-
-            <div className="mt-6 space-y-4">
-              {attentionItems.map((item) => {
-                const Icon = item.icon;
-
-                return (
-                  <article
-                    key={item.title}
-                    className="rounded-[24px] border border-white/12 bg-white/10 p-4"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className="mt-1 flex size-9 items-center justify-center rounded-2xl bg-white/12">
-                        <Icon className="size-4.5 text-white" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                          <p className="text-sm font-semibold text-white">{item.title}</p>
-                          <span className="rounded-full border border-white/15 bg-white/12 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/82">
-                            {item.tag}
-                          </span>
-                        </div>
-                        <p className="mt-2 text-sm leading-6 text-white/78">{item.detail}</p>
-                      </div>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </div>
-        </section> */}
-
         <section className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
             <div className="flex items-center justify-between gap-4 border-b border-brand-line px-6 py-5">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Recent Companies
+                  Pending Companies
                 </p>
                 <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Newly onboarded companies
+                  Company registration approvals
                 </h3>
               </div>
               <Button
@@ -278,37 +370,111 @@ export function SuperAdminDashboardPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
-                <thead className="bg-brand-neutral">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Company
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Created On
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentCompanies.map((company) => (
-                    <tr key={company.name} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-brand-ink">{company.name}</p>
-                        <p className="mt-1 text-sm text-brand-secondary">{company.domain}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-brand-secondary">{company.createdOn}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(company.status)}`}>
-                          {company.status}
-                        </span>
-                      </td>
+              {pendingCompaniesQuery.isLoading ? (
+                <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
+                  <LoaderCircle className="size-5 animate-spin" />
+                  Loading pending companies
+                </div>
+              ) : pendingCompaniesQuery.isError ? (
+                <div className="px-6 py-10 text-sm text-brand-tertiary">
+                  Unable to load pending companies right now.
+                </div>
+              ) : pendingCompanies.length ? (
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-brand-neutral">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Company
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Admin Email
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Created On
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Action
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {pendingCompanies.map((company) => {
+                      const isApproving =
+                        approveInviteMutation.isPending &&
+                        approveInviteMutation.variables?.companyId === company.id;
+                      const isRejecting =
+                        rejectCompanyMutation.isPending &&
+                        rejectCompanyMutation.variables === company.id;
+
+                      return (
+                        <tr key={company.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
+                          <td className="px-6 py-4">
+                            <p className="text-sm font-semibold text-brand-ink">{company.name}</p>
+                            <p className="mt-1 text-sm text-brand-secondary">{company.domain}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm text-brand-ink">{company.adminEmail || "Not available"}</p>
+                            <p className="mt-1 text-sm text-brand-secondary">{company.phoneNumber}</p>
+                          </td>
+                          <td className="px-6 py-4">
+                            <p className="text-sm text-brand-secondary">{company.createdOn}</p>
+                            <span
+                              className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(company.status)}`}
+                            >
+                              {company.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-wrap gap-2">
+                              <Button
+                                type="button"
+                                className="h-9 rounded-xl bg-brand-primary px-4 text-white hover:bg-brand-primary/90"
+                                disabled={isApproving || isRejecting || !company.adminEmail}
+                                onClick={() => handleApproveIntent(company)}
+                              >
+                                {isApproving ? (
+                                  <>
+                                    <LoaderCircle className="size-4 animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCheck className="size-4" />
+                                    Approve and invite
+                                  </>
+                                )}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                className="h-9 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50"
+                                disabled={isApproving || isRejecting}
+                                onClick={() => rejectCompanyMutation.mutate(company.id)}
+                              >
+                                {isRejecting ? (
+                                  <>
+                                    <LoaderCircle className="size-4 animate-spin" />
+                                    Rejecting...
+                                  </>
+                                ) : (
+                                  <>
+                                    <XCircle className="size-4" />
+                                    Reject
+                                  </>
+                                )}
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="px-6 py-10 text-sm text-brand-secondary">
+                  No pending company registrations right now.
+                </div>
+              )}
             </div>
           </div>
 
@@ -333,37 +499,54 @@ export function SuperAdminDashboardPage() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="min-w-full border-collapse">
-                <thead className="bg-brand-neutral">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Company
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {recentAdmins.map((admin) => (
-                    <tr key={admin.email} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                      <td className="px-6 py-4">
-                        <p className="text-sm font-semibold text-brand-ink">{admin.name}</p>
-                        <p className="mt-1 text-sm text-brand-secondary">{admin.email}</p>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-brand-secondary">{admin.company}</td>
-                      <td className="px-6 py-4">
-                        <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(admin.status)}`}>
-                          {admin.status}
-                        </span>
-                      </td>
+              {companyAdminsQuery.isLoading ? (
+                <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
+                  <LoaderCircle className="size-5 animate-spin" />
+                  Loading company admins
+                </div>
+              ) : companyAdminsQuery.isError ? (
+                <div className="px-6 py-10 text-sm text-brand-tertiary">
+                  Unable to load company admin activity right now.
+                </div>
+              ) : recentAdmins.length ? (
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-brand-neutral">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Company
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Status
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {recentAdmins.map((admin) => (
+                      <tr key={admin.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
+                        <td className="px-6 py-4">
+                          <p className="text-sm font-semibold text-brand-ink">{admin.name}</p>
+                          <p className="mt-1 text-sm text-brand-secondary">{admin.email}</p>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-brand-secondary">{admin.company}</td>
+                        <td className="px-6 py-4">
+                          <span
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(admin.status)}`}
+                          >
+                            {admin.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <div className="px-6 py-10 text-sm text-brand-secondary">
+                  No company admin activity found yet.
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -385,18 +568,12 @@ export function SuperAdminDashboardPage() {
             </div>
 
             <div className="mt-6 space-y-4">
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-sm font-semibold text-brand-ink">Billing review with finance</p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">08 Apr 2026 at 11:30 AM</p>
-              </div>
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-sm font-semibold text-brand-ink">Pending activation follow-up</p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">09 Apr 2026 at 3:00 PM</p>
-              </div>
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-sm font-semibold text-brand-ink">Platform health check</p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">10 Apr 2026 at 9:30 AM</p>
-              </div>
+              {recentFollowUps.map((item) => (
+                <div key={item.title} className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                  <p className="text-sm font-semibold text-brand-ink">{item.title}</p>
+                  <p className="mt-2 text-sm leading-6 text-brand-secondary">{item.detail}</p>
+                </div>
+              ))}
             </div>
           </div>
 
@@ -451,8 +628,95 @@ export function SuperAdminDashboardPage() {
                 Notifications
               </Button>
             </div>
+
+            <div className="mt-6 rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex size-10 items-center justify-center rounded-2xl bg-brand-soft">
+                  {isDashboardLoading ? (
+                    <LoaderCircle className="size-4 animate-spin text-brand-primary" />
+                  ) : pendingCompanies.length ? (
+                    <CircleAlert className="size-4 text-amber-600" />
+                  ) : (
+                    <CheckCheck className="size-4 text-emerald-600" />
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-brand-ink">Onboarding queue status</p>
+                  <p className="mt-1 text-sm leading-6 text-brand-secondary">
+                    {isDashboardLoading
+                      ? "Refreshing the latest company registrations and admin records."
+                      : pendingCompanies.length
+                        ? `${pendingCompanies.length} company registration requests are waiting for approval.`
+                        : "No company approvals are pending right now."}
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </section>
+
+        <Dialog
+          open={Boolean(selectedCompanyForApproval)}
+          onOpenChange={(open) => {
+            if (!open && !approveInviteMutation.isPending) {
+              setSelectedCompanyForApproval(null);
+            }
+          }}
+        >
+          <DialogContent className="rounded-[28px] border border-brand-line bg-white sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-brand-ink">
+                Confirm approval and invite
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-6 text-brand-secondary">
+                An invitation will be sent to{" "}
+                <span className="font-semibold text-brand-ink">
+                  {selectedCompanyForApproval?.name || "this company"}
+                </span>{" "}
+                at{" "}
+                <span className="font-semibold text-brand-ink">
+                  {selectedCompanyForApproval?.adminEmail || "the admin email"}
+                </span>
+                . Please confirm to continue.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="rounded-[22px] border border-brand-line bg-brand-neutral p-4 text-sm text-brand-secondary">
+              <p>
+                <span className="font-semibold text-brand-ink">Company:</span>{" "}
+                {selectedCompanyForApproval?.name || "Not available"}
+              </p>
+              <p className="mt-2">
+                <span className="font-semibold text-brand-ink">Domain:</span>{" "}
+                {selectedCompanyForApproval?.domain || "Not available"}
+              </p>
+              <p className="mt-2">
+                <span className="font-semibold text-brand-ink">Admin email:</span>{" "}
+                {selectedCompanyForApproval?.adminEmail || "Not available"}
+              </p>
+            </div>
+
+            <DialogFooter className="gap-3 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-2xl border-brand-line px-5"
+                disabled={approveInviteMutation.isPending}
+                onClick={() => setSelectedCompanyForApproval(null)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
+                disabled={approveInviteMutation.isPending}
+                onClick={handleConfirmApprove}
+              >
+                {approveInviteMutation.isPending ? "Sending invite..." : "Confirm and send invite"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </SuperAdminLayout>
   );

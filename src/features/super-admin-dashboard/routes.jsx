@@ -4,6 +4,7 @@ import { AddAdminPage } from "./pages/add-admin";
 import { AddCompanyPage } from "./pages/add-company";
 import { CompaniesPage } from "./pages/companies";
 import { CompanyAdminsPage } from "./pages/company-admins";
+import { PendingCompaniesPage } from "./pages/pending-companies";
 import { SuperAdminDashboardPage } from "./pages/super-admin-dashboard-page";
 import { SendNotificationsPage } from "./pages/send-notifications-page";
 import { AnalyticsPage } from "./pages/analytics-page";
@@ -31,6 +32,14 @@ export const SuperAdminRoutes = (
       element={
         <ProtectedSuperAdminRoute>
           <SuperAdminDashboardPage />
+        </ProtectedSuperAdminRoute>
+      }
+    />
+    <Route
+      path="/super-admin/dashboard/pending-companies"
+      element={
+        <ProtectedSuperAdminRoute>
+          <PendingCompaniesPage />
         </ProtectedSuperAdminRoute>
       }
     />

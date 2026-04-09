@@ -1,51 +1,68 @@
-import { Mail, Search, ShieldCheck, UserRoundCog, Users } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  LoaderCircle,
+  Mail,
+  Search,
+  ShieldCheck,
+  UserRoundCog,
+  Users,
+} from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { SUPERADMIN_COMPANY_ADMINS } from "@/config/api";
+import { apiClient } from "@/lib/client";
+import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
 
-const adminRows = [
-  {
-    name: "Sumiran DSM",
-    email: "sumiran.dsm@gmail.com",
-    company: "Pexpo",
-    role: "Company Admin",
-    invitedOn: "07 Apr 2026",
-    status: "Active",
-  },
-  {
-    name: "Akhil Reddy",
-    email: "akhil@leviticatechnologies.com",
-    company: "Levitica",
-    role: "Company Admin",
-    invitedOn: "05 Apr 2026",
-    status: "Pending",
-  },
-  {
-    name: "Meera Shah",
-    email: "meera@sonicsolutions.com",
-    company: "Sonic Solutions",
-    role: "Company Admin",
-    invitedOn: "03 Apr 2026",
-    status: "Active",
-  },
-  {
-    name: "Rahul Varma",
-    email: "rahul@pnsr.com",
-    company: "PNSR",
-    role: "Company Admin",
-    invitedOn: "02 Apr 2026",
-    status: "Active",
-  },
-  {
-    name: "Suhani Gupta",
-    email: "suhani@saisystems.com",
-    company: "Sai Systems",
-    role: "Company Admin",
-    invitedOn: "31 Mar 2026",
-    status: "Inactive",
-  },
-];
+function normalizeAdmins(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.admins)) {
+    return data.admins;
+  }
+
+  if (Array.isArray(data?.company_admins)) {
+    return data.company_admins;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  return [];
+}
+
+function formatStatus(status) {
+  if (!status) {
+    return "Active";
+  }
+
+  return String(status)
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function formatDate(value) {
+  if (!value) {
+    return "Not available";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+}
 
 function adminStatusClass(status) {
   if (status === "Active") {
@@ -60,7 +77,40 @@ function adminStatusClass(status) {
 }
 
 export function CompanyAdminsPage() {
+  const session = useAuthStore((state) => state.session);
   const [search, setSearch] = useState("");
+
+  const companyAdminsQuery = useQuery({
+    queryKey: ["super-admin-company-admins"],
+    queryFn: async () => {
+      const response = await apiClient.get(SUPERADMIN_COMPANY_ADMINS, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizeAdmins(response.data);
+    },
+  });
+
+  const adminRows = useMemo(() => {
+    return (companyAdminsQuery.data || []).map((admin, index) => {
+      const firstName = admin.name || admin.full_name || admin.first_name || "";
+      const companyName =
+        admin.company_name || admin.company?.name || admin.company || admin.organization_name || "Not assigned";
+      const status = formatStatus(admin.status || admin.account_status || admin.invite_status);
+
+      return {
+        id: admin.id || admin.user_id || admin.admin_id || `${admin.email || "admin"}-${index}`,
+        name: firstName || "Unnamed admin",
+        email: admin.email || admin.admin_email || "Not available",
+        company: companyName,
+        role: admin.role || admin.user_role || "Company Admin",
+        invitedOn: formatDate(admin.invited_on || admin.created_at || admin.invited_at),
+        status,
+      };
+    });
+  }, [companyAdminsQuery.data]);
 
   const filteredRows = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -75,7 +125,10 @@ export function CompanyAdminsPage() {
         .toLowerCase()
         .includes(term)
     );
-  }, [search]);
+  }, [adminRows, search]);
+
+  const activeCount = adminRows.filter((row) => row.status === "Active").length;
+  const pendingCount = adminRows.filter((row) => row.status === "Pending").length;
 
   return (
     <SuperAdminLayout>
@@ -91,7 +144,7 @@ export function CompanyAdminsPage() {
                 All Company Admins
               </h1>
               <p className="mt-2 text-sm text-brand-secondary">
-                A table view of company admin accounts across all onboarded companies.
+                A live directory of company admin accounts across all onboarded companies.
               </p>
             </div>
           </div>
@@ -127,9 +180,7 @@ export function CompanyAdminsPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-brand-secondary">Active</p>
-                <p className="text-2xl font-semibold text-brand-ink">
-                  {adminRows.filter((row) => row.status === "Active").length}
-                </p>
+                <p className="text-2xl font-semibold text-brand-ink">{activeCount}</p>
               </div>
             </div>
           </div>
@@ -141,9 +192,7 @@ export function CompanyAdminsPage() {
               </div>
               <div>
                 <p className="text-xs uppercase tracking-[0.18em] text-brand-secondary">Pending Invites</p>
-                <p className="text-2xl font-semibold text-brand-ink">
-                  {adminRows.filter((row) => row.status === "Pending").length}
-                </p>
+                <p className="text-2xl font-semibold text-brand-ink">{pendingCount}</p>
               </div>
             </div>
           </div>
@@ -153,39 +202,68 @@ export function CompanyAdminsPage() {
           <div className="border-b border-brand-line px-6 py-5">
             <h2 className="text-lg font-semibold text-brand-ink">Admin Directory</h2>
             <p className="mt-1 text-sm text-brand-secondary">
-              Mock company-admin data for now. We can integrate the live endpoint later.
+              This table is now connected to the live super admin company-admin list.
             </p>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full border-collapse">
-              <thead className="bg-brand-neutral">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Email</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Company</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Role</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Invited On</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredRows.map((row) => (
-                  <tr key={`${row.email}-${row.company}`} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                    <td className="px-6 py-4 text-sm font-semibold text-brand-ink">{row.name}</td>
-                    <td className="px-6 py-4 text-sm text-brand-secondary">{row.email}</td>
-                    <td className="px-6 py-4 text-sm text-brand-ink">{row.company}</td>
-                    <td className="px-6 py-4 text-sm text-brand-secondary">{row.role}</td>
-                    <td className="px-6 py-4 text-sm text-brand-secondary">{row.invitedOn}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${adminStatusClass(row.status)}`}>
-                        {row.status}
-                      </span>
-                    </td>
+            {companyAdminsQuery.isLoading ? (
+              <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
+                <LoaderCircle className="size-5 animate-spin" />
+                Loading company admins
+              </div>
+            ) : companyAdminsQuery.isError ? (
+              <div className="px-6 py-10 text-sm text-brand-tertiary">
+                Unable to load company admins right now. Try refreshing the page or signing in again.
+              </div>
+            ) : filteredRows.length ? (
+              <table className="min-w-full border-collapse">
+                <thead className="bg-brand-neutral">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Name
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Email
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Company
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Role
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Invited On
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      Status
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredRows.map((row) => (
+                    <tr key={row.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
+                      <td className="px-6 py-4 text-sm font-semibold text-brand-ink">{row.name}</td>
+                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.email}</td>
+                      <td className="px-6 py-4 text-sm text-brand-ink">{row.company}</td>
+                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.role}</td>
+                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.invitedOn}</td>
+                      <td className="px-6 py-4">
+                        <span
+                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${adminStatusClass(row.status)}`}
+                        >
+                          {row.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <div className="px-6 py-10 text-sm text-brand-secondary">
+                No company admins found yet.
+              </div>
+            )}
           </div>
         </section>
       </div>

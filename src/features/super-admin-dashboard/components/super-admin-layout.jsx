@@ -1,6 +1,7 @@
 import {
   BellRing,
   Building2,
+  CircleAlert,
   ChevronRight,
   CreditCard,
   FileBarChart2,
@@ -33,6 +34,7 @@ export function SuperAdminLayout({ children }) {
       title: "Platform",
       items: [
         { label: "Overview", icon: LayoutGrid, path: "/super-admin/dashboard" },
+        { label: "Pending Companies", icon: CircleAlert, path: "/super-admin/dashboard/pending-companies" },
         { label: "Add Company", icon: Plus, path: "/super-admin/dashboard/companies/create" },
         { label: "Add Company Admin", icon: UserRoundCog, path: "/super-admin/dashboard/admins/create" },
         { label: "All Companies", icon: Building2, path: "/super-admin/dashboard/companies" },

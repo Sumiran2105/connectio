@@ -59,10 +59,10 @@ export function AddAdminPage() {
 
   const onSubmit = async (data) => {
     try {
-      const response = await apiClient.post(SUPERADMIN_INVITE_COMPANY_ADMIN, null, {
+      const companyId = data.company_id.trim();
+      const response = await apiClient.post(SUPERADMIN_INVITE_COMPANY_ADMIN(companyId), null, {
         params: {
-          company_id: data.company_id.trim(),
-          email: data.email.trim(),
+          admin_email: data.email.trim(),
         },
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
