@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   AUTH_ADMIN_REGISTER,
+  AUTH_REGISTER,
   AUTH_RESEND_OTP,
   AUTH_VERIFY_OTP,
 } from "@/config/api";
@@ -23,11 +24,13 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 
 const defaultAdminForm = {
-  name: "",
+  full_name: "",
   companyName: "",
   companyDomain: "",
   adminEmail: "",
   phoneNumber: "",
+  password: "",
+  confirm_password: "",
 };
 
 const defaultUserForm = {
@@ -59,6 +62,8 @@ export function RegisterPage() {
   const [adminOtp, setAdminOtp] = useState("");
   const [isDomainVerified, setIsDomainVerified] = useState(false);
   const [registeredCompanyId, setRegisteredCompanyId] = useState("");
+  const [isAdminPasswordVisible, setIsAdminPasswordVisible] = useState(false);
+  const [isAdminConfirmPasswordVisible, setIsAdminConfirmPasswordVisible] = useState(false);
   const [isUserPasswordVisible, setIsUserPasswordVisible] = useState(false);
   const [isUserConfirmPasswordVisible, setIsUserConfirmPasswordVisible] = useState(false);
 
@@ -81,7 +86,12 @@ export function RegisterPage() {
   function updateAdminField(field, value) {
     setAdminForm((current) => ({ ...current, [field]: value }));
 
-    if (field === "companyDomain" || field === "adminEmail") {
+    if (
+      field === "companyDomain" ||
+      field === "adminEmail" ||
+      field === "password" ||
+      field === "confirm_password"
+    ) {
       setIsDomainVerified(false);
       setIsOtpSent(false);
       setAdminOtp("");
@@ -93,66 +103,17 @@ export function RegisterPage() {
     setUserForm((current) => ({ ...current, [field]: value }));
   }
 
-  async function handleAdminSubmit(event) {
-    event.preventDefault();
-
-    if (
-      !adminForm.name.trim() ||
-      !adminForm.companyName.trim() ||
-      !adminForm.companyDomain.trim() ||
-      !adminForm.adminEmail.trim() ||
-      !adminForm.phoneNumber.trim()
-    ) {
-      toast.error("Complete all admin registration fields.");
-      return;
-    }
-
-    if (!isValidDomain(adminForm.companyDomain)) {
-      toast.error("Enter a valid company domain like levitica.com");
-      return;
-    }
-
-    if (!isValidEmail(adminForm.adminEmail)) {
-      toast.error("Enter a valid admin email address.");
-      return;
-    }
-
-    if (!isDomainVerified) {
-      toast.error("Verify the OTP before completing the admin registration flow.");
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    const payload = {
-      name: adminForm.name.trim(),
-      company_name: adminForm.companyName.trim(),
-      company_domain: adminForm.companyDomain.trim().toLowerCase().replace(/^@/, ""),
-      admin_email: adminForm.adminEmail.trim().toLowerCase(),
-      phone_number: adminForm.phoneNumber.trim(),
-    };
-
-    await new Promise((resolve) => window.setTimeout(resolve, 900));
-
-    console.log("Admin registration payload queued for super admin:", payload);
-    toast.success("Your account will be activated soon.");
-    setAdminForm(defaultAdminForm);
-    setIsDomainVerified(false);
-    setIsOtpSent(false);
-    setAdminOtp("");
-    setRegisteredCompanyId("");
-    setIsSubmitting(false);
-  }
-
   async function handleSendDomainOtp(event) {
     event.preventDefault();
 
     if (
-      !adminForm.name.trim() ||
+      !adminForm.full_name.trim() ||
       !adminForm.companyName.trim() ||
       !adminForm.companyDomain.trim() ||
       !adminForm.adminEmail.trim() ||
-      !adminForm.phoneNumber.trim()
+      !adminForm.phoneNumber.trim() ||
+      !adminForm.password ||
+      !adminForm.confirm_password
     ) {
       toast.error("Complete all admin registration fields before sending OTP.");
       return;
@@ -168,16 +129,28 @@ export function RegisterPage() {
       return;
     }
 
+    if (adminForm.password.length < 8) {
+      toast.error("Password must be at least 8 characters.");
+      return;
+    }
+
+    if (adminForm.password !== adminForm.confirm_password) {
+      toast.error("Password and confirm password must match.");
+      return;
+    }
+
     try {
       setIsSendingOtp(true);
 
       const response = await apiClient.post(AUTH_ADMIN_REGISTER, null, {
         params: {
-          name: adminForm.name.trim(),
+          full_name: adminForm.full_name.trim(),
           company_name: adminForm.companyName.trim(),
           domain: adminForm.companyDomain.trim().toLowerCase().replace(/^@/, ""),
           email: adminForm.adminEmail.trim().toLowerCase(),
           phone_number: adminForm.phoneNumber.trim(),
+          password: adminForm.password,
+          confirm_password: adminForm.confirm_password,
         },
       });
 
@@ -222,7 +195,16 @@ export function RegisterPage() {
       });
 
       setIsDomainVerified(true);
-      toast.success(response.data?.message || "Verified domain.");
+      toast.success(response.data?.message || "Verified domain. Your account will be activated soon.");
+      setIsSubmitting(true);
+      window.setTimeout(() => {
+        setAdminForm(defaultAdminForm);
+        setIsDomainVerified(false);
+        setIsOtpSent(false);
+        setAdminOtp("");
+        setRegisteredCompanyId("");
+        setIsSubmitting(false);
+      }, 900);
     } catch (error) {
       const message =
         error?.response?.data?.message ||
@@ -289,7 +271,6 @@ export function RegisterPage() {
     }
 
     setIsSubmitting(true);
-
     const payload = {
       full_name: userForm.full_name.trim(),
       email: userForm.email.trim().toLowerCase(),
@@ -298,14 +279,25 @@ export function RegisterPage() {
       confirm_password: userForm.confirm_password,
     };
 
-    const emailDomain = payload.email.split("@")[1] || "company domain";
+    try {
+      const response = await apiClient.post(AUTH_REGISTER, payload, {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
 
-    await new Promise((resolve) => window.setTimeout(resolve, 900));
+      toast.success(response.data?.message || "User registration request submitted successfully.");
+      setUserForm(defaultUserForm);
+    } catch (error) {
+      const message =
+        error?.response?.data?.message ||
+        error?.response?.data?.detail ||
+        "Unable to register the user right now.";
 
-    console.log("User registration payload queued for domain admin:", payload);
-    toast.success(`User registration request sent to the ${emailDomain} admin flow.`);
-    setUserForm(defaultUserForm);
-    setIsSubmitting(false);
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -385,13 +377,13 @@ export function RegisterPage() {
                 </div>
 
                 {mode === "admin" ? (
-                  <form className="space-y-4" onSubmit={handleAdminSubmit}>
+                  <form className="space-y-4" onSubmit={handleSendDomainOtp}>
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="space-y-2">
-                      <label className="text-sm font-medium text-brand-ink">Name</label>
+                      <label className="text-sm font-medium text-brand-ink">Full name</label>
                       <Input
-                        value={adminForm.name}
-                        onChange={(event) => updateAdminField("name", event.target.value)}
+                        value={adminForm.full_name}
+                        onChange={(event) => updateAdminField("full_name", event.target.value)}
                         placeholder="Enter your full name"
                         className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                       />
@@ -437,16 +429,69 @@ export function RegisterPage() {
                           className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                         />
                       </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Password</label>
+                        <div className="relative">
+                          <Input
+                            type={isAdminPasswordVisible ? "text" : "password"}
+                            value={adminForm.password}
+                            onChange={(event) => updateAdminField("password", event.target.value)}
+                            placeholder="Create password"
+                            className="h-12 rounded-2xl border-brand-line bg-brand-neutral pr-12"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full text-brand-secondary hover:bg-white hover:text-brand-ink"
+                            onClick={() => setIsAdminPasswordVisible((current) => !current)}
+                          >
+                            {isAdminPasswordVisible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
+                            <span className="sr-only">
+                              {isAdminPasswordVisible ? "Hide password" : "Show password"}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Confirm password</label>
+                        <div className="relative">
+                          <Input
+                            type={isAdminConfirmPasswordVisible ? "text" : "password"}
+                            value={adminForm.confirm_password}
+                            onChange={(event) => updateAdminField("confirm_password", event.target.value)}
+                            placeholder="Confirm password"
+                            className="h-12 rounded-2xl border-brand-line bg-brand-neutral pr-12"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-2 top-1/2 size-8 -translate-y-1/2 rounded-full text-brand-secondary hover:bg-white hover:text-brand-ink"
+                            onClick={() => setIsAdminConfirmPasswordVisible((current) => !current)}
+                          >
+                            {isAdminConfirmPasswordVisible ? (
+                              <EyeOff className="size-4" />
+                            ) : (
+                              <Eye className="size-4" />
+                            )}
+                            <span className="sr-only">
+                              {isAdminConfirmPasswordVisible ? "Hide confirm password" : "Show confirm password"}
+                            </span>
+                          </Button>
+                        </div>
+                      </div>
                     </div>
 
                     {!isOtpSent ? (
                       <div className="flex justify-center">
                         <Button
-                          type="button"
+                          type="submit"
                           size="lg"
                           className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90 md:w-auto md:min-w-56 md:px-8"
                           disabled={isSendingOtp}
-                          onClick={handleSendDomainOtp}
                         >
                           {isSendingOtp ? "Sending OTP..." : "Send OTP"}
                         </Button>
@@ -506,21 +551,8 @@ export function RegisterPage() {
 
                     {isDomainVerified ? (
                       <p className="rounded-2xl border border-brand-primary/10 bg-brand-primary/5 px-4 py-3 text-sm leading-6 text-brand-primary">
-                        Domain verified successfully. You can now submit the admin registration request.
+                        Domain verified successfully. Your account will be activated soon.
                       </p>
-                    ) : null}
-
-                    {isDomainVerified ? (
-                      <div className="flex justify-center">
-                        <Button
-                          type="submit"
-                          size="lg"
-                          className="h-12 w-full rounded-2xl bg-brand-primary text-sm font-semibold text-white hover:bg-brand-primary/90 md:w-auto md:min-w-64 md:px-8"
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? "Submitting..." : "Complete registration"}
-                        </Button>
-                      </div>
                     ) : null}
                   </form>
                 ) : (

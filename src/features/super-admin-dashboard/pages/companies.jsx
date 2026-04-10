@@ -1,19 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import {
   Building2,
+  Mail,
   Eye,
   Globe,
   LoaderCircle,
-  MapPin,
-  PencilLine,
   Plus,
-  Save,
   Search,
   Phone,
+  UserRound,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { toast } from "sonner";
 
 import { SUPERADMIN_COMPANIES } from "@/config/api";
 import { Button } from "@/components/ui/button";
@@ -22,7 +20,6 @@ import {
   DialogClose,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -30,8 +27,6 @@ import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
-
-const COMPANY_PROFILE_STORAGE_KEY = "conectio-company-profiles";
 
 function normalizeCompanies(data) {
   if (Array.isArray(data)) {
@@ -45,30 +40,12 @@ function normalizeCompanies(data) {
   return [];
 }
 
-function readStoredProfiles() {
-  if (typeof window === "undefined") {
-    return {};
-  }
-
-  try {
-    return JSON.parse(localStorage.getItem(COMPANY_PROFILE_STORAGE_KEY) || "{}");
-  } catch {
-    return {};
-  }
-}
-
 export function CompaniesPage() {
   const navigate = useNavigate();
   const session = useAuthStore((state) => state.session);
   const [search, setSearch] = useState("");
-  const [storedProfiles, setStoredProfiles] = useState(() => readStoredProfiles());
   const [selectedCompany, setSelectedCompany] = useState(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
-  const [isEditing, setIsEditing] = useState(false);
-  const [draftProfile, setDraftProfile] = useState({
-    phone: "",
-    address: "",
-  });
 
   const companiesQuery = useQuery({
     queryKey: ["super-admin-companies-page"],
@@ -105,52 +82,25 @@ export function CompaniesPage() {
     });
   }, [companies, search]);
 
-  useEffect(() => {
-    if (!selectedCompany) {
-      return;
-    }
-
-    const companyId = selectedCompany.id || selectedCompany.company_id || "";
-    const storedProfile = storedProfiles[companyId] || {};
-
-    setDraftProfile({
-      phone: storedProfile.phone || selectedCompany.phone || selectedCompany.mobile_number || "",
-      address: storedProfile.address || selectedCompany.address || "",
-    });
-  }, [selectedCompany, storedProfiles]);
-
   function handleOpenView(company) {
     setSelectedCompany(company);
-    setIsEditing(false);
     setIsViewOpen(true);
   }
 
-  function handleSaveProfile() {
-    if (!selectedCompany) {
-      return;
-    }
-
-    const companyId = selectedCompany.id || selectedCompany.company_id || "";
-    const nextProfiles = {
-      ...storedProfiles,
-      [companyId]: {
-        phone: draftProfile.phone.trim(),
-        address: draftProfile.address.trim(),
-      },
-    };
-
-    setStoredProfiles(nextProfiles);
-    localStorage.setItem(COMPANY_PROFILE_STORAGE_KEY, JSON.stringify(nextProfiles));
-    setIsEditing(false);
-    toast.success("Company details saved locally.");
-  }
-
   const selectedCompanyId = selectedCompany?.id || selectedCompany?.company_id || "";
-  const selectedCompanyProfile = selectedCompanyId ? storedProfiles[selectedCompanyId] || {} : {};
+  const selectedCompanyDomain = selectedCompany?.domain || "Not available";
   const selectedCompanyPhone =
-    draftProfile.phone || selectedCompanyProfile.phone || selectedCompany?.phone || selectedCompany?.mobile_number || "Not added yet";
-  const selectedCompanyAddress =
-    draftProfile.address || selectedCompanyProfile.address || selectedCompany?.address || "Not added yet";
+    selectedCompany?.phone_number ||
+    selectedCompany?.phone ||
+    selectedCompany?.mobile_number ||
+    "Not available";
+  const selectedCompanyEmail =
+    selectedCompany?.admin_email || selectedCompany?.email || "Not available";
+  const selectedCompanyAdminName =
+    selectedCompany?.admin_full_name ||
+    selectedCompany?.full_name ||
+    selectedCompany?.name_of_admin ||
+    "Not available";
 
   return (
     <SuperAdminLayout>
@@ -165,8 +115,8 @@ export function CompaniesPage() {
               Browse every onboarded company in one place.
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-brand-secondary sm:text-base">
-              Use this view to inspect tenant details, copy company IDs, and jump
-              into the company-admin invitation flow without switching between forms.
+              Use this view to inspect each company, review admin contact details,
+              and track onboarded workspaces from one place.
             </p>
           </div>
         </div>
@@ -311,9 +261,8 @@ export function CompaniesPage() {
                     {selectedCompany?.name || selectedCompany?.company_name || "Company"}
                   </DialogTitle>
                   <DialogDescription className="max-w-xl text-sm leading-7 text-brand-secondary">
-                    Review core company details here. Phone number and address can be
-                    updated from this view while backend support for those fields is still
-                    being integrated.
+                    Review the registered company details and the primary admin contact
+                    information returned by the platform.
                   </DialogDescription>
                 </DialogHeader>
 
@@ -333,20 +282,11 @@ export function CompaniesPage() {
               <div className="grid gap-4 xl:grid-cols-2">
                 <div className="min-h-32 rounded-[22px] border border-brand-line bg-brand-neutral p-4 lg:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                    Company ID
-                  </p>
-                  <p className="mt-3 break-all text-[15px] leading-7 text-brand-ink">
-                    {selectedCompanyId || "Not available"}
-                  </p>
-                </div>
-
-                <div className="min-h-32 rounded-[22px] border border-brand-line bg-brand-neutral p-4 lg:p-5">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary">
                     Domain
                   </p>
                   <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
                     <Globe className="mt-1 size-4 shrink-0 text-brand-primary" />
-                    <span className="break-all">{selectedCompany?.domain || "Not available"}</span>
+                    <span className="break-all">{selectedCompanyDomain}</span>
                   </div>
                 </div>
 
@@ -354,85 +294,33 @@ export function CompaniesPage() {
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary">
                     Phone number
                   </p>
-                  {isEditing ? (
-                    <Input
-                      value={draftProfile.phone}
-                      onChange={(event) =>
-                        setDraftProfile((current) => ({
-                          ...current,
-                          phone: event.target.value,
-                        }))
-                      }
-                      placeholder="Enter company phone number"
-                      className="mt-3 h-10 rounded-2xl border-brand-line bg-white text-sm text-brand-ink"
-                    />
-                  ) : (
-                    <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
-                      <Phone className="mt-1 size-4 shrink-0 text-brand-primary" />
-                      <span>{selectedCompanyPhone}</span>
-                    </div>
-                  )}
+                  <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
+                    <Phone className="mt-1 size-4 shrink-0 text-brand-primary" />
+                    <span>{selectedCompanyPhone}</span>
+                  </div>
                 </div>
 
                 <div className="min-h-32 rounded-[22px] border border-brand-line bg-brand-neutral p-4 lg:p-5">
                   <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                    Address
+                    Email
                   </p>
-                  {isEditing ? (
-                    <textarea
-                      value={draftProfile.address}
-                      onChange={(event) =>
-                        setDraftProfile((current) => ({
-                          ...current,
-                          address: event.target.value,
-                        }))
-                      }
-                      placeholder="Enter company address"
-                      className="mt-3 min-h-24 w-full rounded-2xl border border-brand-line bg-white px-4 py-3 text-sm text-brand-ink outline-none transition focus:border-brand-primary focus:ring-2 focus:ring-brand-primary/10"
-                    />
-                  ) : (
-                    <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
-                      <MapPin className="mt-1 size-4 shrink-0 text-brand-primary" />
-                      <span>{selectedCompanyAddress}</span>
-                    </div>
-                  )}
+                  <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
+                    <Mail className="mt-1 size-4 shrink-0 text-brand-primary" />
+                    <span className="break-all">{selectedCompanyEmail}</span>
+                  </div>
+                </div>
+
+                <div className="min-h-32 rounded-[22px] border border-brand-line bg-brand-neutral p-4 lg:p-5">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                    Admin Name
+                  </p>
+                  <div className="mt-3 flex items-start gap-3 text-[15px] leading-7 text-brand-ink">
+                    <UserRound className="mt-1 size-4 shrink-0 text-brand-primary" />
+                    <span>{selectedCompanyAdminName}</span>
+                  </div>
                 </div>
               </div>
             </div>
-
-            <DialogFooter className="rounded-none border-t border-brand-line bg-brand-neutral/70 px-6 py-4 sm:px-7 lg:px-8">
-            {isEditing ? (
-              <>
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="h-11 rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                  onClick={() => setIsEditing(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="button"
-                  className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
-                  onClick={handleSaveProfile}
-                >
-                  <Save className="size-4" />
-                  Save
-                </Button>
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
-                  onClick={() => setIsEditing(true)}
-                >
-                  <PencilLine className="size-4" />
-                  Edit details
-                </Button>
-              </>
-            )}
-            </DialogFooter>
           </div>
         </DialogContent>
       </Dialog>

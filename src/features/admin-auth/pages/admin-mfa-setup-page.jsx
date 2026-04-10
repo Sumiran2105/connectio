@@ -13,6 +13,7 @@ export function AdminMfaSetupPage() {
   const navigate = useNavigate();
   const pendingMfaSession = useAuthStore((state) => state.pendingMfaSession);
   const clearPendingMfaSession = useAuthStore((state) => state.clearPendingMfaSession);
+  const isUserFlow = pendingMfaSession?.role === "USER";
 
   const setupMutation = useMutation({
     mutationFn: async (mfaToken) => {
@@ -60,7 +61,7 @@ export function AdminMfaSetupPage() {
 
   function handleBack() {
     clearPendingMfaSession();
-    navigate("/admin/auth", { replace: true });
+    navigate("/login?mode=workspace", { replace: true });
   }
 
   return (
@@ -74,7 +75,9 @@ export function AdminMfaSetupPage() {
         <div className="mt-5 flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-xl space-y-3">
             <h1 className="text-3xl font-semibold tracking-tight text-brand-ink">
-              Register this device for secure admin access.
+              {isUserFlow
+                ? "Register this device for secure user access."
+                : "Register this device for secure admin access."}
             </h1>
             <p className="text-sm leading-7 text-brand-secondary">
               We’ll call <code>/auth/mfa/setup</code> with the temporary MFA

@@ -1,17 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Activity,
-  BadgeIndianRupee,
   BellRing,
   Building2,
   CalendarClock,
   CheckCheck,
   CircleAlert,
+  CircleDashed,
   CreditCard,
   LoaderCircle,
   Plus,
   Shield,
   UserRoundCog,
+  UserCheck,
   Users,
   XCircle,
 } from "lucide-react";
@@ -28,33 +29,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import {
+  SUPERADMIN_APPROVE_COMPANY,
   SUPERADMIN_COMPANIES,
   SUPERADMIN_COMPANY_ADMINS,
-  SUPERADMIN_INVITE_COMPANY_ADMIN,
+  SUPERADMIN_DASHBOARD_OVERVIEW,
   SUPERADMIN_PENDING_COMPANIES,
   SUPERADMIN_REJECT_COMPANY,
 } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
-
-const staticOverviewCards = [
-  {
-    key: "billing",
-    label: "Billing Collected",
-    value: "Rs. 1.38L",
-    note: "This month across all plans",
-    icon: BadgeIndianRupee,
-  },
-  {
-    key: "health",
-    label: "Platform Health",
-    value: "98.6%",
-    note: "No critical alerts today",
-    icon: Activity,
-  },
-];
 
 const recentFollowUps = [
   {
@@ -135,6 +121,8 @@ export function SuperAdminDashboardPage() {
   const queryClient = useQueryClient();
   const session = useAuthStore((state) => state.session);
   const [selectedCompanyForApproval, setSelectedCompanyForApproval] = useState(null);
+  const [selectedCompanyForRejection, setSelectedCompanyForRejection] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const requestConfig = useMemo(
     () => ({
@@ -150,6 +138,14 @@ export function SuperAdminDashboardPage() {
     queryFn: async () => {
       const response = await apiClient.get(SUPERADMIN_COMPANIES, requestConfig);
       return normalizeCollection(response.data, ["companies"]);
+    },
+  });
+
+  const overviewQuery = useQuery({
+    queryKey: ["super-admin-dashboard-overview"],
+    queryFn: async () => {
+      const response = await apiClient.get(SUPERADMIN_DASHBOARD_OVERVIEW, requestConfig);
+      return response.data || {};
     },
   });
 
@@ -169,21 +165,12 @@ export function SuperAdminDashboardPage() {
     },
   });
 
-  const approveInviteMutation = useMutation({
-    mutationFn: async ({ companyId, adminEmail }) => {
-      return apiClient.post(
-        SUPERADMIN_INVITE_COMPANY_ADMIN(companyId),
-        null,
-        {
-          ...requestConfig,
-          params: {
-            admin_email: adminEmail,
-          },
-        }
-      );
+  const approveCompanyMutation = useMutation({
+    mutationFn: async ({ companyId }) => {
+      return apiClient.post(SUPERADMIN_APPROVE_COMPANY(companyId), null, requestConfig);
     },
     onSuccess: (response) => {
-      toast.success(response.data?.message || "Company approved and invite sent.");
+      toast.success(response.data?.message || "Company approved successfully.");
       setSelectedCompanyForApproval(null);
       queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
       queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-companies"] });
@@ -193,18 +180,25 @@ export function SuperAdminDashboardPage() {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.detail ||
-        "Unable to approve and invite right now.";
+        "Unable to approve the company right now.";
 
       toast.error(message);
     },
   });
 
   const rejectCompanyMutation = useMutation({
-    mutationFn: async (companyId) => {
-      return apiClient.post(SUPERADMIN_REJECT_COMPANY(companyId), null, requestConfig);
+    mutationFn: async ({ companyId, reason }) => {
+      return apiClient.post(SUPERADMIN_REJECT_COMPANY(companyId), null, {
+        ...requestConfig,
+        params: {
+          reason,
+        },
+      });
     },
     onSuccess: (response) => {
       toast.success(response.data?.message || "Company request rejected.");
+      setSelectedCompanyForRejection(null);
+      setRejectionReason("");
       queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
     },
     onError: (error) => {
@@ -241,28 +235,57 @@ export function SuperAdminDashboardPage() {
     }));
   }, [allCompanyAdmins]);
 
+  const overview = overviewQuery.data || {};
   const overviewCards = [
     {
       label: "Total Companies",
-      value: String(allCompanies.length),
-      note: pendingCompanies.length
-        ? `${pendingCompanies.length} awaiting approval`
-        : "No approvals pending",
+      value: String(overview.total ?? allCompanies.length ?? 0),
+      note: "All company workspaces tracked by the platform",
       icon: Building2,
+      accent: "bg-brand-soft text-brand-primary",
     },
     {
-      label: "Company Admins",
-      value: String(allCompanyAdmins.length),
-      note: pendingCompanies.length
-        ? `${pendingCompanies.length} invites to process`
-        : "Admin directory is up to date",
-      icon: UserRoundCog,
+      label: "Approved",
+      value: String(overview.approved ?? 0),
+      note: "Companies ready for admin login and workspace access",
+      icon: UserCheck,
+      accent: "bg-emerald-50 text-emerald-700",
     },
-    ...staticOverviewCards,
+    {
+      label: "Pending Verification",
+      value: String(overview.pending_verification ?? 0),
+      note: "Company registrations still waiting on domain OTP verification",
+      icon: CircleDashed,
+      accent: "bg-amber-50 text-amber-700",
+    },
+    {
+      label: "Pending Admin",
+      value: String(overview.pending_admin ?? 0),
+      note: "Verified companies waiting for super admin approval",
+      icon: UserRoundCog,
+      accent: "bg-sky-50 text-sky-700",
+    },
+    {
+      label: "Rejected",
+      value: String(overview.rejected ?? 0),
+      note: "Registration requests closed by the platform team",
+      icon: XCircle,
+      accent: "bg-rose-50 text-rose-700",
+    },
+    {
+      label: "Platform Health",
+      value: overviewQuery.isLoading ? "..." : "Healthy",
+      note: "Overview and queue services are responding normally",
+      icon: Activity,
+      accent: "bg-violet-50 text-violet-700",
+    },
   ];
 
   const isDashboardLoading =
-    companiesQuery.isLoading || pendingCompaniesQuery.isLoading || companyAdminsQuery.isLoading;
+    overviewQuery.isLoading ||
+    companiesQuery.isLoading ||
+    pendingCompaniesQuery.isLoading ||
+    companyAdminsQuery.isLoading;
 
   function handleApproveIntent(company) {
     setSelectedCompanyForApproval(company);
@@ -273,9 +296,29 @@ export function SuperAdminDashboardPage() {
       return;
     }
 
-    approveInviteMutation.mutate({
+    approveCompanyMutation.mutate({
       companyId: selectedCompanyForApproval.id,
-      adminEmail: selectedCompanyForApproval.adminEmail,
+    });
+  }
+
+  function handleRejectIntent(company) {
+    setSelectedCompanyForRejection(company);
+    setRejectionReason("");
+  }
+
+  function handleConfirmReject() {
+    if (!selectedCompanyForRejection) {
+      return;
+    }
+
+    if (!rejectionReason.trim()) {
+      toast.error("Enter a reason before rejecting the company.");
+      return;
+    }
+
+    rejectCompanyMutation.mutate({
+      companyId: selectedCompanyForRejection.id,
+      reason: rejectionReason.trim(),
     });
   }
 
@@ -322,7 +365,7 @@ export function SuperAdminDashboardPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
+        <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
           {overviewCards.map((card) => {
             const Icon = card.icon;
 
@@ -339,14 +382,114 @@ export function SuperAdminDashboardPage() {
                     </p>
                     <p className="mt-3 text-sm leading-6 text-brand-secondary">{card.note}</p>
                   </div>
-                  <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-soft">
-                    <Icon className="size-5 text-brand-primary" />
+                  <div className={`flex size-12 items-center justify-center rounded-2xl ${card.accent}`}>
+                    <Icon className="size-5" />
                   </div>
                 </div>
               </article>
             );
           })}
         </section>
+
+        {/* <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
+                  Platform Snapshot
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
+                  Registration and approval pipeline
+                </h3>
+              </div>
+              <div className="rounded-2xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-primary">
+                {overview.total ?? 0} total
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-4">
+              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                  Verified
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-brand-ink">
+                  {(overview.total ?? 0) - (overview.pending_verification ?? 0)}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-brand-secondary">
+                  Companies that completed domain verification.
+                </p>
+              </div>
+              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                  Awaiting Approval
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-brand-ink">
+                  {(overview.pending_admin ?? 0) + pendingCompanies.length}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-brand-secondary">
+                  Companies ready for super admin review.
+                </p>
+              </div>
+              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                  Admin Directory
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-brand-ink">
+                  {allCompanyAdmins.length}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-brand-secondary">
+                  Company admins currently visible to the platform.
+                </p>
+              </div>
+              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                  Queue State
+                </p>
+                <p className="mt-3 text-2xl font-semibold text-brand-ink">
+                  {pendingCompanies.length ? "Action needed" : "Clear"}
+                </p>
+                <p className="mt-2 text-sm leading-6 text-brand-secondary">
+                  {pendingCompanies.length
+                    ? `${pendingCompanies.length} companies are still waiting in review.`
+                    : "No company approvals are blocked right now."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
+                  Suggested Next Metrics
+                </p>
+                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
+                  Useful backend additions later
+                </h3>
+              </div>
+              <BellRing className="size-5 text-brand-secondary" />
+            </div>
+
+            <div className="mt-6 space-y-4">
+              {[
+                "Total company admins invited",
+                "Companies verified today",
+                "Average approval turnaround time",
+                "Rejected companies this week",
+              ].map((item) => (
+                <div
+                  key={item}
+                  className="rounded-[22px] border border-dashed border-brand-line bg-brand-neutral px-4 py-4"
+                >
+                  <p className="text-sm font-semibold text-brand-ink">{item}</p>
+                  <p className="mt-2 text-sm leading-6 text-brand-secondary">
+                    This can be added as a dedicated dashboard metric when the backend exposes it.
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section> */}
 
         <section className="grid gap-6 xl:grid-cols-2">
           <div className="overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
@@ -400,11 +543,11 @@ export function SuperAdminDashboardPage() {
                   <tbody>
                     {pendingCompanies.map((company) => {
                       const isApproving =
-                        approveInviteMutation.isPending &&
-                        approveInviteMutation.variables?.companyId === company.id;
+                        approveCompanyMutation.isPending &&
+                        approveCompanyMutation.variables?.companyId === company.id;
                       const isRejecting =
                         rejectCompanyMutation.isPending &&
-                        rejectCompanyMutation.variables === company.id;
+                        rejectCompanyMutation.variables?.companyId === company.id;
 
                       return (
                         <tr key={company.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
@@ -429,7 +572,7 @@ export function SuperAdminDashboardPage() {
                               <Button
                                 type="button"
                                 className="h-9 rounded-xl bg-brand-primary px-4 text-white hover:bg-brand-primary/90"
-                                disabled={isApproving || isRejecting || !company.adminEmail}
+                                disabled={isApproving || isRejecting}
                                 onClick={() => handleApproveIntent(company)}
                               >
                                 {isApproving ? (
@@ -440,7 +583,7 @@ export function SuperAdminDashboardPage() {
                                 ) : (
                                   <>
                                     <CheckCheck className="size-4" />
-                                    Approve and invite
+                                    Approve
                                   </>
                                 )}
                               </Button>
@@ -449,7 +592,7 @@ export function SuperAdminDashboardPage() {
                                 variant="outline"
                                 className="h-9 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50"
                                 disabled={isApproving || isRejecting}
-                                onClick={() => rejectCompanyMutation.mutate(company.id)}
+                                onClick={() => handleRejectIntent(company)}
                               >
                                 {isRejecting ? (
                                   <>
@@ -658,7 +801,7 @@ export function SuperAdminDashboardPage() {
         <Dialog
           open={Boolean(selectedCompanyForApproval)}
           onOpenChange={(open) => {
-            if (!open && !approveInviteMutation.isPending) {
+            if (!open && !approveCompanyMutation.isPending) {
               setSelectedCompanyForApproval(null);
             }
           }}
@@ -669,15 +812,12 @@ export function SuperAdminDashboardPage() {
                 Confirm approval and invite
               </DialogTitle>
               <DialogDescription className="text-sm leading-6 text-brand-secondary">
-                An invitation will be sent to{" "}
+                The company{" "}
                 <span className="font-semibold text-brand-ink">
                   {selectedCompanyForApproval?.name || "this company"}
                 </span>{" "}
-                at{" "}
-                <span className="font-semibold text-brand-ink">
-                  {selectedCompanyForApproval?.adminEmail || "the admin email"}
-                </span>
-                . Please confirm to continue.
+                will be approved. After approval, the company admin can log in using the password set during company creation.
+                Please confirm to continue.
               </DialogDescription>
             </DialogHeader>
 
@@ -701,7 +841,7 @@ export function SuperAdminDashboardPage() {
                 type="button"
                 variant="outline"
                 className="h-11 rounded-2xl border-brand-line px-5"
-                disabled={approveInviteMutation.isPending}
+                disabled={approveCompanyMutation.isPending}
                 onClick={() => setSelectedCompanyForApproval(null)}
               >
                 Cancel
@@ -709,10 +849,65 @@ export function SuperAdminDashboardPage() {
               <Button
                 type="button"
                 className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
-                disabled={approveInviteMutation.isPending}
+                disabled={approveCompanyMutation.isPending}
                 onClick={handleConfirmApprove}
               >
-                {approveInviteMutation.isPending ? "Sending invite..." : "Confirm and send invite"}
+                {approveCompanyMutation.isPending ? "Approving..." : "Confirm approval"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(selectedCompanyForRejection)}
+          onOpenChange={(open) => {
+            if (!open && !rejectCompanyMutation.isPending) {
+              setSelectedCompanyForRejection(null);
+              setRejectionReason("");
+            }
+          }}
+        >
+          <DialogContent className="rounded-[28px] border border-brand-line bg-white sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-brand-ink">
+                Reject company request
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-6 text-brand-secondary">
+                Enter the reason for rejecting{" "}
+                <span className="font-semibold text-brand-ink">
+                  {selectedCompanyForRejection?.name || "this company"}
+                </span>
+                .
+              </DialogDescription>
+            </DialogHeader>
+
+            <Input
+              value={rejectionReason}
+              onChange={(event) => setRejectionReason(event.target.value)}
+              placeholder="Enter rejection reason"
+              className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+            />
+
+            <DialogFooter className="gap-3 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-2xl border-brand-line px-5"
+                disabled={rejectCompanyMutation.isPending}
+                onClick={() => {
+                  setSelectedCompanyForRejection(null);
+                  setRejectionReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-2xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                disabled={rejectCompanyMutation.isPending}
+                onClick={handleConfirmReject}
+              >
+                {rejectCompanyMutation.isPending ? "Rejecting..." : "Confirm reject"}
               </Button>
             </DialogFooter>
           </DialogContent>

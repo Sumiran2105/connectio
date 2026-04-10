@@ -16,6 +16,7 @@ export function AdminMfaVerifyPage() {
   const setSession = useAuthStore((state) => state.setSession);
   const clearPendingMfaSession = useAuthStore((state) => state.clearPendingMfaSession);
   const isSetupVerification = Boolean(pendingMfaSession?.mfaSetupRequired);
+  const isUserFlow = pendingMfaSession?.role === "USER";
 
   const {
     register,
@@ -56,10 +57,11 @@ export function AdminMfaVerifyPage() {
       if (isSetupVerification) {
         toast.success("MFA setup verified. Please sign in again to continue.");
         clearPendingMfaSession();
-        navigate("/admin/auth", { replace: true });
+        navigate("/login?mode=workspace", { replace: true });
         return;
       }
 
+      const nextRole = data.user_role || pendingMfaSession.role;
       setSession({
         accessToken:
           data.access_token ||
@@ -68,13 +70,15 @@ export function AdminMfaVerifyPage() {
           pendingMfaSession.mfaToken,
         refreshToken: data.refresh_token || data.refreshToken || null,
         expiresIn: data.expires_in || data.expiresIn || null,
-        role: data.user_role || pendingMfaSession.role,
+        role: nextRole,
         email: pendingMfaSession.email,
         mfaVerified: true,
       });
       clearPendingMfaSession();
-      toast.success("OTP login verified. Admin session is now active.");
-      navigate("/admin/dashboard", { replace: true });
+      toast.success("OTP login verified. Workspace session is now active.");
+      navigate(nextRole === "USER" ? "/user/dashboard" : "/admin/dashboard", {
+        replace: true,
+      });
     },
     onError: (error) => {
       const message =
@@ -200,7 +204,9 @@ export function AdminMfaVerifyPage() {
               variant="outline"
               className="h-12 rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
               onClick={() =>
-                navigate(isSetupVerification ? "/admin/mfa/setup" : "/admin/auth")
+                navigate(
+                  isSetupVerification ? "/admin/mfa/setup" : "/login?mode=workspace"
+                )
               }
             >
               {isSetupVerification ? "Back to setup" : "Back to login"}

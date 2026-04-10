@@ -292,7 +292,7 @@ export function AdminLayout({ children }) {
               <div className="flex items-center gap-3 cursor-pointer group">
                 <div className="text-right hidden sm:block">
                   <p className="text-sm font-bold text-brand-ink leading-none group-hover:text-brand-primary transition-colors">{identity.displayName}</p>
-                  <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Super Admin</p>
+                  <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Admin</p>
                 </div>
                 <div className="size-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-brand-soft transition-transform group-hover:scale-105">
                   <img

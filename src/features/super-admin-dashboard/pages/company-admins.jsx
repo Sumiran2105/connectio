@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   LoaderCircle,
   Mail,
+  Phone,
   Search,
   ShieldCheck,
   UserRoundCog,
@@ -10,70 +11,21 @@ import {
 import { useMemo, useState } from "react";
 
 import { Input } from "@/components/ui/input";
-import { SUPERADMIN_COMPANY_ADMINS } from "@/config/api";
+import { SUPERADMIN_COMPANIES } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
 
-function normalizeAdmins(data) {
+function normalizeCompanies(data) {
   if (Array.isArray(data)) {
     return data;
   }
 
-  if (Array.isArray(data?.admins)) {
-    return data.admins;
-  }
-
-  if (Array.isArray(data?.company_admins)) {
-    return data.company_admins;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
+  if (Array.isArray(data?.companies)) {
+    return data.companies;
   }
 
   return [];
-}
-
-function formatStatus(status) {
-  if (!status) {
-    return "Active";
-  }
-
-  return String(status)
-    .replace(/_/g, " ")
-    .toLowerCase()
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function formatDate(value) {
-  if (!value) {
-    return "Not available";
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return new Intl.DateTimeFormat("en-IN", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
-function adminStatusClass(status) {
-  if (status === "Active") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
-  }
-
-  if (status === "Pending") {
-    return "border-amber-200 bg-amber-50 text-amber-700";
-  }
-
-  return "border-slate-200 bg-slate-50 text-slate-600";
 }
 
 export function CompanyAdminsPage() {
@@ -83,31 +35,33 @@ export function CompanyAdminsPage() {
   const companyAdminsQuery = useQuery({
     queryKey: ["super-admin-company-admins"],
     queryFn: async () => {
-      const response = await apiClient.get(SUPERADMIN_COMPANY_ADMINS, {
+      const response = await apiClient.get(SUPERADMIN_COMPANIES, {
         headers: {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       });
 
-      return normalizeAdmins(response.data);
+      return normalizeCompanies(response.data);
     },
   });
 
   const adminRows = useMemo(() => {
-    return (companyAdminsQuery.data || []).map((admin, index) => {
-      const firstName = admin.name || admin.full_name || admin.first_name || "";
-      const companyName =
-        admin.company_name || admin.company?.name || admin.company || admin.organization_name || "Not assigned";
-      const status = formatStatus(admin.status || admin.account_status || admin.invite_status);
-
+    return (companyAdminsQuery.data || []).map((company, index) => {
       return {
-        id: admin.id || admin.user_id || admin.admin_id || `${admin.email || "admin"}-${index}`,
-        name: firstName || "Unnamed admin",
-        email: admin.email || admin.admin_email || "Not available",
-        company: companyName,
-        role: admin.role || admin.user_role || "Company Admin",
-        invitedOn: formatDate(admin.invited_on || admin.created_at || admin.invited_at),
-        status,
+        id: company.id || company.company_id || `company-${index}`,
+        companyName: company.name || company.company_name || `Company ${index + 1}`,
+        adminName:
+          company.admin_full_name ||
+          company.full_name ||
+          company.name_of_admin ||
+          "Not available",
+        mobileNumber:
+          company.phone_number ||
+          company.phone ||
+          company.mobile_number ||
+          "Not available",
+        email: company.admin_email || company.email || "Not available",
+        status: company.status || "unknown",
       };
     });
   }, [companyAdminsQuery.data]);
@@ -120,15 +74,15 @@ export function CompanyAdminsPage() {
     }
 
     return adminRows.filter((row) =>
-      [row.name, row.email, row.company, row.role, row.status]
+      [row.companyName, row.adminName, row.mobileNumber, row.email, row.status]
         .join(" ")
         .toLowerCase()
         .includes(term)
     );
   }, [adminRows, search]);
 
-  const activeCount = adminRows.filter((row) => row.status === "Active").length;
-  const pendingCount = adminRows.filter((row) => row.status === "Pending").length;
+  const activeCount = adminRows.filter((row) => row.status.toLowerCase() === "approved").length;
+  const pendingCount = adminRows.filter((row) => row.status.toLowerCase() === "pending").length;
 
   return (
     <SuperAdminLayout>
@@ -191,7 +145,7 @@ export function CompanyAdminsPage() {
                 <Mail className="size-5" />
               </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.18em] text-brand-secondary">Pending Invites</p>
+                <p className="text-xs uppercase tracking-[0.18em] text-brand-secondary">Pending</p>
                 <p className="text-2xl font-semibold text-brand-ink">{pendingCount}</p>
               </div>
             </div>
@@ -202,7 +156,7 @@ export function CompanyAdminsPage() {
           <div className="border-b border-brand-line px-6 py-5">
             <h2 className="text-lg font-semibold text-brand-ink">Admin Directory</h2>
             <p className="mt-1 text-sm text-brand-secondary">
-              This table is now connected to the live super admin company-admin list.
+              This table is derived from the live company records returned by the super admin companies API.
             </p>
           </div>
 
@@ -217,48 +171,41 @@ export function CompanyAdminsPage() {
                 Unable to load company admins right now. Try refreshing the page or signing in again.
               </div>
             ) : filteredRows.length ? (
-              <table className="min-w-full border-collapse">
-                <thead className="bg-brand-neutral">
-                  <tr>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Name
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Email
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Company
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Role
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Invited On
-                    </th>
-                    <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                      Status
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredRows.map((row) => (
-                    <tr key={row.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                      <td className="px-6 py-4 text-sm font-semibold text-brand-ink">{row.name}</td>
-                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.email}</td>
-                      <td className="px-6 py-4 text-sm text-brand-ink">{row.company}</td>
-                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.role}</td>
-                      <td className="px-6 py-4 text-sm text-brand-secondary">{row.invitedOn}</td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${adminStatusClass(row.status)}`}
-                        >
-                          {row.status}
-                        </span>
-                      </td>
+                <table className="min-w-full border-collapse">
+                  <thead className="bg-brand-neutral">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Company Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Admin Name
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Mobile No
+                      </th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                        Email
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {filteredRows.map((row) => (
+                      <tr key={row.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
+                        <td className="px-6 py-4 text-sm font-semibold text-brand-ink">
+                          {row.companyName}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-brand-ink">{row.adminName}</td>
+                        <td className="px-6 py-4 text-sm text-brand-secondary">
+                          <div className="inline-flex items-center gap-2">
+                            <Phone className="size-4 text-brand-primary" />
+                            {row.mobileNumber}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-brand-secondary">{row.email}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
             ) : (
               <div className="px-6 py-10 text-sm text-brand-secondary">
                 No company admins found yet.

@@ -20,7 +20,6 @@ export function ActivateAdminPage() {
   } = useForm({
     defaultValues: {
       full_name: "",
-      mobile_number: "",
       password: "",
     },
     mode: "onBlur",
@@ -32,7 +31,6 @@ export function ActivateAdminPage() {
         params: {
           token,
           full_name: values.full_name,
-          mobile_number: values.mobile_number,
           password: values.password,
         },
       });
@@ -107,23 +105,6 @@ export function ActivateAdminPage() {
             />
             {errors.full_name ? (
               <p className="text-sm text-brand-tertiary">{errors.full_name.message}</p>
-            ) : null}
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-brand-ink" htmlFor="mobile_number">
-              Mobile number
-            </label>
-            <input
-              id="mobile_number"
-              className="h-12 w-full rounded-2xl border border-brand-line bg-white px-4 text-sm text-brand-ink placeholder:text-brand-secondary/70 focus:border-brand-primary focus:outline-none focus:ring-2 focus:ring-brand-primary/10"
-              placeholder="Enter your mobile number"
-              {...register("mobile_number", {
-                required: "Mobile number is required.",
-              })}
-            />
-            {errors.mobile_number ? (
-              <p className="text-sm text-brand-tertiary">{errors.mobile_number.message}</p>
             ) : null}
           </div>
 

@@ -6,7 +6,19 @@ export const useAuthStore = create(
     (set) => ({
       session: null,
       pendingMfaSession: null,
-      setSession: (session) => set({ session }),
+      setSession: (session) =>
+        set({
+          session: session
+            ? {
+                ...session,
+                expiresAt:
+                  session.expiresAt ||
+                  (session.expiresIn
+                    ? Date.now() + Number(session.expiresIn) * 1000
+                    : null),
+              }
+            : null,
+        }),
       setPendingMfaSession: (pendingMfaSession) =>
         set((state) => ({
           pendingMfaSession: {

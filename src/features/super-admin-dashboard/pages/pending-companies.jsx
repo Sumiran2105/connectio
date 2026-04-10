@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
-  SUPERADMIN_INVITE_COMPANY_ADMIN,
+  SUPERADMIN_APPROVE_COMPANY,
   SUPERADMIN_PENDING_COMPANIES,
   SUPERADMIN_REJECT_COMPANY,
 } from "@/config/api";
@@ -95,6 +95,8 @@ export function PendingCompaniesPage() {
   const session = useAuthStore((state) => state.session);
   const [search, setSearch] = useState("");
   const [selectedCompanyForApproval, setSelectedCompanyForApproval] = useState(null);
+  const [selectedCompanyForRejection, setSelectedCompanyForRejection] = useState(null);
+  const [rejectionReason, setRejectionReason] = useState("");
 
   const requestConfig = useMemo(
     () => ({
@@ -113,21 +115,12 @@ export function PendingCompaniesPage() {
     },
   });
 
-  const approveInviteMutation = useMutation({
-    mutationFn: async ({ companyId, adminEmail }) => {
-      return apiClient.post(
-        SUPERADMIN_INVITE_COMPANY_ADMIN(companyId),
-        null,
-        {
-          ...requestConfig,
-          params: {
-            admin_email: adminEmail,
-          },
-        }
-      );
+  const approveCompanyMutation = useMutation({
+    mutationFn: async ({ companyId }) => {
+      return apiClient.post(SUPERADMIN_APPROVE_COMPANY(companyId), null, requestConfig);
     },
     onSuccess: (response) => {
-      toast.success(response.data?.message || "Company approved and invite sent.");
+      toast.success(response.data?.message || "Company approved successfully.");
       setSelectedCompanyForApproval(null);
       queryClient.invalidateQueries({ queryKey: ["super-admin-pending-companies-page"] });
       queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
@@ -138,18 +131,25 @@ export function PendingCompaniesPage() {
       const message =
         error?.response?.data?.message ||
         error?.response?.data?.detail ||
-        "Unable to approve and invite right now.";
+        "Unable to approve the company right now.";
 
       toast.error(message);
     },
   });
 
   const rejectCompanyMutation = useMutation({
-    mutationFn: async (companyId) => {
-      return apiClient.post(SUPERADMIN_REJECT_COMPANY(companyId), null, requestConfig);
+    mutationFn: async ({ companyId, reason }) => {
+      return apiClient.post(SUPERADMIN_REJECT_COMPANY(companyId), null, {
+        ...requestConfig,
+        params: {
+          reason,
+        },
+      });
     },
     onSuccess: (response) => {
       toast.success(response.data?.message || "Company request rejected.");
+      setSelectedCompanyForRejection(null);
+      setRejectionReason("");
       queryClient.invalidateQueries({ queryKey: ["super-admin-pending-companies-page"] });
       queryClient.invalidateQueries({ queryKey: ["super-admin-dashboard-pending-companies"] });
     },
@@ -199,9 +199,29 @@ export function PendingCompaniesPage() {
       return;
     }
 
-    approveInviteMutation.mutate({
+    approveCompanyMutation.mutate({
       companyId: selectedCompanyForApproval.id,
-      adminEmail: selectedCompanyForApproval.adminEmail,
+    });
+  }
+
+  function handleRejectIntent(company) {
+    setSelectedCompanyForRejection(company);
+    setRejectionReason("");
+  }
+
+  function handleConfirmReject() {
+    if (!selectedCompanyForRejection) {
+      return;
+    }
+
+    if (!rejectionReason.trim()) {
+      toast.error("Enter a reason before rejecting the company.");
+      return;
+    }
+
+    rejectCompanyMutation.mutate({
+      companyId: selectedCompanyForRejection.id,
+      reason: rejectionReason.trim(),
     });
   }
 
@@ -239,7 +259,7 @@ export function PendingCompaniesPage() {
           <div className="border-b border-brand-line px-6 py-5">
             <h2 className="text-lg font-semibold text-brand-ink">Pending Requests</h2>
             <p className="mt-1 text-sm text-brand-secondary">
-              Approve and invite sends the admin invitation in one step. Reject removes the request from the queue.
+              Approve moves the verified company forward so the admin can log in with the password created during registration.
             </p>
           </div>
 
@@ -274,11 +294,11 @@ export function PendingCompaniesPage() {
                 <tbody>
                   {filteredCompanies.map((company) => {
                     const isApproving =
-                      approveInviteMutation.isPending &&
-                      approveInviteMutation.variables?.companyId === company.id;
+                      approveCompanyMutation.isPending &&
+                      approveCompanyMutation.variables?.companyId === company.id;
                     const isRejecting =
                       rejectCompanyMutation.isPending &&
-                      rejectCompanyMutation.variables === company.id;
+                      rejectCompanyMutation.variables?.companyId === company.id;
 
                     return (
                       <tr key={company.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
@@ -300,31 +320,31 @@ export function PendingCompaniesPage() {
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              className="h-9 rounded-xl bg-brand-primary px-4 text-white hover:bg-brand-primary/90"
-                              disabled={isApproving || isRejecting || !company.adminEmail}
-                              onClick={() => handleApproveIntent(company)}
-                            >
-                              {isApproving ? (
-                                <>
-                                  <LoaderCircle className="size-4 animate-spin" />
-                                  Approving...
-                                </>
-                              ) : (
-                                <>
-                                  <CheckCheck className="size-4" />
-                                  Approve and invite
-                                </>
-                              )}
-                            </Button>
-                            <Button
-                              type="button"
-                              variant="outline"
-                              className="h-9 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50"
+                              <Button
+                                type="button"
+                                className="h-9 rounded-xl bg-brand-primary px-4 text-white hover:bg-brand-primary/90"
                               disabled={isApproving || isRejecting}
-                              onClick={() => rejectCompanyMutation.mutate(company.id)}
-                            >
+                              onClick={() => handleApproveIntent(company)}
+                              >
+                                {isApproving ? (
+                                  <>
+                                    <LoaderCircle className="size-4 animate-spin" />
+                                    Approving...
+                                  </>
+                                ) : (
+                                  <>
+                                    <CheckCheck className="size-4" />
+                                    Approve
+                                  </>
+                                )}
+                              </Button>
+                            <Button
+                              type="button"
+                                variant="outline"
+                                className="h-9 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50"
+                                disabled={isApproving || isRejecting}
+                              onClick={() => handleRejectIntent(company)}
+                              >
                               {isRejecting ? (
                                 <>
                                   <LoaderCircle className="size-4 animate-spin" />
@@ -366,17 +386,14 @@ export function PendingCompaniesPage() {
                 Confirm approval and invite
               </DialogTitle>
               <DialogDescription className="text-sm leading-6 text-brand-secondary">
-                An invitation will be sent to{" "}
-                <span className="font-semibold text-brand-ink">
-                  {selectedCompanyForApproval?.name || "this company"}
-                </span>{" "}
-                at{" "}
-                <span className="font-semibold text-brand-ink">
-                  {selectedCompanyForApproval?.adminEmail || "the admin email"}
-                </span>
-                . Please confirm to continue.
-              </DialogDescription>
-            </DialogHeader>
+                  The company{" "}
+                  <span className="font-semibold text-brand-ink">
+                    {selectedCompanyForApproval?.name || "this company"}
+                  </span>{" "}
+                  will be approved. After approval, the company admin can log in using the password that was set during registration.
+                  Please confirm to continue.
+                </DialogDescription>
+              </DialogHeader>
 
             <div className="rounded-[22px] border border-brand-line bg-brand-neutral p-4 text-sm text-brand-secondary">
               <p>
@@ -398,7 +415,7 @@ export function PendingCompaniesPage() {
                 type="button"
                 variant="outline"
                 className="h-11 rounded-2xl border-brand-line px-5"
-                disabled={approveInviteMutation.isPending}
+                disabled={approveCompanyMutation.isPending}
                 onClick={() => setSelectedCompanyForApproval(null)}
               >
                 Cancel
@@ -406,10 +423,67 @@ export function PendingCompaniesPage() {
               <Button
                 type="button"
                 className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
-                disabled={approveInviteMutation.isPending}
+                disabled={approveCompanyMutation.isPending}
                 onClick={handleConfirmApprove}
               >
-                {approveInviteMutation.isPending ? "Sending invite..." : "Confirm and send invite"}
+                {approveCompanyMutation.isPending ? "Approving..." : "Confirm approval"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog
+          open={Boolean(selectedCompanyForRejection)}
+          onOpenChange={(open) => {
+            if (!open && !rejectCompanyMutation.isPending) {
+              setSelectedCompanyForRejection(null);
+              setRejectionReason("");
+            }
+          }}
+        >
+          <DialogContent className="rounded-[28px] border border-brand-line bg-white sm:max-w-xl">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-semibold text-brand-ink">
+                Reject company request
+              </DialogTitle>
+              <DialogDescription className="text-sm leading-6 text-brand-secondary">
+                Enter the reason for rejecting{" "}
+                <span className="font-semibold text-brand-ink">
+                  {selectedCompanyForRejection?.name || "this company"}
+                </span>
+                .
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-2">
+              <Input
+                value={rejectionReason}
+                onChange={(event) => setRejectionReason(event.target.value)}
+                placeholder="Enter rejection reason"
+                className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+              />
+            </div>
+
+            <DialogFooter className="gap-3 sm:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 rounded-2xl border-brand-line px-5"
+                disabled={rejectCompanyMutation.isPending}
+                onClick={() => {
+                  setSelectedCompanyForRejection(null);
+                  setRejectionReason("");
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="h-11 rounded-2xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                disabled={rejectCompanyMutation.isPending}
+                onClick={handleConfirmReject}
+              >
+                {rejectCompanyMutation.isPending ? "Rejecting..." : "Confirm reject"}
               </Button>
             </DialogFooter>
           </DialogContent>
