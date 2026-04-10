@@ -24,3 +24,10 @@ export const COMPANY_USERS = "/company/users";
 export const COMPANY_INVITE_USER = "/company/users/invite";
 export const COMPANY_APPROVE_USER = (userId) => `/company/users/${userId}/approve`;
 export const COMPANY_REJECT_USER = (userId) => `/company/users/${userId}/reject`;
+
+export const TEAMS_CREATE = "/teams/";
+export const TEAMS_LIST = "/teams/";
+export const USERS_SEARCH = "/api/v1/dm/users/search";
+export const TEAMS_MEMBERS = (teamId) => `/teams/${teamId}/members`;
+export const TEAMS_ADD_MEMBER = (teamId) => `/teams/${teamId}/members`;
+export const TEAMS_ASSIGN_LEAD = (teamId) => `/teams/${teamId}/assign-admin`;
