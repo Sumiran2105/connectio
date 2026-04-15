@@ -24,6 +24,7 @@ const workspaceDemoAccounts = [
     access_token: "demo-admin-access-token",
     refresh_token: "demo-admin-refresh-token",
     expires_in: 86400,
+    user_id: "demo-admin-user-id",
   },
   {
     label: "Demo user",
@@ -33,6 +34,7 @@ const workspaceDemoAccounts = [
     access_token: "demo-user-access-token",
     refresh_token: "demo-user-refresh-token",
     expires_in: 86400,
+    user_id: "demo-user-user-id",
   },
 ];
 
@@ -90,6 +92,7 @@ export function LoginForm({ audience = "workspace" }) {
           expiresIn: data.expires_in,
           role,
           email: variables.email,
+          userId: data.user_id || data.id || null,
         });
 
         toast.success("Super admin signed in successfully.");
@@ -110,6 +113,7 @@ export function LoginForm({ audience = "workspace" }) {
           expiresIn: data.expires_in,
           role,
           email: variables.email,
+          userId: data.user_id || data.id || null,
           mfaVerified: true,
         });
 

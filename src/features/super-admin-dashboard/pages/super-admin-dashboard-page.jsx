@@ -33,7 +33,6 @@ import { Input } from "@/components/ui/input";
 import {
   SUPERADMIN_APPROVE_COMPANY,
   SUPERADMIN_COMPANIES,
-  SUPERADMIN_COMPANY_ADMINS,
   SUPERADMIN_DASHBOARD_OVERVIEW,
   SUPERADMIN_PENDING_COMPANIES,
   SUPERADMIN_REJECT_COMPANY,
@@ -160,8 +159,8 @@ export function SuperAdminDashboardPage() {
   const companyAdminsQuery = useQuery({
     queryKey: ["super-admin-dashboard-company-admins"],
     queryFn: async () => {
-      const response = await apiClient.get(SUPERADMIN_COMPANY_ADMINS, requestConfig);
-      return normalizeCollection(response.data, ["admins", "company_admins", "data"]);
+      const response = await apiClient.get(SUPERADMIN_COMPANIES, requestConfig);
+      return normalizeCollection(response.data, ["companies", "data"]);
     },
   });
 
@@ -227,10 +226,10 @@ export function SuperAdminDashboardPage() {
 
   const recentAdmins = useMemo(() => {
     return (allCompanyAdmins || []).slice(0, 4).map((admin, index) => ({
-      id: admin.id || admin.user_id || admin.admin_id || `company-admin-${index}`,
-      name: admin.name || admin.full_name || "Unnamed admin",
-      email: admin.email || admin.admin_email || "Not available",
-      company: admin.company_name || admin.company?.name || admin.company || "Not assigned",
+      id: admin.id || admin.company_id || `company-admin-${index}`,
+      name: admin.admin_full_name || admin.full_name || "Unnamed admin",
+      email: admin.admin_email || admin.email || "Not available",
+      company: admin.name || admin.company_name || "Not assigned",
       status: formatStatus(admin.status || admin.account_status || admin.invite_status || "Active"),
     }));
   }, [allCompanyAdmins]);

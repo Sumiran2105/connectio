@@ -1,5 +1,5 @@
 import { useDeferredValue, useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Send,
   Smile,
@@ -16,68 +16,20 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/client";
-import { DM_SEND_MESSAGE, DM_USERS_SEARCH } from "@/config/api";
+import { CHANNEL_MESSAGE, CHANNEL_MESSAGES, DM_SEND_MESSAGE, DM_USERS_SEARCH } from "@/config/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
 
-const initialContacts = [
-  {
-    id: 1,
-    name: "madhav",
-    role: "You: Microsoft Teams-Inspired User Interface ...",
-    online: true,
-    unread: 0,
-    messages: [
-      { id: 1, from: "them", text: "You:  User Interface ...", time: "17:46", read: true },
-      { id: 2, from: "me", text: "About 1.jsx", time: "27 March 18:31", read: true, isFile: true },
-      { id: 3, from: "me", text: "Contact.jsx", time: "27 March 18:31", read: true, isFile: true },
-      { id: 4, from: "me", text: "hi", time: "30 March 15:14", read: true },
-      { id: 5, from: "me", text: "doubt ", time: "30 March 18:16", read: true },
-      { id: 6, from: "me", text: "yes", time: "01 April 17:30", read: true },
-      { id: 7, from: "them", text: " 1 min", time: "30 March 18:16", read: true },
-    ],
-  },
-  {
-    id: 2,
-    name: "john and doe",
-    role: "You: ok bro",
-    online: true,
-    unread: 0,
-    messages: [
-      { id: 1, from: "me", text: "You: ok bro", time: "16:55", read: true },
-    ],
-  },
-  {
-    id: 3,
-    name: "madhav",
-    role: "git status --porcelain git status > status.txt Get...",
-    online: true,
-    unread: 0,
-    messages: [
-      { id: 1, from: "them", text: "git status --porcelain git status > status.txt Get...", time: "16:44", read: true },
-    ],
-  },
-  {
-    id: 4,
-    name: "Connectio- Levitica Teams frontend",
-    role: "Sai: https://connectio-fawn.vercel.app/",
-    online: false,
-    unread: 0,
-    messages: [
-      { id: 1, from: "them", text: "Sai: https://connectio-fawn.vercel.app/", time: "15:39", read: true },
-    ],
-  },
-  {
-    id: 5,
-    name: "HMS React Web Application - Team",
-    role: "Abhinaya: Thank you i received",
-    online: false,
-    unread: 0,
-    messages: [
-      { id: 1, from: "them", text: "Abhinaya: Thank you i received", time: "12:39", read: true },
-    ],
-  },
-];
+const chatStorageKey = "conectio-user-chat-state-v2";
+
+const initialContacts = [];
 
 function Avatar({ name, online, size = "size-10" }) {
   const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
@@ -113,23 +65,184 @@ function normalizeSearchResults(data) {
   return [];
 }
 
+function normalizeCollection(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.messages)) {
+    return data.messages;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  if (Array.isArray(data?.results)) {
+    return data.results;
+  }
+
+  return [];
+}
+
+function getMessageTimestamp(message) {
+  const rawValue =
+    message?.created_at ||
+    message?.updated_at ||
+    message?.createdAt ||
+    message?.timestamp ||
+    null;
+
+  if (!rawValue) {
+    return 0;
+  }
+
+  const value = new Date(rawValue).getTime();
+  return Number.isNaN(value) ? 0 : value;
+}
+
+function sortMessagesChronologically(messages = []) {
+  return [...messages].sort((a, b) => {
+    const first = a?.timestamp ?? 0;
+    const second = b?.timestamp ?? 0;
+
+    if (first !== second) {
+      return first - second;
+    }
+
+    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
+  });
+}
+
+function formatMessageTime(value) {
+  if (!value) {
+    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function normalizeServerMessage(message, currentUserId) {
+  const senderId = message.user_id || message.sender_id || message.created_by;
+  const isFromCurrentUser =
+    currentUserId && senderId && String(senderId) === String(currentUserId);
+
+  return {
+    id: message.id || message.message_id || `${Date.now()}-${Math.random()}`,
+    from: isFromCurrentUser ? "me" : "them",
+    text: message.content || message.message || message.text || "",
+    time: formatMessageTime(message.created_at || message.updated_at),
+    timestamp: getMessageTimestamp(message),
+    read: Boolean(message.is_read || message.read_at || message.delivered_at),
+  };
+}
+
+function loadStoredChatState() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(chatStorageKey);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+}
+
+function mergeContacts(storedContacts = []) {
+  const byId = new Map();
+
+  storedContacts.forEach((contact) => {
+    byId.set(String(contact.id), contact);
+  });
+
+  return Array.from(byId.values());
+}
+
+function getInitialContacts() {
+  const stored = loadStoredChatState();
+  return mergeContacts(stored?.contacts || []);
+}
+
+function getInitialConversations(contacts) {
+  const stored = loadStoredChatState();
+  return {
+    ...(stored?.conversations || {}),
+    ...Object.fromEntries(
+      contacts.map((contact) => [
+        contact.id,
+        stored?.conversations?.[contact.id] || contact.messages || [],
+      ])
+    ),
+  };
+}
+
 export function ChatPage() {
   const session = useAuthStore((state) => state.session);
-  const [contacts, setContacts] = useState(initialContacts);
-  const [activeContact, setActiveContact] = useState(initialContacts[0]);
+  const queryClient = useQueryClient();
+  const [contacts, setContacts] = useState(() => getInitialContacts());
+  const [activeContact, setActiveContact] = useState(() => getInitialContacts()[0] || null);
   const [messageInput, setMessageInput] = useState("");
-  const [conversations, setConversations] = useState(
-    Object.fromEntries(initialContacts.map((contact) => [contact.id, contact.messages]))
-  );
+  const [conversations, setConversations] = useState(() => getInitialConversations(getInitialContacts()));
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("chat");
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
   const [isNewChatMode, setIsNewChatMode] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState(null);
   const bottomRef = useRef(null);
   const searchInputRef = useRef(null);
   const deferredNewChatQuery = useDeferredValue(searchQuery.trim());
 
-  const currentMessages = conversations[activeContact.id] || [];
+  const currentMessages = activeContact ? conversations[activeContact.id] || [] : [];
+
+  const channelMessagesQuery = useQuery({
+    queryKey: ["channel-messages", activeContact?.channelId, activeContact?.id],
+    queryFn: async () => {
+      const response = await apiClient.get(CHANNEL_MESSAGES(activeContact.channelId), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return sortMessagesChronologically(
+        normalizeCollection(response.data).map((message) =>
+          normalizeServerMessage(message, session?.userId)
+        )
+      );
+    },
+    enabled: Boolean(session?.accessToken && activeContact?.channelId),
+    staleTime: 10 * 1000,
+  });
+
+  const getMessageMutation = useMutation({
+    mutationFn: async ({ channelId, messageId, targetUserId }) => {
+      const response = await apiClient.get(CHANNEL_MESSAGE(channelId, messageId), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      const message = response.data?.message || response.data;
+
+      return {
+        raw: message,
+        normalized: normalizeServerMessage(message, session?.userId || targetUserId),
+      };
+    },
+    onSuccess: (data) => {
+      setSelectedMessage(data);
+    },
+    onError: () => {
+      toast.error("Unable to load message details right now.");
+    },
+  });
 
   const sendMessageMutation = useMutation({
     mutationFn: async ({ targetUserId, text }) => {
@@ -148,49 +261,61 @@ export function ChatPage() {
 
       return response.data;
     },
-    onSuccess: (_, variables) => {
+    onSuccess: (data, variables) => {
       const sentAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-      const newMsg = {
-        id: Date.now(),
-        from: "me",
-        text: variables.text,
-        time: sentAt,
-        read: false,
-      };
+      const channelId = data?.channel_id || data?.channel?.id || data?.message?.channel_id || variables.channelId || null;
+      const newMsg = data?.message
+        ? normalizeServerMessage(data.message, session?.userId || variables.targetUserId)
+        : {
+            id: data?.id || data?.message_id || Date.now(),
+            from: "me",
+            text: data?.content || variables.text,
+            time: formatMessageTime(data?.created_at) || sentAt,
+            timestamp: getMessageTimestamp({
+              created_at: data?.created_at || new Date().toISOString(),
+            }),
+            read: false,
+          };
 
       setConversations((prev) => ({
         ...prev,
-        [variables.targetUserId]: [...(prev[variables.targetUserId] || []), newMsg],
+        [variables.targetUserId]: sortMessagesChronologically([
+          ...(prev[variables.targetUserId] || []),
+          newMsg,
+        ]),
       }));
 
       setContacts((prev) => {
-        const nextContacts = prev.map((contact) =>
+        return prev.map((contact) =>
           contact.id === variables.targetUserId
             ? {
                 ...contact,
+                channelId: channelId || contact.channelId,
                 role: `You: ${variables.text}`,
-                messages: [...(contact.messages || []), newMsg],
+                messages: sortMessagesChronologically([...(contact.messages || []), newMsg]),
               }
             : contact
         );
-
-        const updatedContact = nextContacts.find((contact) => contact.id === variables.targetUserId);
-        const otherContacts = nextContacts.filter((contact) => contact.id !== variables.targetUserId);
-
-        return updatedContact ? [updatedContact, ...otherContacts] : prev;
       });
 
       setActiveContact((current) =>
         current.id === variables.targetUserId
           ? {
               ...current,
+              channelId: channelId || current.channelId,
               role: `You: ${variables.text}`,
-              messages: [...(current.messages || []), newMsg],
+              messages: sortMessagesChronologically([...(current.messages || []), newMsg]),
             }
           : current
       );
 
       setMessageInput("");
+
+      if (channelId) {
+        queryClient.invalidateQueries({
+          queryKey: ["channel-messages", channelId, variables.targetUserId],
+        });
+      }
     },
     onError: () => {
       toast.error("Unable to send the message right now.");
@@ -222,15 +347,56 @@ export function ChatPage() {
   }, [isNewChatMode]);
 
   useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      chatStorageKey,
+      JSON.stringify({
+        contacts,
+        conversations,
+      })
+    );
+  }, [contacts, conversations]);
+
+  useEffect(() => {
+    if (!activeContact || !channelMessagesQuery.data?.length) {
+      return;
+    }
+
+    setConversations((current) => ({
+      ...current,
+      [activeContact.id]: sortMessagesChronologically(channelMessagesQuery.data),
+    }));
+
+    setContacts((current) =>
+      current.map((contact) =>
+        contact.id === activeContact.id
+          ? {
+              ...contact,
+              messages: sortMessagesChronologically(channelMessagesQuery.data),
+              role:
+                sortMessagesChronologically(channelMessagesQuery.data)[
+                  sortMessagesChronologically(channelMessagesQuery.data).length - 1
+                ]?.text || contact.role,
+            }
+          : contact
+      )
+    );
+  }, [activeContact, channelMessagesQuery.data]);
+
+  useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [currentMessages]);
 
   function sendMessage() {
     const text = messageInput.trim();
-    if (!text || sendMessageMutation.isPending) return;
+    if (!text || !activeContact || sendMessageMutation.isPending) return;
 
     sendMessageMutation.mutate({
       targetUserId: activeContact.id,
+      channelId: activeContact.channelId,
       text,
     });
   }
@@ -259,6 +425,7 @@ export function ChatPage() {
       name: user.full_name || user.name || user.display_name || user.email || "Unknown user",
       role: user.email || user.user_role || "New conversation",
       online: Boolean(user.online || user.is_online || user.is_active),
+      channelId: user.channel_id || user.dm_channel_id || user.direct_channel_id || null,
       unread: 0,
       messages: conversations[user.id || user.user_id || user.email] || [],
     };
@@ -283,6 +450,18 @@ export function ChatPage() {
   function handleNewChatClick() {
     setIsNewChatMode(true);
     setSearchQuery("");
+  }
+
+  function handleMessageClick(message) {
+    if (!activeContact?.channelId || !message?.id) {
+      return;
+    }
+
+    getMessageMutation.mutate({
+      channelId: activeContact.channelId,
+      messageId: message.id,
+      targetUserId: activeContact.id,
+    });
   }
 
   const sidebarResults = isNewChatMode ? searchUsersQuery.data || [] : filteredContacts;
@@ -370,7 +549,7 @@ export function ChatPage() {
                     const contactOnline = isNewChatMode
                       ? Boolean(contact.online || contact.is_online || contact.is_active)
                       : contact.online;
-                    const isActive = activeContact.id === contactId;
+                    const isActive = activeContact?.id === contactId;
                     const contactMessages = conversations[contactId] || contact.messages || [];
 
                     return (
@@ -422,66 +601,94 @@ export function ChatPage() {
           </aside>
 
           <div className={`flex-1 flex-col min-w-0 bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
-            <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <button
-                  onClick={() => setIsMobileChatOpen(false)}
-                  className="sm:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                >
-                  <ChevronLeft className="size-5" />
-                </button>
-                <Avatar name={activeContact.name} online={activeContact.online} size="size-11" />
-                <div>
-                  <h3 className="text-base font-bold text-gray-900">{activeContact.name}</h3>
-                  <p className="text-xs text-gray-600">{activeContact.messages.length} messages</p>
+            {activeContact ? (
+              <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <button
+                    onClick={() => setIsMobileChatOpen(false)}
+                    className="sm:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
+                  >
+                    <ChevronLeft className="size-5" />
+                  </button>
+                  <Avatar name={activeContact.name} online={activeContact.online} size="size-11" />
+                  <div>
+                    <h3 className="text-base font-bold text-gray-900">{activeContact.name}</h3>
+                    <p className="text-xs text-gray-600">{currentMessages.length} messages</p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                  <Video className="size-5" />
-                </button>
-                <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                  <Phone className="size-5" />
-                </button>
-                <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                  <Search className="size-5" />
-                </button>
-                <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                  <MoreVertical className="size-5" />
-                </button>
-              </div>
-            </header>
+                <div className="flex items-center gap-2">
+                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
+                    <Video className="size-5" />
+                  </button>
+                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
+                    <Phone className="size-5" />
+                  </button>
+                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
+                    <Search className="size-5" />
+                  </button>
+                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
+                    <MoreVertical className="size-5" />
+                  </button>
+                </div>
+              </header>
+            ) : null}
 
-            <div className="flex items-center gap-6 px-6 py-3 border-b border-gray-200 bg-gray-50">
-              {["Chat", "Files", "Photos"].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab.toLowerCase())}
-                  className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab.toLowerCase()
-                    ? "text-brand-primary border-brand-primary"
-                    : "text-gray-600 border-transparent hover:text-gray-900"
-                    }`}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            {activeContact ? (
+              <div className="flex items-center gap-6 px-6 py-3 border-b border-gray-200 bg-gray-50">
+                {["Chat", "Files", "Photos"].map(tab => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab.toLowerCase())}
+                    className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab.toLowerCase()
+                      ? "text-brand-primary border-brand-primary"
+                      : "text-gray-600 border-transparent hover:text-gray-900"
+                      }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-white [scrollbar-width:thin]">
+              {!activeContact ? (
+                <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
+                  <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-primary">
+                    <SquarePen className="size-6" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900">Start a conversation</h3>
+                  <p className="mt-2 max-w-sm text-sm text-gray-500">
+                    Click the new chat icon, search for a user, and send your first message.
+                  </p>
+                </div>
+              ) : null}
+
+              {channelMessagesQuery.isLoading ? (
+                <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
+                  <LoaderCircle className="size-4 animate-spin" />
+                  Loading messages
+                </div>
+              ) : null}
+
               {currentMessages.map((msg, idx) => {
                 const isMe = msg.from === "me";
                 const prevMsg = currentMessages[idx - 1];
                 const showAvatar = !isMe && prevMsg?.from !== "them";
 
                 return (
-                  <div key={msg.id} className={`flex items-end gap-3 ${isMe ? "flex-row-reverse justify-end" : "flex-row justify-start"}`}>
-                    <div className="w-8 h-8 shrink-0">
-                      {!isMe && showAvatar && <Avatar name={activeContact.name} online={false} size="size-8" />}
-                    </div>
+                  <div key={msg.id} className={`flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
+                    {!isMe ? (
+                      <div className="h-8 w-8 shrink-0">
+                        {showAvatar ? <Avatar name={activeContact.name} online={false} size="size-8" /> : null}
+                      </div>
+                    ) : null}
 
                     <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                       {msg.isFile ? (
-                        <div className={`px-4 py-3 rounded-xl text-sm font-medium shadow-sm border min-w-[200px] ${isMe
+                        <button
+                          type="button"
+                          onClick={() => handleMessageClick(msg)}
+                          className={`min-w-[200px] rounded-xl border px-4 py-3 text-left text-sm font-medium shadow-sm transition hover:shadow-md ${isMe
                           ? "bg-brand-primary text-white border-brand-primary"
                           : "bg-white border-gray-300 text-gray-900"
                           }`}>
@@ -491,16 +698,18 @@ export function ChatPage() {
                             </div>
                             <span>{msg.text}</span>
                           </div>
-                        </div>
+                        </button>
                       ) : (
-                        <div
-                          className={`px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm max-w-md ${isMe
+                        <button
+                          type="button"
+                          onClick={() => handleMessageClick(msg)}
+                          className={`max-w-md rounded-2xl px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow-md ${isMe
                             ? "bg-brand-primary text-white rounded-br-none"
                             : "bg-gray-100 text-gray-900 rounded-bl-none"
                             }`}
                         >
                           {msg.text}
-                        </div>
+                        </button>
                       )}
                       {isMe && msg.time && (
                         <div className="flex items-center gap-1 mt-1 flex-row-reverse">
@@ -515,6 +724,7 @@ export function ChatPage() {
               <div ref={bottomRef} />
             </div>
 
+            {activeContact ? (
             <div className="shrink-0 pl-6 pr-24 py-4 border-t border-gray-200 bg-white">
               <div className="flex items-end gap-3 bg-gray-100 border border-gray-300 rounded-full px-4 py-3 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
                 <button className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-brand-primary hover:bg-white transition-colors">
@@ -551,9 +761,46 @@ export function ChatPage() {
                 </button>
               </div>
             </div>
+            ) : null}
           </div>
         </div>
       </div>
+      <Dialog open={Boolean(selectedMessage)} onOpenChange={(open) => !open && setSelectedMessage(null)}>
+        <DialogContent className="rounded-[28px] border-brand-line bg-white">
+          <DialogHeader>
+            <DialogTitle className="text-brand-ink">Message details</DialogTitle>
+            <DialogDescription>
+              Loaded from the single message endpoint for the active channel.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedMessage ? (
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-brand-line bg-brand-neutral p-4">
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
+                  Content
+                </p>
+                <p className="mt-2 text-sm text-brand-ink">{selectedMessage.normalized.text || "No content"}</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-2xl border border-brand-line bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
+                    Message ID
+                  </p>
+                  <p className="mt-2 break-all text-sm text-brand-ink">{selectedMessage.normalized.id}</p>
+                </div>
+                <div className="rounded-2xl border border-brand-line bg-white p-4">
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
+                    Time
+                  </p>
+                  <p className="mt-2 text-sm text-brand-ink">{selectedMessage.normalized.time}</p>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </UserLayout>
   );
 }

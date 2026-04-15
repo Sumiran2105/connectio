@@ -14,7 +14,6 @@ export const SUPERADMIN_APPROVE_COMPANY = (companyId) =>
   `/superadmin/companies/${companyId}/approve`;
 export const SUPERADMIN_ACTIVATE_COMPANY_ADMIN = "/superadmin/activate";
 export const SUPERADMIN_COMPANIES = "/superadmin/companies";
-export const SUPERADMIN_COMPANY_ADMINS = "/superadmin/Company Admins";
 export const SUPERADMIN_PENDING_COMPANIES = "/superadmin/companies/pending";
 export const SUPERADMIN_REJECT_COMPANY = (companyId) => `/superadmin/companies/${companyId}/reject`;
 export const SUPERADMIN_DASHBOARD_OVERVIEW = "/superadmin/dashboard";
@@ -40,3 +39,7 @@ export const PRESENCE_CUSTOM_STATUS = "/api/v1/presence/custom-status";
 
 export const DM_USERS_SEARCH = "/api/v1/dm/users/search";
 export const DM_SEND_MESSAGE = (targetUserId) => `/api/v1/dm/${targetUserId}`;
+
+export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/messages`;
+export const CHANNEL_MESSAGE = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}`;

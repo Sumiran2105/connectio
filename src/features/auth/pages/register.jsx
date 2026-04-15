@@ -29,6 +29,7 @@ const defaultAdminForm = {
   companyDomain: "",
   adminEmail: "",
   phoneNumber: "",
+  address: "",
   password: "",
   confirm_password: "",
 };
@@ -112,6 +113,7 @@ export function RegisterPage() {
       !adminForm.companyDomain.trim() ||
       !adminForm.adminEmail.trim() ||
       !adminForm.phoneNumber.trim() ||
+      !adminForm.address.trim() ||
       !adminForm.password ||
       !adminForm.confirm_password
     ) {
@@ -149,6 +151,7 @@ export function RegisterPage() {
           domain: adminForm.companyDomain.trim().toLowerCase().replace(/^@/, ""),
           email: adminForm.adminEmail.trim().toLowerCase(),
           phone_number: adminForm.phoneNumber.trim(),
+          address: adminForm.address.trim(),
           password: adminForm.password,
           confirm_password: adminForm.confirm_password,
         },
@@ -415,6 +418,16 @@ export function RegisterPage() {
                           value={adminForm.phoneNumber}
                           onChange={(event) => updateAdminField("phoneNumber", event.target.value)}
                           placeholder="Enter phone number"
+                          className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                        />
+                      </div>
+
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium text-brand-ink">Company address</label>
+                        <Input
+                          value={adminForm.address}
+                          onChange={(event) => updateAdminField("address", event.target.value)}
+                          placeholder="Enter company address"
                           className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                         />
                       </div>

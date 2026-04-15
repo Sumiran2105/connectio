@@ -72,6 +72,7 @@ export function AdminMfaVerifyPage() {
         expiresIn: data.expires_in || data.expiresIn || null,
         role: nextRole,
         email: pendingMfaSession.email,
+        userId: data.user_id || data.id || pendingMfaSession.userId || null,
         mfaVerified: true,
       });
       clearPendingMfaSession();

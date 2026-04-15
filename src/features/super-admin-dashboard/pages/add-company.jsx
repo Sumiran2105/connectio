@@ -31,6 +31,7 @@ const defaultForm = {
   domain: "",
   email: "",
   phoneNumber: "",
+  address: "",
   password: "",
   confirmPassword: "",
 };
@@ -84,6 +85,7 @@ export function AddCompanyPage() {
       !form.domain.trim() ||
       !form.email.trim() ||
       !form.phoneNumber.trim() ||
+      !form.address.trim() ||
       !form.password ||
       !form.confirmPassword
     ) {
@@ -132,6 +134,7 @@ export function AddCompanyPage() {
           domain: form.domain.trim().toLowerCase().replace(/^@/, ""),
           email: form.email.trim().toLowerCase(),
           phone_number: form.phoneNumber.trim(),
+          address: form.address.trim(),
           password: form.password,
           confirm_password: form.confirmPassword,
           remember_me: false,
@@ -310,6 +313,19 @@ export function AddCompanyPage() {
                   value={form.phoneNumber}
                   onChange={(event) => updateField("phoneNumber", event.target.value)}
                   placeholder="Enter phone number"
+                  className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="address" className="flex items-center gap-2 text-brand-ink">
+                  Company address
+                </Label>
+                <Input
+                  id="address"
+                  value={form.address}
+                  onChange={(event) => updateField("address", event.target.value)}
+                  placeholder="Enter company address"
                   className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
                 />
               </div>
