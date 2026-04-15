@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/client";
-import { TEAMS_CREATE, TEAMS_LIST, USERS_SEARCH, TEAMS_MEMBERS, TEAMS_ADD_MEMBER, TEAMS_ASSIGN_LEAD } from "@/config/api";
+import { TEAMS_CREATE, TEAMS_LIST, USERS_SEARCH, TEAMS_MEMBERS, TEAMS_ADD_MEMBER, TEAMS_ASSIGN_LEAD, TEAMS_REMOVE_MEMBER } from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -22,7 +22,8 @@ import {
   Hash,
   LayoutDashboard,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
 import { AdminLayout } from "../components/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -77,6 +78,7 @@ export function TeamsPage() {
   const [addMemberError, setAddMemberError] = useState(null);
   const [isAssigningLead, setIsAssigningLead] = useState(false);
   const [assignLeadError, setAssignLeadError] = useState(null);
+  const [isDeletingMember, setIsDeletingMember] = useState(null); // stores userId being deleted
   const session = useAuthStore((state) => state.session);
 
   // Forms
@@ -271,6 +273,30 @@ export function TeamsPage() {
       setAssignLeadError(err?.response?.data?.detail || "Failed to assign lead");
     } finally {
       setIsAssigningLead(false);
+    }
+  };
+
+  const onHandleRemoveMember = async (userId) => {
+    if (!selectedTeam) return;
+    
+    setIsDeletingMember(userId);
+    try {
+      await apiClient.delete(TEAMS_REMOVE_MEMBER(selectedTeam.id, userId), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+      
+      // Update local state instead of full refresh for better UX
+      setTeamMembers(prev => prev.filter(m => (m.id || m.user_id || m.email) !== userId));
+      setTeams(prev => prev.map(t => t.id === selectedTeam.id ? { ...t, memberCount: Math.max(0, t.memberCount - 1) } : t));
+      if (selectedTeam?.id === selectedTeam.id) {
+        setSelectedTeam(prev => prev ? { ...prev, memberCount: Math.max(0, prev.memberCount - 1) } : null);
+      }
+    } catch (err) {
+      console.error("Remove member error:", err);
+    } finally {
+      setIsDeletingMember(null);
     }
   };
 
@@ -562,11 +588,19 @@ export function TeamsPage() {
                           <div key={member.id || i} className="flex items-center justify-between p-4 rounded-2xl border border-brand-line bg-white hover:border-brand-primary/30 transition-all group">
                             <div className="flex items-center gap-4">
                               <div className="size-10 rounded-xl bg-brand-soft flex items-center justify-center font-bold text-brand-primary uppercase">
-                                {(member.name || member.username || "U")[0]}
+                                {(member.name || member.username || member.full_name || member.email || "U")[0]}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
-                                  <p className="text-sm font-bold text-brand-ink leading-none">{member.name || member.username || "Member"}</p>
+                                  <p className="text-sm font-bold text-brand-ink leading-none">
+                                    {member.name || 
+                                     member.full_name || 
+                                     (member.first_name ? `${member.first_name} ${member.last_name || ''}` : null) ||
+                                     member.username || 
+                                     member.user?.name || 
+                                     member.user?.full_name || 
+                                     (member.email ? member.email.split('@')[0] : "Team Member")}
+                                  </p>
                                   {isLead && (
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 animate-in fade-in zoom-in duration-300">
                                       Team Lead
@@ -580,6 +614,19 @@ export function TeamsPage() {
                               <span className="text-[10px] font-bold uppercase tracking-wider bg-brand-soft px-2 py-1 rounded-md text-brand-secondary/70 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {isLead ? "Lead" : (member.role || "Member")}
                               </span>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
+                                onClick={() => onHandleRemoveMember(member.id || member.user_id || member.email)}
+                                disabled={isDeletingMember === (member.id || member.user_id || member.email)}
+                              >
+                                {isDeletingMember === (member.id || member.user_id || member.email) ? (
+                                  <Loader2 className="size-4 animate-spin" />
+                                ) : (
+                                  <Trash2 className="size-4" />
+                                )}
+                              </Button>
                               <Button variant="ghost" size="icon" className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity">
                                 <MoreHorizontal className="size-4" />
                               </Button>

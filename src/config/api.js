@@ -31,6 +31,7 @@ export const USERS_SEARCH = "/api/v1/dm/users/search";
 export const TEAMS_MEMBERS = (teamId) => `/teams/${teamId}/members`;
 export const TEAMS_ADD_MEMBER = (teamId) => `/teams/${teamId}/members`;
 export const TEAMS_ASSIGN_LEAD = (teamId) => `/teams/${teamId}/assign-admin`;
+export const TEAMS_REMOVE_MEMBER = (teamId, userId) => `/teams/${teamId}/members/${userId}`;
 
 export const PRESENCE_OPTIONS = "/api/v1/presence/options";
 export const PRESENCE_ME = "/api/v1/presence/me";

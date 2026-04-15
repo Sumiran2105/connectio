@@ -154,7 +154,7 @@ export function ChannelsPage() {
 
   return (
     <AdminLayout>
-      <div className="flex h-[calc(100vh-120px)] md:h-[calc(100vh-180px)] min-h-[600px] overflow-hidden rounded-2xl md:rounded-[32px] border border-brand-line bg-white shadow-[0_32px_120px_rgba(68,83,74,0.12)] relative">
+      <div className="fixed top-20 bottom-0 left-0 lg:left-[292px] right-0 bg-white z-[20] flex flex-row overflow-hidden border-t md:border-t-0 border-brand-line">
 
         {/* Mobile Backdrop */}
         {isSidebarOpen && (
