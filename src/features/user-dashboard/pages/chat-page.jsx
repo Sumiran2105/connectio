@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/client";
-import { CHANNEL_MESSAGE, CHANNEL_MESSAGES, DM_SEND_MESSAGE, DM_USERS_SEARCH } from "@/config/api";
+import { CHANNEL_MESSAGE, CHANNEL_MESSAGES, CHAT_WEBSOCKET, DM_SEND_MESSAGE, DM_USERS_SEARCH } from "@/config/api";
 import {
   Dialog,
   DialogContent,
@@ -114,6 +114,20 @@ function sortMessagesChronologically(messages = []) {
   });
 }
 
+function mergeMessages(existing = [], incoming = []) {
+  const byId = new Map();
+
+  [...existing, ...incoming].forEach((message) => {
+    if (!message?.id) {
+      return;
+    }
+
+    byId.set(String(message.id), message);
+  });
+
+  return sortMessagesChronologically(Array.from(byId.values()));
+}
+
 function formatMessageTime(value) {
   if (!value) {
     return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
@@ -198,6 +212,7 @@ export function ChatPage() {
   const [selectedMessage, setSelectedMessage] = useState(null);
   const bottomRef = useRef(null);
   const searchInputRef = useRef(null);
+  const chatSocketRef = useRef(null);
   const deferredNewChatQuery = useDeferredValue(searchQuery.trim());
 
   const currentMessages = activeContact ? conversations[activeContact.id] || [] : [];
@@ -279,10 +294,7 @@ export function ChatPage() {
 
       setConversations((prev) => ({
         ...prev,
-        [variables.targetUserId]: sortMessagesChronologically([
-          ...(prev[variables.targetUserId] || []),
-          newMsg,
-        ]),
+        [variables.targetUserId]: mergeMessages(prev[variables.targetUserId] || [], [newMsg]),
       }));
 
       setContacts((prev) => {
@@ -292,7 +304,7 @@ export function ChatPage() {
                 ...contact,
                 channelId: channelId || contact.channelId,
                 role: `You: ${variables.text}`,
-                messages: sortMessagesChronologically([...(contact.messages || []), newMsg]),
+                messages: mergeMessages(contact.messages || [], [newMsg]),
               }
             : contact
         );
@@ -304,7 +316,7 @@ export function ChatPage() {
               ...current,
               channelId: channelId || current.channelId,
               role: `You: ${variables.text}`,
-              messages: sortMessagesChronologically([...(current.messages || []), newMsg]),
+              messages: mergeMessages(current.messages || [], [newMsg]),
             }
           : current
       );
@@ -367,7 +379,7 @@ export function ChatPage() {
 
     setConversations((current) => ({
       ...current,
-      [activeContact.id]: sortMessagesChronologically(channelMessagesQuery.data),
+      [activeContact.id]: mergeMessages(current[activeContact.id] || [], channelMessagesQuery.data),
     }));
 
     setContacts((current) =>
@@ -375,16 +387,133 @@ export function ChatPage() {
         contact.id === activeContact.id
           ? {
               ...contact,
-              messages: sortMessagesChronologically(channelMessagesQuery.data),
+              messages: mergeMessages(contact.messages || [], channelMessagesQuery.data),
               role:
-                sortMessagesChronologically(channelMessagesQuery.data)[
-                  sortMessagesChronologically(channelMessagesQuery.data).length - 1
+                mergeMessages(contact.messages || [], channelMessagesQuery.data)[
+                  mergeMessages(contact.messages || [], channelMessagesQuery.data).length - 1
                 ]?.text || contact.role,
             }
           : contact
       )
     );
   }, [activeContact, channelMessagesQuery.data]);
+
+  useEffect(() => {
+    if (!activeContact?.channelId || !session?.accessToken) {
+      return undefined;
+    }
+
+    const socketUrl = CHAT_WEBSOCKET(activeContact.channelId);
+
+    if (!socketUrl) {
+      return undefined;
+    }
+
+    const socket = new WebSocket(socketUrl);
+    chatSocketRef.current = socket;
+
+    socket.onmessage = async (event) => {
+      try {
+        const rawPayload =
+          typeof event.data === "string" ? JSON.parse(event.data) : event.data;
+
+        if (!rawPayload) {
+          return;
+        }
+
+        if (rawPayload.message_id && rawPayload.channel_id === activeContact.channelId) {
+          const response = await apiClient.get(
+            CHANNEL_MESSAGE(activeContact.channelId, rawPayload.message_id),
+            {
+              headers: {
+                Authorization: `Bearer ${session.accessToken}`,
+              },
+            }
+          );
+
+          const fetchedMessage = response.data?.message || response.data;
+          const normalizedMessage = normalizeServerMessage(fetchedMessage, session.userId);
+
+          setConversations((current) => ({
+            ...current,
+            [activeContact.id]: mergeMessages(current[activeContact.id] || [], [normalizedMessage]),
+          }));
+
+          setContacts((current) =>
+            current.map((contact) =>
+              contact.id === activeContact.id
+                ? {
+                    ...contact,
+                    messages: mergeMessages(contact.messages || [], [normalizedMessage]),
+                    role: normalizedMessage.text || contact.role,
+                  }
+                : contact
+            )
+          );
+
+          setActiveContact((current) =>
+            current?.id === activeContact.id
+              ? {
+                  ...current,
+                  messages: mergeMessages(current.messages || [], [normalizedMessage]),
+                  role: normalizedMessage.text || current.role,
+                }
+              : current
+          );
+
+          return;
+        }
+
+        const normalizedMessage = normalizeServerMessage(rawPayload?.message || rawPayload, session.userId);
+
+        setConversations((current) => ({
+          ...current,
+          [activeContact.id]: mergeMessages(current[activeContact.id] || [], [normalizedMessage]),
+        }));
+
+        setContacts((current) =>
+          current.map((contact) =>
+            contact.id === activeContact.id
+              ? {
+                  ...contact,
+                  messages: mergeMessages(contact.messages || [], [normalizedMessage]),
+                  role: normalizedMessage.text || contact.role,
+                }
+              : contact
+          )
+        );
+
+        setActiveContact((current) =>
+          current?.id === activeContact.id
+            ? {
+                ...current,
+                messages: mergeMessages(current.messages || [], [normalizedMessage]),
+                role: normalizedMessage.text || current.role,
+              }
+            : current
+        );
+      } catch {
+        return;
+      }
+    };
+
+    socket.onerror = () => {
+      return;
+    };
+
+    return () => {
+      if (chatSocketRef.current === socket) {
+        chatSocketRef.current = null;
+      }
+
+      if (
+        socket.readyState === WebSocket.OPEN ||
+        socket.readyState === WebSocket.CONNECTING
+      ) {
+        socket.close();
+      }
+    };
+  }, [activeContact?.channelId, activeContact?.id, session?.accessToken, session?.userId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

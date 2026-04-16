@@ -43,3 +43,25 @@ export const DM_SEND_MESSAGE = (targetUserId) => `/api/v1/dm/${targetUserId}`;
 export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/messages`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>
   `/api/v1/channels/${channelId}/messages/${messageId}`;
+
+export function CHAT_WEBSOCKET(channelId) {
+  if (!channelId) {
+    return null;
+  }
+
+  const explicitWsBase = import.meta.env.VITE_WS_BASE_URL?.replace(/\/$/, "");
+
+  if (explicitWsBase) {
+    return `${explicitWsBase}/ws/chat/${channelId}`;
+  }
+
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}/backend-ws/chat/${channelId}`;
+  }
+
+  const apiBase =
+    (import.meta.env.VITE_API_BASE_URL || "https://collabration-teams.onrender.com").replace(/\/$/, "");
+
+  return `${apiBase.replace(/^http/, "ws")}/ws/chat/${channelId}`;
+}

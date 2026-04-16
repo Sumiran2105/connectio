@@ -12,6 +12,13 @@ export default defineConfig({
         secure: true,
         rewrite: (path) => path.replace(/^\/backend/, ''),
       },
+      '/backend-ws': {
+        target: 'https://collabration-teams.onrender.com',
+        changeOrigin: true,
+        secure: true,
+        ws: true,
+        rewrite: (path) => path.replace(/^\/backend-ws/, '/ws'),
+      },
     },
   },
 })
