@@ -107,7 +107,7 @@ export function AdminLayout({ children }) {
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink">
+    <main className="h-screen overflow-hidden bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink flex flex-col">
       {/* Mobile Header */}
       <div className="flex items-center justify-between border-b border-brand-line bg-brand-primary p-4 lg:hidden">
         <div className="flex items-center gap-2">
@@ -124,7 +124,7 @@ export function AdminLayout({ children }) {
         </button>
       </div>
 
-      <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col lg:flex-row">
+      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row overflow-hidden">
         {/* Sidebar */}
         <aside
           className={`${isMobileMenuOpen ? "flex" : "hidden"
@@ -237,7 +237,7 @@ export function AdminLayout({ children }) {
         )}
 
         {/* Content Area */}
-        <section className="relative flex-1 flex flex-col min-h-screen overflow-hidden">
+        <section className="relative flex-1 flex flex-col h-full overflow-hidden">
           {/* Top Navigation Bar */}
           <header className="h-20 bg-white/40 backdrop-blur-md border-b border-brand-line/10 px-6 lg:px-10 flex items-center justify-between gap-4 sticky top-0 z-30">
             {/* Breadcrumbs */}

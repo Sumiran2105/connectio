@@ -22,7 +22,8 @@ import {
   Paperclip,
   FileText,
   Send,
-  MoreHorizontal
+  MoreHorizontal,
+  Trash2
 } from "lucide-react";
 import { AdminLayout } from "../components/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -50,7 +51,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { apiClient } from "@/lib/client";
-import { CHANNELS_CREATE, CHANNELS_LIST, TEAMS_LIST } from "@/config/api";
+import { CHANNELS_CREATE, CHANNELS_LIST, CHANNELS_DELETE, TEAMS_LIST } from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
 
 
@@ -242,6 +243,25 @@ export function ChannelsPage() {
       });
 
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to create channel. Please check your inputs and try again.";
+      alert(`Error: ${errorMessage}`);
+    }
+  };
+
+  const handleDeleteChannel = async (channelId) => {
+    if (!window.confirm("Are you sure you want to delete this channel? This action cannot be undone.")) return;
+
+    try {
+      await apiClient.delete(CHANNELS_DELETE(channelId), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      setChannels(prev => prev.filter(c => c.id !== channelId));
+      if (selectedChannel?.id === channelId) {
+        setSelectedChannel(null);
+      }
+    } catch (error) {
+      console.error("Error deleting channel:", error);
+      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to delete channel.";
       alert(`Error: ${errorMessage}`);
     }
   };
@@ -808,6 +828,15 @@ export function ChannelsPage() {
             <div className="flex items-center gap-2">
               <Button variant="ghost" size="icon" className="rounded-xl text-brand-secondary">
                 <Users className="size-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl text-brand-secondary hover:text-red-500 hover:bg-red-50"
+                onClick={() => handleDeleteChannel(selectedChannel?.id)}
+                disabled={!selectedChannel}
+              >
+                <Trash2 className="size-4" />
               </Button>
               <Button variant="ghost" size="icon" className="rounded-xl text-brand-secondary">
                 <Settings className="size-4" />
