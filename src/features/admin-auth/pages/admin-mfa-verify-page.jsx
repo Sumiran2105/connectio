@@ -25,12 +25,13 @@ export function AdminMfaVerifyPage() {
   } = useForm({
     defaultValues: {
       otp: "",
+      rememberDevice: false,
     },
     mode: "onBlur",
   });
 
   const verifyMutation = useMutation({
-    mutationFn: async ({ mfaToken, userId, otp }) => {
+    mutationFn: async ({ mfaToken, userId, otp, rememberDevice }) => {
       if (isSetupVerification) {
         const response = await apiClient.post(AUTH_MFA_VERIFY, null, {
           params: {
@@ -48,6 +49,7 @@ export function AdminMfaVerifyPage() {
         params: {
           user_id: userId,
           otp,
+          remember_device: rememberDevice,
         },
       });
 
@@ -98,11 +100,12 @@ export function AdminMfaVerifyPage() {
   }
 
   const onSubmit = handleSubmit((values) => {
-    verifyMutation.mutate({
-      mfaToken: pendingMfaSession.mfaToken,
-      userId: pendingMfaSession.userId,
-      otp: values.otp,
-    });
+      verifyMutation.mutate({
+        mfaToken: pendingMfaSession.mfaToken,
+        userId: pendingMfaSession.userId,
+        otp: values.otp,
+        rememberDevice: values.rememberDevice,
+      });
   });
 
   function handleCancel() {
@@ -183,6 +186,17 @@ export function AdminMfaVerifyPage() {
               <p className="text-sm text-rose-600">{errors.otp.message}</p>
             ) : null}
           </div>
+
+          {!isSetupVerification ? (
+            <label className="flex items-center gap-3 rounded-2xl border border-brand-line bg-brand-soft/30 px-4 py-3 text-sm text-brand-ink">
+              <input
+                type="checkbox"
+                className="size-4 rounded border-brand-line accent-[var(--brand-primary)]"
+                {...register("rememberDevice")}
+              />
+              Remember this device
+            </label>
+          ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button

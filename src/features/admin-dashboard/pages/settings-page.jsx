@@ -4,11 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { MfaResetDialog } from "@/features/auth/components/mfa-reset-dialog";
+import { useAuthStore } from "@/store/auth-store";
 import { Bell, Lock, User, Building2, ShieldCheck, Mail, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
+  const session = useAuthStore((state) => state.session);
 
   const tabs = [
     { id: "profile", label: "My Profile", icon: User },
@@ -137,7 +140,14 @@ export function SettingsPage() {
                     <div>
                       <h4 className="text-sm font-bold text-brand-ink">Two-Factor Authentication is Active</h4>
                       <p className="text-sm text-brand-secondary mt-1 leading-relaxed">Your account is protected with an authenticator app. We recommend keeping this enabled to secure company data.</p>
-                      <Button variant="outline" className="mt-4 border-brand-line rounded-xl text-brand-ink h-9">Configure MFA</Button>
+                      <div className="mt-4">
+                        <MfaResetDialog
+                          session={session}
+                          triggerLabel="Configure MFA"
+                          triggerVariant="outline"
+                          triggerClassName="border-brand-line rounded-xl text-brand-ink h-9"
+                        />
+                      </div>
                     </div>
                   </div>
 

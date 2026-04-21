@@ -2,6 +2,8 @@ export const AUTH_LOGIN = "/auth/login";
 export const AUTH_LOGIN_MFA = "/auth/login/mfa";
 export const AUTH_MFA_SETUP = "/auth/mfa/setup";
 export const AUTH_MFA_VERIFY = "/auth/mfa/verify";
+export const AUTH_MFA_REQUEST_RESET_OTP = "/auth/mfa/request-reset-otp";
+export const AUTH_MFA_SELF_RESET = "/auth/mfa/self-reset";
 export const AUTH_ADMIN_REGISTER = "/auth/admin-register";
 export const AUTH_REGISTER = "/auth/register";
 export const AUTH_VERIFY_OTP = (companyId) => `/auth/verify-otp/${companyId}`;
@@ -34,10 +36,12 @@ export const TEAMS_REMOVE_MEMBER = (teamId, userId) => `/teams/${teamId}/members
 
 export const PRESENCE_OPTIONS = "/api/v1/presence/options";
 export const PRESENCE_ME = "/api/v1/presence/me";
+export const PRESENCE_USER = (userId) => `/api/v1/presence/${userId}`;
 export const PRESENCE_STATUS = "/api/v1/presence/status";
 export const PRESENCE_CUSTOM_STATUS = "/api/v1/presence/custom-status";
 
 export const DM_USERS_SEARCH = "/api/v1/dm/users/search";
+export const DM_CHANNELS = "/api/v1/dm";
 export const DM_SEND_MESSAGE = (targetUserId) => `/api/v1/dm/${targetUserId}`;
 
 export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/messages`;
@@ -46,6 +50,15 @@ export const CHANNELS_LIST = "/api/v1/channels";
 export const CHANNELS_DELETE = (channelId) => `/api/v1/channels/${channelId}`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>
   `/api/v1/channels/${channelId}/messages/${messageId}`;
+export const MESSAGE_REACTIONS = (messageId) => `/api/v1/messages/${messageId}/reactions`;
+export const MESSAGE_REACTION = (messageId, emoji) =>
+  `/api/v1/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`;
+export const MESSAGE_MARK_READ = (messageId) => `/api/v1/messages/${messageId}/read`;
+export const MESSAGE_BULK_READ = "/api/v1/messages/read/bulk";
+export const MESSAGE_READ_STATUS = (messageId) => `/api/v1/messages/${messageId}/read-status`;
+export const CHANNEL_MARK_READ = (channelId) => `/api/v1/messages/channels/${channelId}/read`;
+export const CHANNEL_UNREAD_COUNT = (channelId) =>
+  `/api/v1/messages/channels/${channelId}/unread-count`;
 
 export const MEETINGS_CREATE = "/api/v1/meetings";
 

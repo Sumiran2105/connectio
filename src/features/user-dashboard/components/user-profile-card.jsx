@@ -1,4 +1,5 @@
 import { useRef, useEffect } from "react";
+import { MfaResetDialog } from "@/features/auth/components/mfa-reset-dialog";
 import { PresencePanel, customStatusLabel, formatStatusLabel } from "./presence-panel";
 
 export function UserProfileCard({
@@ -64,6 +65,15 @@ export function UserProfileCard({
       </div>
 
       <PresencePanel session={session} />
+
+      <div className="border-t border-gray-100 px-6 py-4">
+        <MfaResetDialog
+          session={session}
+          triggerLabel="Reset MFA"
+          triggerVariant="outline"
+          triggerClassName="h-10 w-full justify-center rounded-xl border-gray-200 text-gray-700 hover:bg-gray-50"
+        />
+      </div>
     </div>
   );
 }

@@ -1,210 +1,51 @@
-import { useDeferredValue, useEffect, useRef, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Send,
-  Smile,
-  Paperclip,
-  Phone,
-  Video,
-  MoreVertical,
-  Search,
-  CheckCheck,
-  SquarePen,
-  Plus as PlusIcon,
-  ChevronLeft,
-  LoaderCircle,
-} from "lucide-react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { apiClient } from "@/lib/client";
-import { CHANNEL_MESSAGE, CHANNEL_MESSAGES, CHAT_WEBSOCKET, DM_SEND_MESSAGE, DM_USERS_SEARCH } from "@/config/api";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+  CHANNEL_MARK_READ,
+  CHANNEL_MESSAGE,
+  CHANNEL_MESSAGES,
+  CHANNEL_UNREAD_COUNT,
+  CHAT_WEBSOCKET,
+  DM_CHANNELS,
+  DM_SEND_MESSAGE,
+  DM_USERS_SEARCH,
+  MESSAGE_BULK_READ,
+  MESSAGE_MARK_READ,
+  MESSAGE_REACTION,
+  MESSAGE_REACTIONS,
+  MESSAGE_READ_STATUS,
+  PRESENCE_USER,
+} from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
-
-const chatStorageKey = "conectio-user-chat-state-v2";
-
-const initialContacts = [];
-
-function Avatar({ name, online, size = "size-10" }) {
-  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-pink-500", "bg-amber-500"];
-  const color = colors[name.charCodeAt(0) % colors.length];
-  return (
-    <div className={`relative shrink-0 ${size} rounded-full ${color} flex items-center justify-center font-bold text-white text-sm shadow-sm`}>
-      {initials}
-      {online && (
-        <span className="absolute bottom-0 right-0 size-2.5 bg-emerald-400 border-2 border-white rounded-full" />
-      )}
-    </div>
-  );
-}
-
-function normalizeSearchResults(data) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data?.users)) {
-    return data.users;
-  }
-
-  if (Array.isArray(data?.results)) {
-    return data.results;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  return [];
-}
-
-function normalizeCollection(data) {
-  if (Array.isArray(data)) {
-    return data;
-  }
-
-  if (Array.isArray(data?.messages)) {
-    return data.messages;
-  }
-
-  if (Array.isArray(data?.data)) {
-    return data.data;
-  }
-
-  if (Array.isArray(data?.results)) {
-    return data.results;
-  }
-
-  return [];
-}
-
-function getMessageTimestamp(message) {
-  const rawValue =
-    message?.created_at ||
-    message?.updated_at ||
-    message?.createdAt ||
-    message?.timestamp ||
-    null;
-
-  if (!rawValue) {
-    return 0;
-  }
-
-  const value = new Date(rawValue).getTime();
-  return Number.isNaN(value) ? 0 : value;
-}
-
-function sortMessagesChronologically(messages = []) {
-  return [...messages].sort((a, b) => {
-    const first = a?.timestamp ?? 0;
-    const second = b?.timestamp ?? 0;
-
-    if (first !== second) {
-      return first - second;
-    }
-
-    return String(a?.id ?? "").localeCompare(String(b?.id ?? ""));
-  });
-}
-
-function mergeMessages(existing = [], incoming = []) {
-  const byId = new Map();
-
-  [...existing, ...incoming].forEach((message) => {
-    if (!message?.id) {
-      return;
-    }
-
-    byId.set(String(message.id), message);
-  });
-
-  return sortMessagesChronologically(Array.from(byId.values()));
-}
-
-function formatMessageTime(value) {
-  if (!value) {
-    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  }
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function normalizeServerMessage(message, currentUserId) {
-  const senderId = message.user_id || message.sender_id || message.created_by;
-  const isFromCurrentUser =
-    currentUserId && senderId && String(senderId) === String(currentUserId);
-
-  return {
-    id: message.id || message.message_id || `${Date.now()}-${Math.random()}`,
-    from: isFromCurrentUser ? "me" : "them",
-    text: message.content || message.message || message.text || "",
-    time: formatMessageTime(message.created_at || message.updated_at),
-    timestamp: getMessageTimestamp(message),
-    read: Boolean(message.is_read || message.read_at || message.delivered_at),
-  };
-}
-
-function loadStoredChatState() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const stored = window.localStorage.getItem(chatStorageKey);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-function mergeContacts(storedContacts = []) {
-  const byId = new Map();
-
-  storedContacts.forEach((contact) => {
-    byId.set(String(contact.id), contact);
-  });
-
-  return Array.from(byId.values());
-}
-
-function getInitialContacts() {
-  const stored = loadStoredChatState();
-  return mergeContacts(stored?.contacts || []);
-}
-
-function getInitialConversations(contacts) {
-  const stored = loadStoredChatState();
-  return {
-    ...(stored?.conversations || {}),
-    ...Object.fromEntries(
-      contacts.map((contact) => [
-        contact.id,
-        stored?.conversations?.[contact.id] || contact.messages || [],
-      ])
-    ),
-  };
-}
+import { ChatConversationPane } from "../components/chat-conversation-pane";
+import { ChatSidebar } from "../components/chat-sidebar";
+import { MessageDetailsDialog } from "../components/message-details-dialog";
+import { formatStatusLabel, normalizePresence } from "../components/presence-panel";
+import {
+  formatMessageTime,
+  getChatStorageKey,
+  getInitialChatState,
+  getMessageTimestamp,
+  mergeMessages,
+  normalizeCollection,
+  normalizeDmChannels,
+  normalizeReadStatus,
+  normalizeSearchResults,
+  normalizeServerMessage,
+  sortMessagesChronologically,
+} from "../lib/chat-utils";
 
 export function ChatPage() {
   const session = useAuthStore((state) => state.session);
   const queryClient = useQueryClient();
-  const [contacts, setContacts] = useState(() => getInitialContacts());
-  const [activeContact, setActiveContact] = useState(() => getInitialContacts()[0] || null);
+  const chatStorageKey = getChatStorageKey(session);
+  const [contacts, setContacts] = useState(() => getInitialChatState(chatStorageKey).contacts);
+  const [activeContact, setActiveContact] = useState(() => getInitialChatState(chatStorageKey).activeContact);
   const [messageInput, setMessageInput] = useState("");
-  const [conversations, setConversations] = useState(() => getInitialConversations(getInitialContacts()));
+  const [conversations, setConversations] = useState(() => getInitialChatState(chatStorageKey).conversations);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("chat");
   const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
@@ -213,9 +54,25 @@ export function ChatPage() {
   const bottomRef = useRef(null);
   const searchInputRef = useRef(null);
   const chatSocketRef = useRef(null);
+  const lastBulkReadKeyRef = useRef(null);
   const deferredNewChatQuery = useDeferredValue(searchQuery.trim());
 
   const currentMessages = activeContact ? conversations[activeContact.id] || [] : [];
+
+  const dmChannelsQuery = useQuery({
+    queryKey: ["dm-channels", session?.accessToken, session?.userId],
+    queryFn: async () => {
+      const response = await apiClient.get(DM_CHANNELS, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizeDmChannels(response.data);
+    },
+    enabled: Boolean(session?.accessToken),
+    staleTime: 10 * 1000,
+  });
 
   const channelMessagesQuery = useQuery({
     queryKey: ["channel-messages", activeContact?.channelId, activeContact?.id],
@@ -228,13 +85,90 @@ export function ChatPage() {
 
       return sortMessagesChronologically(
         normalizeCollection(response.data).map((message) =>
-          normalizeServerMessage(message, session?.userId)
+          normalizeServerMessage(message, session?.userId, activeContact?.id)
         )
       );
     },
     enabled: Boolean(session?.accessToken && activeContact?.channelId),
     staleTime: 10 * 1000,
   });
+
+  const activePresenceQuery = useQuery({
+    queryKey: ["presence-user", activeContact?.id],
+    queryFn: async () => {
+      const response = await apiClient.get(PRESENCE_USER(activeContact.id), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizePresence(response.data);
+    },
+    enabled: Boolean(session?.accessToken && activeContact?.id),
+    staleTime: 15 * 1000,
+  });
+
+  const unreadCountQueries = useQueries({
+    queries: contacts
+      .filter((contact) => contact.channelId)
+      .map((contact) => ({
+        queryKey: ["channel-unread-count", contact.channelId, contact.id],
+        queryFn: async () => {
+          const response = await apiClient.get(CHANNEL_UNREAD_COUNT(contact.channelId), {
+            headers: {
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+          });
+
+          return response.data?.unread_messages ?? 0;
+        },
+        enabled: Boolean(session?.accessToken && contact.channelId),
+        staleTime: 5 * 1000,
+      })),
+  });
+
+  const unreadCountsByContactId = contacts.reduce((acc, contact, index) => {
+    acc[contact.id] = unreadCountQueries[index]?.data ?? 0;
+    return acc;
+  }, {});
+  const pendingCountsByContactId = contacts.reduce((acc, contact) => {
+    if (activeContact?.id === contact.id) {
+      acc[contact.id] = 0;
+      return acc;
+    }
+
+    const conversation = conversations[contact.id] || contact.messages || [];
+    const pendingCount = conversation.filter(
+      (message) => message.from === "them" && !message.read
+    ).length;
+
+    acc[contact.id] = pendingCount || unreadCountsByContactId[contact.id] || 0;
+    return acc;
+  }, {});
+
+  const messageReactionQueries = useQueries({
+    queries: currentMessages
+      .filter((message) => message.id)
+      .map((message) => ({
+        queryKey: ["message-reactions", message.id],
+        queryFn: async () => {
+          const response = await apiClient.get(MESSAGE_REACTIONS(message.id), {
+            headers: {
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+          });
+
+          return normalizeCollection(response.data);
+        },
+        enabled: Boolean(session?.accessToken && message.id),
+        staleTime: 10 * 1000,
+      })),
+  });
+
+  const reactionsByMessageId = currentMessages.reduce((acc, message, index) => {
+    acc[message.id] = messageReactionQueries[index]?.data || [];
+    return acc;
+  }, {});
 
   const getMessageMutation = useMutation({
     mutationFn: async ({ channelId, messageId, targetUserId }) => {
@@ -248,7 +182,7 @@ export function ChatPage() {
 
       return {
         raw: message,
-        normalized: normalizeServerMessage(message, session?.userId || targetUserId),
+        normalized: normalizeServerMessage(message, session?.userId, targetUserId),
       };
     },
     onSuccess: (data) => {
@@ -257,6 +191,34 @@ export function ChatPage() {
     onError: () => {
       toast.error("Unable to load message details right now.");
     },
+  });
+
+  const selectedMessageReadStatusQuery = useQuery({
+    queryKey: ["message-read-status", selectedMessage?.normalized?.id],
+    queryFn: async () => {
+      const response = await apiClient.get(MESSAGE_READ_STATUS(selectedMessage.normalized.id), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizeReadStatus(response.data);
+    },
+    enabled: Boolean(session?.accessToken && selectedMessage?.normalized?.id),
+  });
+
+  const selectedMessageReactionsQuery = useQuery({
+    queryKey: ["message-reactions", selectedMessage?.normalized?.id, "dialog"],
+    queryFn: async () => {
+      const response = await apiClient.get(MESSAGE_REACTIONS(selectedMessage.normalized.id), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizeCollection(response.data);
+    },
+    enabled: Boolean(session?.accessToken && selectedMessage?.normalized?.id),
   });
 
   const sendMessageMutation = useMutation({
@@ -281,7 +243,7 @@ export function ChatPage() {
       const sentAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const channelId = data?.channel_id || data?.channel?.id || data?.message?.channel_id || variables.channelId || null;
       const newMsg = data?.message
-        ? normalizeServerMessage(data.message, session?.userId || variables.targetUserId)
+        ? normalizeServerMessage(data.message, session?.userId, variables.targetUserId)
         : {
             id: data?.id || data?.message_id || Date.now(),
             from: "me",
@@ -335,6 +297,147 @@ export function ChatPage() {
     },
   });
 
+  const addReactionMutation = useMutation({
+    mutationFn: async ({ messageId, emoji }) => {
+      const response = await apiClient.post(
+        MESSAGE_REACTIONS(messageId),
+        { emoji },
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["message-reactions", variables.messageId] });
+      queryClient.invalidateQueries({ queryKey: ["message-reactions", variables.messageId, "dialog"] });
+    },
+    onError: () => {
+      toast.error("Unable to add reaction right now.");
+    },
+  });
+
+  const removeReactionMutation = useMutation({
+    mutationFn: async ({ messageId, emoji }) => {
+      const response = await apiClient.delete(MESSAGE_REACTION(messageId, emoji), {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["message-reactions", variables.messageId] });
+      queryClient.invalidateQueries({ queryKey: ["message-reactions", variables.messageId, "dialog"] });
+    },
+    onError: () => {
+      toast.error("Unable to remove reaction right now.");
+    },
+  });
+
+  const markMessageReadMutation = useMutation({
+    mutationFn: async (messageId) => {
+      const response = await apiClient.post(
+        MESSAGE_MARK_READ(messageId),
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (_, messageId) => {
+      queryClient.invalidateQueries({ queryKey: ["message-read-status", messageId] });
+      if (activeContact?.channelId) {
+        queryClient.invalidateQueries({
+          queryKey: ["channel-unread-count", activeContact.channelId, activeContact.id],
+        });
+      }
+    },
+  });
+
+  const bulkReadMutation = useMutation({
+    mutationFn: async (messageIds) => {
+      const response = await apiClient.post(
+        MESSAGE_BULK_READ,
+        messageIds,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (_, messageIds) => {
+      if (!activeContact) {
+        return;
+      }
+
+      setConversations((current) => ({
+        ...current,
+        [activeContact.id]: (current[activeContact.id] || []).map((message) =>
+          messageIds.includes(message.id) ? { ...message, read: true } : message
+        ),
+      }));
+
+      setContacts((current) =>
+        current.map((contact) =>
+          contact.id === activeContact.id
+            ? {
+                ...contact,
+                messages: (contact.messages || []).map((message) =>
+                  messageIds.includes(message.id) ? { ...message, read: true } : message
+                ),
+              }
+            : contact
+        )
+      );
+
+      messageIds.forEach((messageId) => {
+        queryClient.invalidateQueries({ queryKey: ["message-read-status", messageId] });
+      });
+
+      if (activeContact.channelId) {
+        queryClient.invalidateQueries({
+          queryKey: ["channel-unread-count", activeContact.channelId, activeContact.id],
+        });
+      }
+    },
+  });
+
+  const markChannelReadMutation = useMutation({
+    mutationFn: async ({ channelId, messageId }) => {
+      const response = await apiClient.post(
+        CHANNEL_MARK_READ(channelId),
+        null,
+        {
+          headers: {
+            Authorization: `Bearer ${session?.accessToken}`,
+          },
+          params: {
+            message_id: messageId,
+          },
+        }
+      );
+
+      return response.data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: ["channel-unread-count", variables.channelId, activeContact?.id],
+      });
+    },
+  });
+
   const searchUsersQuery = useQuery({
     queryKey: ["dm-users-search", deferredNewChatQuery],
     queryFn: async () => {
@@ -353,6 +456,16 @@ export function ChatPage() {
     staleTime: 30 * 1000,
   });
 
+  const sidebarResults = useMemo(
+    () =>
+      isNewChatMode
+        ? searchUsersQuery.data || []
+        : contacts.filter((contact) =>
+            contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+          ),
+    [contacts, isNewChatMode, searchQuery, searchUsersQuery.data]
+  );
+
   useEffect(() => {
     if (isNewChatMode) {
       searchInputRef.current?.focus();
@@ -360,7 +473,7 @@ export function ChatPage() {
   }, [isNewChatMode]);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
+    if (typeof window === "undefined" || !chatStorageKey) {
       return;
     }
 
@@ -371,7 +484,86 @@ export function ChatPage() {
         conversations,
       })
     );
-  }, [contacts, conversations]);
+  }, [chatStorageKey, contacts, conversations]);
+
+  useEffect(() => {
+    const initialState = getInitialChatState(chatStorageKey);
+
+    setContacts(initialState.contacts);
+    setActiveContact(initialState.activeContact);
+    setConversations(initialState.conversations);
+  }, [chatStorageKey]);
+
+  useEffect(() => {
+    if (!dmChannelsQuery.data?.length) {
+      return;
+    }
+
+    setContacts((current) => {
+      const currentById = new Map(current.map((contact) => [String(contact.id), contact]));
+      const backendContacts = dmChannelsQuery.data.map((channel) => {
+        const existing = currentById.get(String(channel.user_id));
+        const existingMessages = existing?.messages || conversations[channel.user_id] || [];
+
+        return {
+          id: channel.user_id,
+          name: channel.name || existing?.name || "Unknown user",
+          role: existingMessages[existingMessages.length - 1]?.text || existing?.role || "Conversation",
+          online: existing?.online || false,
+          channelId: channel.channel_id,
+          unread: 0,
+          messages: existingMessages,
+        };
+      });
+
+      const merged = new Map();
+
+      backendContacts.forEach((contact) => {
+        merged.set(String(contact.id), contact);
+      });
+
+      current.forEach((contact) => {
+        const key = String(contact.id);
+        const existing = merged.get(key);
+
+        merged.set(key, existing
+          ? {
+              ...contact,
+              ...existing,
+              role: existing.role || contact.role,
+              messages: mergeMessages(contact.messages || [], existing.messages || []),
+            }
+          : contact);
+      });
+
+      return Array.from(merged.values());
+    });
+
+    setConversations((current) => {
+      const next = { ...current };
+
+      dmChannelsQuery.data.forEach((channel) => {
+        next[channel.user_id] = current[channel.user_id] || [];
+      });
+
+      return next;
+    });
+
+    setActiveContact((current) => {
+      const refreshedContacts = dmChannelsQuery.data.map((channel) => ({
+        id: channel.user_id,
+        name: channel.name || "Unknown user",
+        channelId: channel.channel_id,
+      }));
+
+      if (current) {
+        const refreshed = refreshedContacts.find((contact) => contact.id === current.id);
+        return refreshed ? { ...current, ...refreshed } : current;
+      }
+
+      return refreshedContacts[0] || null;
+    });
+  }, [dmChannelsQuery.data]);
 
   useEffect(() => {
     if (!activeContact || !channelMessagesQuery.data?.length) {
@@ -398,6 +590,44 @@ export function ChatPage() {
       )
     );
   }, [activeContact, channelMessagesQuery.data]);
+
+  useEffect(() => {
+    if (!activeContact?.channelId || !currentMessages.length) {
+      lastBulkReadKeyRef.current = null;
+      return;
+    }
+
+    const unreadIncomingMessages = currentMessages.filter(
+      (message) => message.from === "them" && !message.read && message.id
+    );
+
+    if (!unreadIncomingMessages.length) {
+      return;
+    }
+
+    const messageIds = unreadIncomingMessages.map((message) => message.id);
+    const readKey = `${activeContact.channelId}:${messageIds.join(",")}`;
+
+    if (lastBulkReadKeyRef.current === readKey || bulkReadMutation.isPending) {
+      return;
+    }
+
+    lastBulkReadKeyRef.current = readKey;
+    bulkReadMutation.mutate(messageIds);
+
+    const latestMessage = unreadIncomingMessages[unreadIncomingMessages.length - 1];
+    if (latestMessage?.id) {
+      markChannelReadMutation.mutate({
+        channelId: activeContact.channelId,
+        messageId: latestMessage.id,
+      });
+    }
+  }, [
+    activeContact?.channelId,
+    currentMessages,
+    bulkReadMutation,
+    markChannelReadMutation,
+  ]);
 
   useEffect(() => {
     if (!activeContact?.channelId || !session?.accessToken) {
@@ -440,7 +670,11 @@ export function ChatPage() {
           );
 
           const fetchedMessage = response.data?.message || response.data;
-          const normalizedMessage = normalizeServerMessage(fetchedMessage, session.userId);
+          const normalizedMessage = normalizeServerMessage(
+            fetchedMessage,
+            session.userId,
+            activeContact.id
+          );
 
           setConversations((current) => ({
             ...current,
@@ -472,7 +706,11 @@ export function ChatPage() {
           return;
         }
 
-        const normalizedMessage = normalizeServerMessage(rawPayload?.message || rawPayload, session.userId);
+        const normalizedMessage = normalizeServerMessage(
+          rawPayload?.message || rawPayload,
+          session.userId,
+          activeContact.id
+        );
 
         setConversations((current) => ({
           ...current,
@@ -544,11 +782,31 @@ export function ChatPage() {
     }
   }
 
-  const filteredContacts = contacts.filter(c =>
-    c.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   function openConversation(contact) {
+    const nextMessages = (conversations[contact.id] || contact.messages || []).map((message) =>
+      message.from === "them" ? { ...message, read: true } : message
+    );
+
+    setConversations((current) => ({
+      ...current,
+      [contact.id]: nextMessages,
+    }));
+
+    setContacts((current) =>
+      current.map((item) =>
+        item.id === contact.id
+          ? {
+              ...item,
+              messages: nextMessages,
+            }
+          : item
+      )
+    );
+
+    if (contact.channelId) {
+      queryClient.setQueryData(["channel-unread-count", contact.channelId, contact.id], 0);
+    }
+
     setActiveContact(contact);
     setIsMobileChatOpen(true);
     setIsNewChatMode(false);
@@ -593,6 +851,10 @@ export function ChatPage() {
       return;
     }
 
+    if (message.from === "them" && !message.read) {
+      markMessageReadMutation.mutate(message.id);
+    }
+
     getMessageMutation.mutate({
       channelId: activeContact.channelId,
       messageId: message.id,
@@ -600,343 +862,80 @@ export function ChatPage() {
     });
   }
 
-  const sidebarResults = isNewChatMode ? searchUsersQuery.data || [] : filteredContacts;
-
   return (
-    <UserLayout>
-      <div className="fixed top-20 bottom-0 left-0 lg:left-[72px] right-0 bg-white z-[20] flex flex-col overflow-hidden">
-        <div className="flex w-full h-full gap-0 overflow-hidden bg-white">
-          <aside className={`shrink-0 border-r border-gray-200 flex-col bg-gray-50 ${isMobileChatOpen ? "hidden sm:flex" : "flex w-full sm:w-80"}`}>
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between mb-5">
-                <h2 className="text-2xl font-bold text-gray-900">Chat</h2>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="p-2 hover:bg-white rounded-lg transition-colors"
-                    aria-label="New chat"
-                    title="New chat"
-                    onClick={handleNewChatClick}
-                  >
-                    <SquarePen className="size-5 text-gray-700" />
-                  </button>
-                </div>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
-                <input
-                  ref={searchInputRef}
-                  type="text"
-                  placeholder={isNewChatMode ? "Search by user name or email" : "Search..."}
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full bg-white border border-gray-300 rounded-full py-2.5 pl-10 pr-4 text-sm placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-brand-primary/30 transition-all"
-                />
-              </div>
-            </div>
+    <UserLayout
+      showFloatingActions={false}
+      contentClassName="overflow-hidden px-0 py-0 sm:px-0 lg:px-0 lg:py-0"
+      contentInnerClassName="max-w-none h-full"
+    >
+      <div className="flex h-[calc(100vh-5rem)] min-h-[640px] w-full overflow-hidden bg-white">
+        <div className="flex h-full w-full overflow-hidden bg-white">
+          <ChatSidebar
+            activeContact={activeContact}
+            conversations={conversations}
+            deferredNewChatQuery={deferredNewChatQuery}
+            isMobileChatOpen={isMobileChatOpen}
+            isNewChatMode={isNewChatMode}
+            onCancelSearch={() => {
+              setIsNewChatMode(false);
+              setSearchQuery("");
+            }}
+            onNewChatClick={handleNewChatClick}
+            onOpenConversation={openConversation}
+            onSearchChange={setSearchQuery}
+            onSelectSearchUser={handleSelectSearchUser}
+            searchInputRef={searchInputRef}
+            searchQuery={searchQuery}
+            searchUsersQuery={searchUsersQuery}
+            sidebarResults={sidebarResults}
+            unreadCountsByContactId={pendingCountsByContactId}
+          />
 
-            <div className="flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
-              <div className="px-6 py-4">
-                <div className="mb-3 flex items-center justify-between gap-3">
-                  <h3 className="text-xs font-bold text-gray-600 uppercase tracking-wide">
-                    {isNewChatMode ? "Search results" : "Recent"}
-                  </h3>
-                  {isNewChatMode ? (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsNewChatMode(false);
-                        setSearchQuery("");
-                      }}
-                      className="text-xs font-semibold text-brand-primary hover:underline"
-                    >
-                      Cancel
-                    </button>
-                  ) : null}
-                </div>
-                <div className="space-y-2">
-                  {isNewChatMode && deferredNewChatQuery.length <= 1 ? (
-                    <div className="rounded-lg bg-white px-4 py-4 text-sm text-gray-500">
-                      Type at least 2 characters to search for a person.
-                    </div>
-                  ) : null}
-
-                  {isNewChatMode && deferredNewChatQuery.length > 1 && searchUsersQuery.isLoading ? (
-                    <div className="flex items-center gap-3 rounded-lg bg-white px-4 py-4 text-sm text-gray-500">
-                      <LoaderCircle className="size-4 animate-spin" />
-                      Searching users
-                    </div>
-                  ) : null}
-
-                  {isNewChatMode && deferredNewChatQuery.length > 1 && searchUsersQuery.isError ? (
-                    <div className="rounded-lg bg-white px-4 py-4 text-sm text-rose-600">
-                      Unable to search users right now.
-                    </div>
-                  ) : null}
-
-                  {sidebarResults.map(contact => {
-                    const contactId = contact.id || contact.user_id || contact.email;
-                    const contactName = isNewChatMode
-                      ? contact.full_name || contact.name || contact.display_name || "Unknown user"
-                      : contact.name;
-                    const contactSubtitle = isNewChatMode
-                      ? contact.email || "No email available"
-                      : contact.role;
-                    const contactOnline = isNewChatMode
-                      ? Boolean(contact.online || contact.is_online || contact.is_active)
-                      : contact.online;
-                    const isActive = activeContact?.id === contactId;
-                    const contactMessages = conversations[contactId] || contact.messages || [];
-
-                    return (
-                      <button
-                        key={contactId}
-                        onClick={() =>
-                          isNewChatMode ? handleSelectSearchUser(contact) : openConversation(contact)
-                        }
-                        className={`w-full flex items-start gap-3 px-4 py-2.5 rounded-lg transition-all ${isActive
-                          ? "bg-white shadow-sm"
-                          : "hover:bg-white/50"
-                          }`}
-                      >
-                        <Avatar name={contactName} online={contactOnline} size="size-10" />
-                        <div className="flex-1 min-w-0 text-left">
-                          <p className={`text-sm font-bold truncate ${isActive ? "text-gray-900" : "text-gray-700"}`}>
-                            {contactName}
-                          </p>
-                          <p className="text-xs text-gray-600 truncate">{contactSubtitle}</p>
-                        </div>
-                        {!isNewChatMode ? (
-                          <p className="text-xs text-gray-500 shrink-0">
-                            {contactMessages[contactMessages.length - 1]?.time}
-                          </p>
-                        ) : null}
-                      </button>
-                    );
-                  })}
-
-                  {isNewChatMode &&
-                  deferredNewChatQuery.length > 1 &&
-                  !searchUsersQuery.isLoading &&
-                  !searchUsersQuery.isError &&
-                  !sidebarResults.length ? (
-                    <div className="rounded-lg bg-white px-4 py-4 text-sm text-gray-500">
-                      No users found for this search.
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="p-6">
-                <button className="w-full flex items-center justify-center gap-2 rounded-lg bg-white border border-gray-300 px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  <PlusIcon className="size-4" />
-                  Invite to Connectio
-                </button>
-              </div>
-            </div>
-          </aside>
-
-          <div className={`flex-1 flex-col min-w-0 bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
-            {activeContact ? (
-              <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
-                <div className="flex items-center gap-3 sm:gap-4">
-                  <button
-                    onClick={() => setIsMobileChatOpen(false)}
-                    className="sm:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
-                  >
-                    <ChevronLeft className="size-5" />
-                  </button>
-                  <Avatar name={activeContact.name} online={activeContact.online} size="size-11" />
-                  <div>
-                    <h3 className="text-base font-bold text-gray-900">{activeContact.name}</h3>
-                    <p className="text-xs text-gray-600">{currentMessages.length} messages</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                    <Video className="size-5" />
-                  </button>
-                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                    <Phone className="size-5" />
-                  </button>
-                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                    <Search className="size-5" />
-                  </button>
-                  <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                    <MoreVertical className="size-5" />
-                  </button>
-                </div>
-              </header>
-            ) : null}
-
-            {activeContact ? (
-              <div className="flex items-center gap-6 px-6 py-3 border-b border-gray-200 bg-gray-50">
-                {["Chat", "Files", "Photos"].map(tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab.toLowerCase())}
-                    className={`text-sm font-medium pb-2 border-b-2 transition-colors ${activeTab === tab.toLowerCase()
-                      ? "text-brand-primary border-brand-primary"
-                      : "text-gray-600 border-transparent hover:text-gray-900"
-                      }`}
-                  >
-                    {tab}
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            <div className="flex-1 overflow-y-auto px-6 py-6 space-y-4 bg-white [scrollbar-width:thin]">
-              {!activeContact ? (
-                <div className="flex h-full min-h-[420px] flex-col items-center justify-center text-center">
-                  <div className="mb-4 flex size-14 items-center justify-center rounded-2xl bg-brand-soft text-brand-primary">
-                    <SquarePen className="size-6" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-900">Start a conversation</h3>
-                  <p className="mt-2 max-w-sm text-sm text-gray-500">
-                    Click the new chat icon, search for a user, and send your first message.
-                  </p>
-                </div>
-              ) : null}
-
-              {channelMessagesQuery.isLoading ? (
-                <div className="flex items-center justify-center gap-2 py-6 text-sm text-gray-500">
-                  <LoaderCircle className="size-4 animate-spin" />
-                  Loading messages
-                </div>
-              ) : null}
-
-              {currentMessages.map((msg, idx) => {
-                const isMe = msg.from === "me";
-                const prevMsg = currentMessages[idx - 1];
-                const showAvatar = !isMe && prevMsg?.from !== "them";
-
-                return (
-                  <div key={msg.id} className={`flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
-                    {!isMe ? (
-                      <div className="h-8 w-8 shrink-0">
-                        {showAvatar ? <Avatar name={activeContact.name} online={false} size="size-8" /> : null}
-                      </div>
-                    ) : null}
-
-                    <div className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
-                      {msg.isFile ? (
-                        <button
-                          type="button"
-                          onClick={() => handleMessageClick(msg)}
-                          className={`min-w-[200px] rounded-xl border px-4 py-3 text-left text-sm font-medium shadow-sm transition hover:shadow-md ${isMe
-                          ? "bg-brand-primary text-white border-brand-primary"
-                          : "bg-white border-gray-300 text-gray-900"
-                          }`}>
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-                              <Paperclip className="size-5" />
-                            </div>
-                            <span>{msg.text}</span>
-                          </div>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => handleMessageClick(msg)}
-                          className={`max-w-md rounded-2xl px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow-md ${isMe
-                            ? "bg-brand-primary text-white rounded-br-none"
-                            : "bg-gray-100 text-gray-900 rounded-bl-none"
-                            }`}
-                        >
-                          {msg.text}
-                        </button>
-                      )}
-                      {isMe && msg.time && (
-                        <div className="flex items-center gap-1 mt-1 flex-row-reverse">
-                          <span className="text-[11px] text-gray-500">{msg.time}</span>
-                          <CheckCheck className="size-3.5 text-brand-primary" />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-              <div ref={bottomRef} />
-            </div>
-
-            {activeContact ? (
-            <div className="shrink-0 pl-6 pr-24 py-4 border-t border-gray-200 bg-white">
-              <div className="flex items-end gap-3 bg-gray-100 border border-gray-300 rounded-full px-4 py-3 focus-within:border-brand-primary focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
-                <button className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-brand-primary hover:bg-white transition-colors">
-                  <Paperclip className="size-5" />
-                </button>
-                <textarea
-                  rows={1}
-                  value={messageInput}
-                  onChange={e => {
-                    setMessageInput(e.target.value);
-                    e.target.style.height = "auto";
-                    e.target.style.height = Math.min(e.target.scrollHeight, 100) + "px";
-                  }}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type a message"
-                  className="flex-1 bg-transparent border-none resize-none text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none leading-relaxed py-1 max-h-[100px] [scrollbar-width:thin]"
-                />
-                <button className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-brand-primary hover:bg-white transition-colors">
-                  <Smile className="size-5" />
-                </button>
-                <button className="shrink-0 p-1.5 rounded-lg text-gray-600 hover:text-brand-primary hover:bg-white transition-colors">
-                  <PlusIcon className="size-5" />
-                </button>
-                <button
-                  onClick={sendMessage}
-                  disabled={!messageInput.trim() || sendMessageMutation.isPending}
-                  className="shrink-0 size-9 flex items-center justify-center rounded-lg bg-brand-primary text-white hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                  {sendMessageMutation.isPending ? (
-                    <LoaderCircle className="size-5 animate-spin" />
-                  ) : (
-                    <Send className="size-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-            ) : null}
-          </div>
+        <ChatConversationPane
+          activeContact={activeContact}
+          activePresenceLabel={
+            activePresenceQuery.data?.customStatus
+              ? `${activePresenceQuery.data.customStatus.emoji || ""} ${activePresenceQuery.data.customStatus.text || ""}`.trim()
+              : formatStatusLabel(activePresenceQuery.data?.status || (activeContact?.online ? "online" : "offline"))
+          }
+          activeTab={activeTab}
+          bottomRef={bottomRef}
+          currentMessages={currentMessages}
+            isLoading={channelMessagesQuery.isLoading}
+            isMobileChatOpen={isMobileChatOpen}
+            messageInput={messageInput}
+            onAddReaction={(messageId, emoji) =>
+              addReactionMutation.mutate({ messageId, emoji })
+            }
+            onBack={() => setIsMobileChatOpen(false)}
+            onInputChange={(event) => {
+              setMessageInput(event.target.value);
+              event.target.style.height = "auto";
+              event.target.style.height = `${Math.min(event.target.scrollHeight, 120)}px`;
+            }}
+            onKeyDown={handleKeyDown}
+            onMessageClick={handleMessageClick}
+            onRemoveReaction={(messageId, emoji) =>
+              removeReactionMutation.mutate({ messageId, emoji })
+            }
+            onSendMessage={sendMessage}
+            onTabChange={setActiveTab}
+            reactionsByMessageId={reactionsByMessageId}
+            sendMessageMutation={sendMessageMutation}
+          />
         </div>
       </div>
-      <Dialog open={Boolean(selectedMessage)} onOpenChange={(open) => !open && setSelectedMessage(null)}>
-        <DialogContent className="rounded-[28px] border-brand-line bg-white">
-          <DialogHeader>
-            <DialogTitle className="text-brand-ink">Message details</DialogTitle>
-            <DialogDescription>
-              Loaded from the single message endpoint for the active channel.
-            </DialogDescription>
-          </DialogHeader>
 
-          {selectedMessage ? (
-            <div className="space-y-4">
-              <div className="rounded-2xl border border-brand-line bg-brand-neutral p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
-                  Content
-                </p>
-                <p className="mt-2 text-sm text-brand-ink">{selectedMessage.normalized.text || "No content"}</p>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="rounded-2xl border border-brand-line bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
-                    Message ID
-                  </p>
-                  <p className="mt-2 break-all text-sm text-brand-ink">{selectedMessage.normalized.id}</p>
-                </div>
-                <div className="rounded-2xl border border-brand-line bg-white p-4">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
-                    Time
-                  </p>
-                  <p className="mt-2 text-sm text-brand-ink">{selectedMessage.normalized.time}</p>
-                </div>
-              </div>
-            </div>
-          ) : null}
-        </DialogContent>
-      </Dialog>
+      <MessageDetailsDialog
+        addReaction={(messageId, emoji) => addReactionMutation.mutate({ messageId, emoji })}
+        onOpenChange={() => setSelectedMessage(null)}
+        removeReaction={(messageId, emoji) =>
+          removeReactionMutation.mutate({ messageId, emoji })
+        }
+        selectedMessage={selectedMessage}
+        selectedMessageReactionsQuery={selectedMessageReactionsQuery}
+        selectedMessageReadStatusQuery={selectedMessageReadStatusQuery}
+      />
     </UserLayout>
   );
 }

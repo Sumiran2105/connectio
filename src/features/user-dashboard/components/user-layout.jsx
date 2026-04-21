@@ -25,7 +25,12 @@ import { useAuthStore } from "@/store/auth-store";
 import { customStatusLabel, formatStatusLabel, normalizePresence } from "./presence-panel";
 import { UserProfileCard } from "./user-profile-card";
 
-export function UserLayout({ children }) {
+export function UserLayout({
+  children,
+  contentClassName = "",
+  contentInnerClassName = "",
+  showFloatingActions = true,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
@@ -247,12 +252,14 @@ export function UserLayout({ children }) {
             </div>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-12 lg:py-10">
-            <div className="mx-auto max-w-[1200px]">{children}</div>
+          <div
+            className={`flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-12 lg:py-10 ${contentClassName}`}
+          >
+            <div className={`mx-auto max-w-[1200px] ${contentInnerClassName}`}>{children}</div>
           </div>
         </section>
 
-        <FloatingActionMenu items={quickActions} />
+        {showFloatingActions ? <FloatingActionMenu items={quickActions} /> : null}
       </div>
     </main>
   );
