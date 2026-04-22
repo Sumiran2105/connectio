@@ -28,6 +28,7 @@ export const COMPANY_REJECT_USER = (userId) => `/company/users/${userId}/reject`
 
 export const TEAMS_CREATE = "/teams/";
 export const TEAMS_LIST = "/teams/";
+export const TEAMS_MY_TEAMS = "/teams/my-teams";
 export const USERS_SEARCH = "/api/v1/dm/users/search";
 export const TEAMS_MEMBERS = (teamId) => `/teams/${teamId}/members`;
 export const TEAMS_ADD_MEMBER = (teamId) => `/teams/${teamId}/members`;
@@ -48,6 +49,7 @@ export const DM_SEND_MESSAGE = (targetUserId) => `/api/v1/dm/${targetUserId}`;
 export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/messages`;
 export const CHANNELS_CREATE = "/api/v1/channels";
 export const CHANNELS_LIST = "/api/v1/channels";
+export const CHANNELS_MY_CHANNELS = "/api/v1/channels/my-channels";
 export const CHANNELS_DELETE = (channelId) => `/api/v1/channels/${channelId}`;
 export const CHANNEL_MEMBERS = (channelId) => `/api/v1/channels/${channelId}/members`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>

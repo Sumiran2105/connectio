@@ -20,7 +20,7 @@ export function ChatSidebar({
 }) {
   return (
     <aside
-      className={`shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white ${
+      className={`h-full min-h-0 shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white ${
         isMobileChatOpen ? "hidden sm:flex" : "flex w-full sm:w-[22rem]"
       }`}
     >
@@ -56,7 +56,7 @@ export function ChatSidebar({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
         <div className="px-6 py-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-xs font-bold uppercase tracking-[0.22em] text-gray-500">

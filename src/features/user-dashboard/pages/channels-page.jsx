@@ -1,403 +1,376 @@
-import { useState, useRef, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
-  Hash,
-  Users2,
-  Plus,
-  Search,
-  MoreVertical,
-  Settings,
-  UserPlus,
-  Video,
-  ChevronRight,
-  X, Lock,
-  Phone,
-  Paperclip,
-  Smile,
-  Send,
-  Plus as PlusIcon,
-  CheckCheck,
   ChevronLeft,
+  Hash,
+  Lock,
+  Search,
+  SquarePen,
+  Users2,
 } from "lucide-react";
+
+import { CHANNELS_MY_CHANNELS } from "@/config/api";
+import { apiClient } from "@/lib/client";
+import { useAuthStore } from "@/store/auth-store";
+import { ChatAvatar } from "../components/chat-avatar";
 import { UserLayout } from "../components/user-layout";
 
-function Avatar({ name, online, size = "size-8" }) {
-  const initials = name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase();
-  const colors = ["bg-violet-500", "bg-blue-500", "bg-emerald-500", "bg-pink-500", "bg-amber-500"];
-  const color = colors[name.charCodeAt(0) % colors.length];
+function normalizeChannels(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.channels)) {
+    return data.channels;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data;
+  }
+
+  return [];
+}
+
+function buildChannelView(channel, index) {
+  const name = channel?.name || channel?.channel_name || `channel-${index + 1}`;
+  const description =
+    channel?.description ||
+    channel?.purpose ||
+    channel?.topic ||
+    "No channel description available yet.";
+  const memberCount =
+    channel?.members_count ||
+    channel?.member_count ||
+    channel?.members?.length ||
+    0;
+  const teamName =
+    channel?.team_name || channel?.team?.name || channel?.workspace_name || "Workspace channel";
+  const isPrivate = Boolean(channel?.private || channel?.is_private);
+
+  return {
+    id: channel?.id || channel?.channel_id || `${name}-${index}`,
+    name,
+    description,
+    memberCount,
+    isPrivate,
+    teamName,
+    visibilityLabel: isPrivate ? "Private" : "Public",
+  };
+}
+
+function ChannelSidebarItem({ channel, isActive, onClick }) {
   return (
-    <div className={`relative shrink-0 ${size} rounded-full ${color} flex items-center justify-center font-bold text-white text-[10px] shadow-sm`}>
-      {initials}
-      {online && (
-        <span className="absolute bottom-0 right-0 size-2 bg-emerald-400 border border-white rounded-full" />
-      )}
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+        isActive
+          ? "border-brand-primary/20 bg-white shadow-sm"
+          : "border-transparent bg-transparent hover:border-gray-200 hover:bg-white"
+      }`}
+    >
+      <div className="flex items-start gap-3">
+        <ChatAvatar name={channel.name} size="size-11" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2">
+              <p className="truncate text-sm font-semibold text-gray-900">#{channel.name}</p>
+              {channel.isPrivate ? <Lock className="size-3.5 shrink-0 text-gray-400" /> : null}
+            </div>
+            <span className="shrink-0 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-gray-500">
+              {channel.visibilityLabel}
+            </span>
+          </div>
+          <p className="mt-0.5 line-clamp-1 text-sm text-gray-500">{channel.description}</p>
+        </div>
+      </div>
+    </button>
+  );
+}
+
+function ChannelMetricCard({ icon: Icon, label, value }) {
+  return (
+    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-2 text-gray-400">
+        <Icon className="size-4" />
+        <p className="text-[11px] font-bold uppercase tracking-[0.22em]">{label}</p>
+      </div>
+      <p className="mt-4 text-3xl font-semibold text-gray-950">{value}</p>
     </div>
   );
 }
 
-const mockChannels = [
-  {
-    id: 1,
-    name: "general",
-    description: "Company-wide announcements and discussion",
-    members: 45,
-    private: false,
-    messages: [
-      { id: 1, from: "Alex", text: "Hey team, welcome to the general channel!", time: "09:00", isMe: false },
-      { id: 2, from: "me", text: "Thanks Alex! Excited to be here.", time: "09:05", isMe: true },
-      { id: 3, from: "Sarah", text: "Did everyone see the Q3 report?", time: "10:30", isMe: false },
-    ]
-  },
-  {
-    id: 2,
-    name: "design",
-    description: "Design critiques, UI/UX discussions",
-    members: 12,
-    private: true,
-    messages: [
-      { id: 1, from: "Jordan", text: "Just uploaded the new high-fidelity mocks.", time: "Yesterday", isMe: false },
-      { id: 2, from: "me", text: "Looking great, especially the dark mode version.", time: "Yesterday", isMe: true },
-    ]
-  },
-  {
-    id: 3,
-    name: "dev-backend",
-    description: "Backend architecture, APIs, and services",
-    members: 20,
-    private: true,
-    messages: [
-      { id: 1, from: "Mike", text: "The new API endpoint is live on staging.", time: "2 days ago", isMe: false },
-    ]
-  },
-  {
-    id: 4,
-    name: "marketing",
-    description: "Campaign planning, content, and analytics",
-    members: 8,
-    private: false,
-    messages: []
-  },
-  {
-    id: 5,
-    name: "marketing",
-    description: "Campaign planning, content, and analytics",
-    members: 8,
-    private: false,
-    messages: []
-  },
-  {
-    id: 6,
-    name: "marketing",
-    description: "Campaign planning, content, and analytics",
-    members: 8,
-    private: false,
-    messages: []
-  },
-  {
-    id: 7,
-    name: "marketing",
-    description: "Campaign planning, content, and analytics",
-    members: 8,
-    private: false,
-    messages: []
-  },
-  {
-    id: 8,
-    name: "marketing",
-    description: "Campaign planning, content, and analytics",
-    members: 8,
-    private: false,
-    messages: []
-  },
-];
-
 export function ChannelsPage() {
-  const [activeChannelId, setActiveChannelId] = useState(mockChannels[0].id);
+  const session = useAuthStore((state) => state.session);
   const [search, setSearch] = useState("");
-  const [showCreate, setShowCreate] = useState(false);
-  const [newName, setNewName] = useState("");
-  const [newDesc, setNewDesc] = useState("");
-  const [newPrivate, setNewPrivate] = useState(false);
-  const [messageInput, setMessageInput] = useState("");
-  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
-  const [conversations, setConversations] = useState(
-    Object.fromEntries(mockChannels.map(c => [c.id, c.messages]))
-  );
+  const [activeChannelId, setActiveChannelId] = useState(null);
+  const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
 
-  const bottomRef = useRef(null);
-  const activeChannel = mockChannels.find(c => c.id === activeChannelId);
-  const currentMessages = conversations[activeChannelId] || [];
+  const channelsQuery = useQuery({
+    queryKey: ["my-channels", session?.accessToken],
+    queryFn: async () => {
+      const response = await apiClient.get(CHANNELS_MY_CHANNELS, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      return normalizeChannels(response.data).map(buildChannelView);
+    },
+    enabled: Boolean(session?.accessToken),
+    staleTime: 30 * 1000,
+  });
+
+  const channels = channelsQuery.data || [];
+
+  const filteredChannels = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) {
+      return channels;
+    }
+
+    return channels.filter(
+      (channel) =>
+        channel.name.toLowerCase().includes(query) ||
+        channel.description.toLowerCase().includes(query) ||
+        channel.teamName.toLowerCase().includes(query)
+    );
+  }, [channels, search]);
+
+  const activeChannel =
+    filteredChannels.find((channel) => channel.id === activeChannelId) ||
+    channels.find((channel) => channel.id === activeChannelId) ||
+    filteredChannels[0] ||
+    channels[0] ||
+    null;
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [currentMessages]);
-
-  const filtered = mockChannels.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.description.toLowerCase().includes(search.toLowerCase())
-  );
-
-  function handleCreate(e) {
-    e.preventDefault();
-    setShowCreate(false);
-    setNewName("");
-    setNewDesc("");
-    setNewPrivate(false);
-  }
-
-  function sendMessage() {
-    const text = messageInput.trim();
-    if (!text) return;
-
-    const newMsg = {
-      id: Date.now(),
-      from: "me",
-      text,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      isMe: true,
-    };
-
-    setConversations(prev => ({
-      ...prev,
-      [activeChannelId]: [...(prev[activeChannelId] || []), newMsg],
-    }));
-    setMessageInput("");
-  }
-
-  function handleKeyDown(e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
+    if (!activeChannelId && channels[0]) {
+      setActiveChannelId(channels[0].id);
     }
+  }, [activeChannelId, channels]);
+
+  function openChannel(channel) {
+    setActiveChannelId(channel.id);
+    setIsMobilePanelOpen(true);
   }
 
   return (
-    <UserLayout>
-      {/* Create Channel Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-brand-ink/40 backdrop-blur-sm" onClick={() => setShowCreate(false)} />
-          <div className="relative z-10 w-full max-w-md bg-white rounded-[28px] shadow-2xl border border-brand-line p-6 animate-in fade-in zoom-in-95 duration-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-bold text-brand-ink">Create a Channel</h3>
-              <button onClick={() => setShowCreate(false)} className="size-8 flex items-center justify-center rounded-xl bg-brand-neutral text-brand-secondary hover:bg-brand-soft hover:text-brand-ink transition-colors">
-                <X className="size-4" />
-              </button>
-            </div>
-            <form onSubmit={handleCreate} className="space-y-4">
+    <UserLayout
+      showFloatingActions={false}
+      contentClassName="overflow-hidden px-0 py-0 sm:px-0 lg:px-0 lg:py-0"
+      contentInnerClassName="max-w-none h-full"
+    >
+      <div className="flex h-[calc(100vh-5rem)] min-h-[640px] w-full overflow-hidden bg-white">
+        <aside
+          className={`shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white ${
+            isMobilePanelOpen ? "hidden sm:flex" : "flex w-full sm:w-[22rem]"
+          }`}
+        >
+          <div className="border-b border-gray-200 px-6 py-5">
+            <div className="mb-5 flex items-center justify-between">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-brand-secondary mb-1.5">Channel Name *</label>
-                <input
-                  required
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  placeholder="e.g. product-updates"
-                  className="w-full rounded-xl border border-brand-line bg-brand-neutral/40 px-4 py-2.5 text-sm text-brand-ink focus:ring-2 focus:ring-brand-primary/20 focus:outline-none"
-                />
+                <h2 className="text-3xl font-semibold tracking-tight text-gray-950">Channels</h2>
+                <p className="mt-1 text-sm text-gray-500">Your joined channels</p>
               </div>
-              <div>
-                <label className="block text-xs font-bold uppercase tracking-widest text-brand-secondary mb-1.5">Description</label>
-                <textarea
-                  rows={2}
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Brief description of the channel"
-                  className="w-full rounded-xl border border-brand-line bg-brand-neutral/40 px-4 py-2.5 text-sm text-brand-ink focus:ring-2 focus:ring-brand-primary/20 focus:outline-none resize-none"
-                />
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => setNewPrivate(!newPrivate)}
-                  className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border ${newPrivate ? "bg-brand-primary/10 border-brand-primary text-brand-primary" : "border-brand-line text-brand-secondary hover:bg-brand-neutral"}`}
-                >
-                  {newPrivate ? "Private" : "Public"}
-                </button>
-              </div>
-              <div className="flex gap-3 pt-2">
-                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-2.5 rounded-xl border border-brand-line bg-brand-neutral text-sm font-semibold text-brand-ink hover:bg-brand-soft transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" className="flex-1 py-2.5 rounded-xl bg-brand-primary text-white text-sm font-bold shadow-md hover:bg-brand-primary/90 transition-all active:scale-95">
-                  Create Channel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Main Container breakout */}
-      <div className="fixed top-20 bottom-0 left-0 lg:left-[72px] right-0 bg-white z-[20] flex flex-row overflow-hidden">
-
-        {/* ─── Left Sidebar - Channel List ─── */}
-        <aside className={`shrink-0 border-r border-gray-200 flex-col bg-gray-50 ${isMobileChatOpen ? "hidden sm:flex" : "flex w-full sm:w-80"}`}>
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="text-2xl font-bold text-gray-900">Channels</h2>
               <button
-                onClick={() => setShowCreate(true)}
-                className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-brand-primary"
+                type="button"
+                className="rounded-2xl border border-gray-200 bg-white p-2.5 text-gray-700 shadow-sm transition hover:border-brand-primary/30 hover:text-brand-primary"
+                aria-label="Channels workspace"
+                title="Channels workspace"
               >
-                <PlusIcon className="size-5" />
+                <SquarePen className="size-5" />
               </button>
             </div>
+
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-gray-400" />
+              <Search className="absolute left-4 top-1/2 size-4 -translate-y-1/2 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search channels"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                className="w-full bg-white border border-gray-300 rounded-full py-2.5 pl-10 pr-4 text-sm focus:ring-2 focus:ring-brand-primary/30 outline-none transition-all"
+                onChange={(event) => setSearch(event.target.value)}
+                className="w-full rounded-2xl border border-gray-200 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-primary/20"
               />
             </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4 space-y-1 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:bg-gray-200 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
-            {filtered.map(channel => {
-              const isActive = activeChannelId === channel.id;
-              return (
-                <button
-                  key={channel.id}
-                  onClick={() => {
-                    setActiveChannelId(channel.id);
-                    setIsMobileChatOpen(true);
-                  }}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${isActive ? "bg-white shadow-sm ring-1 ring-gray-200" : "hover:bg-white/50"
-                    }`}
-                >
-                  <div className={`p-2 rounded-lg ${isActive ? "bg-brand-primary/10 text-brand-primary" : "bg-gray-200 text-gray-500"}`}>
-                    {channel.private ? <Lock className="size-4" /> : <Hash className="size-4" />}
+          <div className="flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
+            <div className="px-6 py-5">
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h3 className="text-xs font-bold uppercase tracking-[0.22em] text-gray-500">
+                  Your channels
+                </h3>
+                <span className="text-xs font-medium text-gray-400">{channels.length}</span>
+              </div>
+
+              <div className="space-y-2">
+                {channelsQuery.isLoading ? (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-4 text-sm text-gray-500">
+                    Loading your channels...
                   </div>
-                  <div className="flex-1 text-left min-w-0">
-                    <p className={`text-sm font-bold truncate ${isActive ? "text-brand-primary" : "text-gray-700"}`}>
-                      {channel.name}
-                    </p>
-                    <p className="text-[10px] text-gray-500 truncate">{channel.members} members</p>
+                ) : null}
+
+                {channelsQuery.isError ? (
+                  <div className="rounded-2xl border border-rose-100 bg-rose-50 px-4 py-4 text-sm text-rose-600">
+                    Unable to load your channels right now.
                   </div>
-                </button>
-              );
-            })}
+                ) : null}
+
+                {!channelsQuery.isLoading && !channelsQuery.isError && !filteredChannels.length ? (
+                  <div className="rounded-2xl border border-dashed border-gray-200 bg-white px-4 py-4 text-sm text-gray-500">
+                    No channels matched this search.
+                  </div>
+                ) : null}
+
+                {filteredChannels.map((channel) => (
+                  <ChannelSidebarItem
+                    key={channel.id}
+                    channel={channel}
+                    isActive={activeChannel?.id === channel.id}
+                    onClick={() => openChannel(channel)}
+                  />
+                ))}
+              </div>
+            </div>
           </div>
         </aside>
 
-        {/* ─── Main Chat Area ─── */}
-        <div className={`flex-1 flex-col min-w-0 bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
-          {/* Header */}
-          <header className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 bg-white shrink-0">
-            <div className="flex items-center gap-3 sm:gap-4">
-              <button
-                onClick={() => setIsMobileChatOpen(false)}
-                className="sm:hidden p-2 -ml-2 hover:bg-gray-100 rounded-lg text-gray-600"
-              >
-                <ChevronLeft className="size-5" />
-              </button>
-              <div className="flex size-11 items-center justify-center rounded-xl bg-brand-primary/10 text-brand-primary shrink-0">
-                {activeChannel.private ? <Lock className="size-6" /> : <Hash className="size-6" />}
-              </div>
-              <div>
-                <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
-                  {activeChannel.name}
-                  <ChevronRight className="size-3.5 text-gray-400" />
-                </h3>
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="flex items-center gap-1 text-[11px] font-bold text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded">
-                    <Users2 className="size-3 text-brand-primary" /> {activeChannel.members}
-                  </span>
-                  <p className="text-[11px] text-gray-400 truncate max-w-[200px]">{activeChannel.description}</p>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary">
-                <Video className="size-5" />
-              </button>
-              <button className="p-2 hover:bg-brand-primary/10 rounded-lg transition-colors text-gray-700 hover:text-brand-primary font-bold text-xs px-3">
-                Meet
-              </button>
-              <div className="w-px h-6 bg-gray-200 mx-1" />
-              <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-gray-600">
-                <Settings className="size-5" />
-              </button>
-            </div>
-          </header>
-
-          {/* Tabs */}
-          <div className="flex items-center gap-6 px-6 py-2.5 border-b border-gray-200 bg-gray-50/50">
-            {["Posts", "Files", "Notes", "+"].map((tab, idx) => (
-              <button
-                key={tab}
-                className={`text-[13px] font-bold pb-2 border-b-2 transition-colors ${idx === 0
-                  ? "text-brand-primary border-brand-primary"
-                  : "text-gray-500 border-transparent hover:text-gray-900"
-                  }`}
-              >
-                {tab}
-              </button>
-            ))}
-          </div>
-
-          {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto px-6 py-6 space-y-6 bg-[#f8fafc] [scrollbar-width:thin]">
-            {currentMessages.map((msg, idx) => {
-              const isMe = msg.isMe;
-              return (
-                <div key={msg.id} className={`flex items-start gap-4 ${isMe ? "flex-row-reverse" : ""}`}>
-                  <Avatar name={msg.from === "me" ? "My Name" : msg.from} />
-                  <div className={`flex flex-col ${isMe ? "items-end" : "items-start"} max-w-[70%]`}>
-                    <div className="flex items-center gap-2 mb-1 px-1">
-                      <span className="text-xs font-bold text-gray-900">{msg.from === "me" ? "You" : msg.from}</span>
-                      <span className="text-[10px] text-gray-500">{msg.time}</span>
-                    </div>
-                    <div className={`px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm ring-1 ring-gray-200/50 ${isMe ? "bg-brand-primary text-white rounded-tr-none" : "bg-white text-gray-700 rounded-tl-none"
-                      }`}>
-                      {msg.text}
+        <section
+          className={`min-w-0 flex-1 flex-col bg-white ${
+            isMobilePanelOpen ? "flex" : "hidden sm:flex"
+          }`}
+        >
+          {activeChannel ? (
+            <>
+              <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setIsMobilePanelOpen(false)}
+                      className="rounded-xl p-2 text-gray-600 transition hover:bg-gray-100 sm:hidden"
+                    >
+                      <ChevronLeft className="size-5" />
+                    </button>
+                    <ChatAvatar name={activeChannel.name} size="size-11" />
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-semibold text-gray-950">
+                        #{activeChannel.name}
+                      </h3>
+                      <p className="text-xs font-medium uppercase tracking-[0.18em] text-gray-400">
+                        {activeChannel.visibilityLabel}
+                      </p>
                     </div>
                   </div>
                 </div>
-              );
-            })}
-            <div ref={bottomRef} />
-          </div>
+              </header>
 
-          {/* Message Input */}
-          <div className="shrink-0 pl-6 pr-24 py-4 border-t border-gray-200 bg-white">
-            <div className="bg-gray-50 border border-gray-200 rounded-2xl p-2 focus-within:ring-2 focus-within:ring-brand-primary/20 transition-all">
-              <textarea
-                rows={1}
-                value={messageInput}
-                onChange={e => {
-                  setMessageInput(e.target.value);
-                  e.target.style.height = "auto";
-                  e.target.style.height = Math.min(e.target.scrollHeight, 120) + "px";
-                }}
-                onKeyDown={handleKeyDown}
-                placeholder={`Start a new conversation in #${activeChannel.name}`}
-                className="w-full bg-transparent border-none resize-none text-sm text-gray-900 placeholder:text-gray-500 focus:outline-none leading-relaxed px-3 pt-2 max-h-[120px] [scrollbar-width:thin]"
-              />
-              <div className="flex items-center justify-between border-t border-gray-100 mt-2 pt-2 px-2">
-                <div className="flex items-center gap-1">
-                  <button className="p-2 rounded-lg text-gray-500 hover:text-brand-primary hover:bg-brand-primary/10 transition-colors">
-                    <PlusIcon className="size-4.5" />
-                  </button>
-                  <button className="p-2 rounded-lg text-gray-500 hover:text-brand-primary hover:bg-brand-primary/10 transition-colors">
-                    <Paperclip className="size-4.5" />
-                  </button>
-                  <button className="p-2 rounded-lg text-gray-500 hover:text-brand-primary hover:bg-brand-primary/10 transition-colors">
-                    <Smile className="size-4.5" />
-                  </button>
+              <div className="shrink-0 border-b border-gray-200 bg-gray-50 px-6 py-3">
+                <div className="flex items-center gap-6">
+                  {["overview", "members", "team"].map((tab) => (
+                    <span
+                      key={tab}
+                      className={`border-b-2 pb-2 text-sm font-medium capitalize ${
+                        tab === "overview"
+                          ? "border-brand-primary text-brand-primary"
+                          : "border-transparent text-gray-600"
+                      }`}
+                    >
+                      {tab}
+                    </span>
+                  ))}
                 </div>
-                <button
-                  onClick={sendMessage}
-                  disabled={!messageInput.trim()}
-                  className="size-9 flex items-center justify-center rounded-xl bg-brand-primary text-white shadow-md shadow-brand-primary/20 hover:bg-brand-primary/90 disabled:opacity-40 disabled:cursor-not-allowed transition-all active:scale-95"
-                >
-                  <Send className="size-4.5" />
-                </button>
               </div>
-            </div>
+            </>
+          ) : null}
+
+          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6 [scrollbar-width:thin]">
+            {!activeChannel ? (
+              <div className="flex min-h-[420px] h-full flex-col items-center justify-center text-center">
+                <div className="mb-4 flex size-16 items-center justify-center rounded-3xl bg-brand-soft text-brand-primary">
+                  <Hash className="size-6" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-950">Select a channel</h3>
+                <p className="mt-2 max-w-sm text-sm text-gray-500">
+                  Pick a channel from the left to inspect its current workspace context.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
+                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
+                    Channel topic
+                  </p>
+                  <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600">
+                    {activeChannel.description}
+                  </p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-3">
+                  <ChannelMetricCard icon={Users2} label="Members" value={activeChannel.memberCount} />
+                  <ChannelMetricCard icon={Hash} label="Channel" value={`#${activeChannel.name}`} />
+                  <ChannelMetricCard icon={Lock} label="Visibility" value={activeChannel.visibilityLabel} />
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+                  <div className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
+                      Channel summary
+                    </p>
+                    <div className="mt-5 space-y-4">
+                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
+                        <p className="text-sm font-semibold text-gray-900">Membership footprint</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          {activeChannel.memberCount} members currently belong to this channel.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
+                        <p className="text-sm font-semibold text-gray-900">Attached team</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          This channel belongs to <span className="font-medium text-gray-700">{activeChannel.teamName}</span>.
+                        </p>
+                      </div>
+                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
+                        <p className="text-sm font-semibold text-gray-900">Visibility</p>
+                        <p className="mt-1 text-sm text-gray-500">
+                          The channel is currently marked as <span className="font-medium text-gray-700">{activeChannel.visibilityLabel}</span>.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <aside className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
+                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
+                      Snapshot
+                    </p>
+                    <div className="mt-5 space-y-4">
+                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
+                          Team
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-brand-primary">{activeChannel.teamName}</p>
+                      </div>
+                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
+                          Members
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-gray-950">{activeChannel.memberCount}</p>
+                      </div>
+                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
+                          Visibility
+                        </p>
+                        <p className="mt-2 text-base font-semibold text-gray-950">{activeChannel.visibilityLabel}</p>
+                      </div>
+                    </div>
+                  </aside>
+                </div>
+              </div>
+            )}
           </div>
-        </div>
+        </section>
       </div>
     </UserLayout>
   );

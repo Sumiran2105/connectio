@@ -142,7 +142,12 @@ export function ChatPage() {
       (message) => message.from === "them" && !message.read
     ).length;
 
-    acc[contact.id] = pendingCount || unreadCountsByContactId[contact.id] || 0;
+    if (conversation.length > 0) {
+      acc[contact.id] = pendingCount;
+      return acc;
+    }
+
+    acc[contact.id] = unreadCountsByContactId[contact.id] || 0;
     return acc;
   }, {});
 
@@ -865,11 +870,11 @@ export function ChatPage() {
   return (
     <UserLayout
       showFloatingActions={false}
-      contentClassName="overflow-hidden px-0 py-0 sm:px-0 lg:px-0 lg:py-0"
-      contentInnerClassName="max-w-none h-full"
+      contentClassName="overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6"
+      contentInnerClassName="max-w-none h-full min-h-0"
     >
-      <div className="flex h-[calc(100vh-5rem)] min-h-[640px] w-full overflow-hidden bg-white">
-        <div className="flex h-full w-full overflow-hidden bg-white">
+      <div className="flex h-full min-h-0 w-full overflow-hidden">
+        <div className="flex h-full min-h-0 w-full overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70">
           <ChatSidebar
             activeContact={activeContact}
             conversations={conversations}
@@ -891,16 +896,18 @@ export function ChatPage() {
             unreadCountsByContactId={pendingCountsByContactId}
           />
 
-        <ChatConversationPane
-          activeContact={activeContact}
-          activePresenceLabel={
-            activePresenceQuery.data?.customStatus
-              ? `${activePresenceQuery.data.customStatus.emoji || ""} ${activePresenceQuery.data.customStatus.text || ""}`.trim()
-              : formatStatusLabel(activePresenceQuery.data?.status || (activeContact?.online ? "online" : "offline"))
-          }
-          activeTab={activeTab}
-          bottomRef={bottomRef}
-          currentMessages={currentMessages}
+          <ChatConversationPane
+            activeContact={activeContact}
+            activePresenceLabel={
+              activePresenceQuery.data?.customStatus
+                ? `${activePresenceQuery.data.customStatus.emoji || ""} ${activePresenceQuery.data.customStatus.text || ""}`.trim()
+                : formatStatusLabel(
+                    activePresenceQuery.data?.status || (activeContact?.online ? "online" : "offline")
+                  )
+            }
+            activeTab={activeTab}
+            bottomRef={bottomRef}
+            currentMessages={currentMessages}
             isLoading={channelMessagesQuery.isLoading}
             isMobileChatOpen={isMobileChatOpen}
             messageInput={messageInput}

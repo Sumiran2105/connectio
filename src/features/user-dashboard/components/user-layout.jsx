@@ -115,7 +115,7 @@ export function UserLayout({
   }
 
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink">
+    <main className="h-screen overflow-hidden bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_38%,_#f6f6ff_100%)] text-brand-ink">
       <div className="flex items-center justify-between border-b border-brand-line/10 bg-white p-4 shadow-sm lg:hidden">
         <div className="flex items-center gap-2">
           <div className="flex size-9 items-center justify-center rounded-lg bg-primary-600 shadow-sm">
@@ -132,7 +132,7 @@ export function UserLayout({
         </button>
       </div>
 
-      <div className="mx-auto flex min-h-screen w-full max-w-[1600px] flex-col lg:flex-row">
+      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row">
         <aside
           className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             } fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r bg-[#f0f4f5] text-brand-ink transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:w-[72px] lg:h-screen lg:translate-x-0`}
@@ -192,7 +192,7 @@ export function UserLayout({
           />
         ) : null}
 
-        <section className="relative flex min-h-screen flex-1 flex-col overflow-hidden">
+        <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-30 flex h-20 items-center justify-between gap-4 border-b border-brand-line/15 bg-white px-6 shadow-[0_6px_24px_rgba(68,83,74,0.05)] lg:px-10">
             <div className="hidden items-center gap-2 overflow-hidden whitespace-nowrap md:flex">
               <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-brand-ink/40">
@@ -253,7 +253,7 @@ export function UserLayout({
           </header>
 
           <div
-            className={`flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-12 lg:py-10 ${contentClassName}`}
+            className={`min-h-0 flex-1 overflow-y-auto px-5 py-6 sm:px-8 lg:px-12 lg:py-10 ${contentClassName}`}
           >
             <div className={`mx-auto max-w-[1200px] ${contentInnerClassName}`}>{children}</div>
           </div>

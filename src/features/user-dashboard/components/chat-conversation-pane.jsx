@@ -31,7 +31,7 @@ export function ChatConversationPane({
   sendMessageMutation,
 }) {
   return (
-    <div className={`min-w-0 flex-1 flex-col bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
+    <div className={`h-full min-h-0 min-w-0 flex-1 flex-col bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
       {activeContact ? (
         <>
           <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
@@ -88,7 +88,7 @@ export function ChatConversationPane({
         </>
       ) : null}
 
-      <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6 [scrollbar-width:thin]">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6 [scrollbar-width:thin]">
         {!activeContact ? (
           <div className="flex min-h-[420px] h-full flex-col items-center justify-center text-center">
             <div className="mb-4 flex size-16 items-center justify-center rounded-3xl bg-brand-soft text-brand-primary">
