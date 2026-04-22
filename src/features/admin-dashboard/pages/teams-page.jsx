@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { apiClient } from "@/lib/client";
-import { TEAMS_CREATE, TEAMS_LIST, USERS_SEARCH, TEAMS_MEMBERS, TEAMS_ADD_MEMBER, TEAMS_ASSIGN_LEAD, TEAMS_REMOVE_MEMBER } from "@/config/api";
+import { TEAMS_CREATE, TEAMS_LIST, USERS_SEARCH, TEAMS_MEMBERS, TEAMS_ADD_MEMBER, TEAMS_ASSIGN_LEAD, TEAMS_ADMINS, TEAMS_REMOVE_MEMBER } from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -79,6 +79,7 @@ export function TeamsPage() {
   const [isAssigningLead, setIsAssigningLead] = useState(false);
   const [assignLeadError, setAssignLeadError] = useState(null);
   const [isDeletingMember, setIsDeletingMember] = useState(null); // stores userId being deleted
+  const [teamAdmins, setTeamAdmins] = useState([]);
   const session = useAuthStore((state) => state.session);
 
   // Forms
@@ -159,21 +160,32 @@ export function TeamsPage() {
     setIsMembersLoading(true);
     setMembersError(null);
     try {
-      const response = await apiClient.get(TEAMS_MEMBERS(teamId), {
-        headers: {
-          Authorization: `Bearer ${session?.accessToken}`,
-        },
-      });
-      // Handle the nested structure and potential lead info in members response
-      const data = response.data;
+      const [membersResponse, adminsResponse] = await Promise.all([
+        apiClient.get(TEAMS_MEMBERS(teamId), {
+          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        }),
+        apiClient.get(TEAMS_ADMINS(teamId), {
+          headers: { Authorization: `Bearer ${session?.accessToken}` },
+        }).catch(err => {
+          console.warn("Error fetching admins:", err);
+          return { data: [] }; // Fallback to empty list
+        })
+      ]);
+
+      // Handle members
+      const data = membersResponse.data;
       const membersData = Array.isArray(data) ? data : (data.members || data.users || []);
-      
+
+      // Handle admins
+      const adminsData = Array.isArray(adminsResponse.data) ? adminsResponse.data : (adminsResponse.data?.admins || adminsResponse.data?.users || []);
+      setTeamAdmins(adminsData);
+
       // If the members response contains a lead/admin field, prioritize it
       const remoteLead = data.lead || data.admin || data.manager || data.department_admin;
       if (remoteLead && selectedTeam?.id === teamId) {
         setSelectedTeam(prev => prev ? { ...prev, lead: remoteLead } : null);
       }
-      
+
       setTeamMembers(membersData);
     } catch (err) {
       console.error("Error fetching members:", err);
@@ -231,14 +243,14 @@ export function TeamsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       });
-      
+
       // Refresh members list and team count
       fetchTeamMembers(data.teamId);
       setTeams(teams.map(t => t.id === data.teamId ? { ...t, memberCount: t.memberCount + 1 } : t));
       if (selectedTeam?.id === data.teamId) {
         setSelectedTeam({ ...selectedTeam, memberCount: selectedTeam.memberCount + 1 });
       }
-      
+
       setActiveModal(null);
       memberForm.reset();
     } catch (err) {
@@ -259,13 +271,13 @@ export function TeamsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       });
-      
+
       // Refresh teams list to show new lead
       setTeams(teams.map(t => t.id === data.teamId ? { ...t, lead: data.userId } : t));
       if (selectedTeam?.id === data.teamId) {
         setSelectedTeam({ ...selectedTeam, lead: data.userId });
       }
-      
+
       setActiveModal(null);
       leadForm.reset();
     } catch (err) {
@@ -278,7 +290,7 @@ export function TeamsPage() {
 
   const onHandleRemoveMember = async (userId) => {
     if (!selectedTeam) return;
-    
+
     setIsDeletingMember(userId);
     try {
       await apiClient.delete(TEAMS_REMOVE_MEMBER(selectedTeam.id, userId), {
@@ -286,7 +298,7 @@ export function TeamsPage() {
           Authorization: `Bearer ${session?.accessToken}`,
         },
       });
-      
+
       // Update local state instead of full refresh for better UX
       setTeamMembers(prev => prev.filter(m => (m.id || m.user_id || m.email) !== userId));
       setTeams(prev => prev.map(t => t.id === selectedTeam.id ? { ...t, memberCount: Math.max(0, t.memberCount - 1) } : t));
@@ -509,9 +521,13 @@ export function TeamsPage() {
                     </div>
                   </div>
                   <div className="p-4 md:p-6 rounded-2xl md:rounded-[28px] border border-brand-line bg-brand-neutral/30">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Team Lead</p>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Team Admins</p>
                     <div className="mt-3 flex items-end justify-between">
-                      <h4 className="text-base md:text-lg font-bold text-brand-ink truncate pr-2">{selectedTeam.lead}</h4>
+                      <h4 className="text-base md:text-lg font-bold text-brand-ink truncate pr-2">
+                        {teamAdmins.length > 0
+                          ? teamAdmins.map(a => a.name || a.username || a.email).join(", ")
+                          : selectedTeam.lead || "Unassigned"}
+                      </h4>
                       <Shield className="size-5 md:size-6 text-brand-primary/20 mb-1" />
                     </div>
                   </div>
@@ -540,7 +556,7 @@ export function TeamsPage() {
                     <h4 className="text-xs font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Members List</h4>
                     <span className="text-[10px] font-bold text-brand-primary underline cursor-pointer">View All</span>
                   </div>
-                  
+
                   {isMembersLoading ? (
                     <div className="flex flex-col items-center justify-center py-12 text-brand-secondary/40">
                       <Loader2 className="size-6 animate-spin mb-4" />
@@ -549,9 +565,9 @@ export function TeamsPage() {
                   ) : membersError ? (
                     <div className="p-8 rounded-2xl border border-dashed border-red-100 bg-red-50/30 text-center">
                       <p className="text-xs font-bold text-red-500/60 uppercase tracking-widest">{membersError}</p>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         className="mt-2 text-brand-primary h-8"
                         onClick={() => fetchTeamMembers(selectedTeam.id)}
                       >
@@ -566,17 +582,23 @@ export function TeamsPage() {
                   ) : (
                     <div className="space-y-3">
                       {teamMembers.map((member, i) => {
-                        const isLead = 
-                          member.is_admin || 
+                        const isLead =
+                          member.is_admin ||
                           member.is_lead ||
+                          teamAdmins.some(admin =>
+                            (admin.id && admin.id === member.id) ||
+                            (admin.user_id && admin.user_id === member.user_id) ||
+                            (admin.email && admin.email === member.email) ||
+                            (admin.username && admin.username === member.username)
+                          ) ||
                           (selectedTeam.lead && (
-                            member.id === selectedTeam.lead || 
-                            member.user_id === selectedTeam.lead || 
+                            member.id === selectedTeam.lead ||
+                            member.user_id === selectedTeam.lead ||
                             member.email === selectedTeam.lead ||
                             member.username === selectedTeam.lead ||
                             member.name === selectedTeam.lead
-                          )) || 
-                          member.role === 'LEAD' || 
+                          )) ||
+                          member.role === 'LEAD' ||
                           member.role === 'TEAM_LEAD' ||
                           member.role === 'ADMIN';
 
@@ -589,13 +611,13 @@ export function TeamsPage() {
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="text-sm font-bold text-brand-ink leading-none">
-                                    {member.name || 
-                                     member.full_name || 
-                                     (member.first_name ? `${member.first_name} ${member.last_name || ''}` : null) ||
-                                     member.username || 
-                                     member.user?.name || 
-                                     member.user?.full_name || 
-                                     (member.email ? member.email.split('@')[0] : "Team Member")}
+                                    {member.name ||
+                                      member.full_name ||
+                                      (member.first_name ? `${member.first_name} ${member.last_name || ''}` : null) ||
+                                      member.username ||
+                                      member.user?.name ||
+                                      member.user?.full_name ||
+                                      (member.email ? member.email.split('@')[0] : "Team Member")}
                                   </p>
                                   {isLead && (
                                     <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 animate-in fade-in zoom-in duration-300">
@@ -610,9 +632,9 @@ export function TeamsPage() {
                               <span className="text-[10px] font-bold uppercase tracking-wider bg-brand-soft px-2 py-1 rounded-md text-brand-secondary/70 opacity-0 group-hover:opacity-100 transition-opacity">
                                 {isLead ? "Lead" : (member.role || "Member")}
                               </span>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
+                              <Button
+                                variant="ghost"
+                                size="icon"
                                 className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
                                 onClick={() => onHandleRemoveMember(member.id || member.user_id || member.email)}
                                 disabled={isDeletingMember === (member.id || member.user_id || member.email)}
@@ -752,7 +774,18 @@ export function TeamsPage() {
                               {(user.name || user.username || "U")[0].toUpperCase()}
                             </div>
                             <div>
-                              <p className="text-xs font-bold text-brand-ink group-hover:text-brand-primary transition-colors">{user.name || user.username}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-xs font-bold text-brand-ink group-hover:text-brand-primary transition-colors">{user.name || user.username}</p>
+                                {teamAdmins.some(admin =>
+                                  (admin.id && admin.id === user.id) ||
+                                  (admin.user_id && admin.user_id === user.id) ||
+                                  (admin.email && admin.email === user.email)
+                                ) && (
+                                    <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/10">
+                                      Admin
+                                    </span>
+                                  )}
+                              </div>
                               <p className="text-[10px] text-brand-secondary">{user.email || user.id}</p>
                             </div>
                           </button>
@@ -763,8 +796,8 @@ export function TeamsPage() {
                 )}
               </div>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isAddingMember}
               className="w-full h-12 rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white font-bold text-sm shadow-lg shadow-brand-primary/20 disabled:opacity-50"
             >
@@ -849,8 +882,8 @@ export function TeamsPage() {
                 )}
               </div>
             </div>
-            <Button 
-              type="submit" 
+            <Button
+              type="submit"
               disabled={isAssigningLead}
               className="w-full h-12 rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white font-bold text-sm shadow-lg shadow-brand-primary/20 disabled:opacity-50"
             >

@@ -32,6 +32,7 @@ export const USERS_SEARCH = "/api/v1/dm/users/search";
 export const TEAMS_MEMBERS = (teamId) => `/teams/${teamId}/members`;
 export const TEAMS_ADD_MEMBER = (teamId) => `/teams/${teamId}/members`;
 export const TEAMS_ASSIGN_LEAD = (teamId) => `/teams/${teamId}/assign-admin`;
+export const TEAMS_ADMINS = (teamId) => `/teams/${teamId}/admins`;
 export const TEAMS_REMOVE_MEMBER = (teamId, userId) => `/teams/${teamId}/members/${userId}`;
 
 export const PRESENCE_OPTIONS = "/api/v1/presence/options";
@@ -48,6 +49,7 @@ export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/me
 export const CHANNELS_CREATE = "/api/v1/channels";
 export const CHANNELS_LIST = "/api/v1/channels";
 export const CHANNELS_DELETE = (channelId) => `/api/v1/channels/${channelId}`;
+export const CHANNEL_MEMBERS = (channelId) => `/api/v1/channels/${channelId}/members`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>
   `/api/v1/channels/${channelId}/messages/${messageId}`;
 export const MESSAGE_REACTIONS = (messageId) => `/api/v1/messages/${messageId}/reactions`;

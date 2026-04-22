@@ -1,13 +1,15 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
+  AlertTriangle,
   ArrowLeft,
   Clock,
   Filter,
+  Loader2,
   MessageSquare,
-  MoreVertical,
   Phone,
   Search,
   ShieldCheck,
+  Trash2,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -19,6 +21,13 @@ import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { COMPANY_USERS } from "@/config/api";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { AdminLayout } from "../components/admin-layout";
 
 function normalizeUsers(data) {
@@ -59,6 +68,8 @@ export function CompanyUsers() {
   const navigate = useNavigate();
   const session = useAuthStore((state) => state.session);
   const [searchQuery, setSearchQuery] = useState("");
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const usersQuery = useQuery({
     queryKey: ["company-users"],
@@ -85,6 +96,31 @@ export function CompanyUsers() {
       description: "Connecting to secure voice line.",
       icon: <Phone className="size-4 text-emerald-500" />,
     });
+  };
+
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId) => {
+      await apiClient.delete(`${COMPANY_USERS}/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+    },
+    onSuccess: () => {
+      toast.success("User deleted successfully");
+      usersQuery.refetch();
+      setIsDeleteDialogOpen(false);
+      setUserToDelete(null);
+    },
+    onError: (error) => {
+      toast.error(error?.response?.data?.message || "Failed to delete user");
+    },
+  });
+
+  const confirmDelete = () => {
+    if (userToDelete) {
+      deleteUserMutation.mutate(userToDelete.id);
+    }
   };
 
   const displayUsers = useMemo(() => {
@@ -219,8 +255,15 @@ export function CompanyUsers() {
                         >
                           <Phone className="size-5" />
                         </button>
-                        <button className="rounded-xl p-2.5 text-brand-secondary/40 transition-colors hover:bg-brand-soft hover:text-brand-ink">
-                          <MoreVertical className="size-6" />
+                        <button
+                          title="Delete User"
+                          onClick={() => {
+                            setUserToDelete(user);
+                            setIsDeleteDialogOpen(true);
+                          }}
+                          className="rounded-xl p-2.5 text-brand-secondary/40 transition-colors hover:bg-red-50 hover:text-red-500 active:scale-90"
+                        >
+                          <Trash2 className="size-5" />
                         </button>
                       </div>
                     </td>
@@ -265,6 +308,56 @@ export function CompanyUsers() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent 
+          showCloseButton={false}
+          className="max-w-[400px] gap-0 overflow-hidden rounded-[40px] border-none bg-white p-0 shadow-[0_32px_64px_-12px_rgba(0,0,0,0.14)]"
+        >
+          <div className="p-8 pb-4">
+            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+              <div className="flex size-12 items-center justify-center rounded-xl bg-red-100/50">
+                <AlertTriangle className="size-7" />
+              </div>
+            </div>
+            <DialogHeader className="gap-2 text-center">
+              <DialogTitle className="text-2xl font-bold tracking-tight text-brand-ink">
+                Delete User
+              </DialogTitle>
+              <DialogDescription className="px-2 text-base leading-relaxed text-brand-secondary">
+                Are you sure you want to delete{" "}
+                <span className="font-bold text-brand-ink">
+                  {userToDelete?.name || userToDelete?.email}
+                </span>
+                ? This action is permanent and cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+          </div>
+          <div className="flex flex-col gap-3 p-8 pt-4">
+            <Button
+              onClick={confirmDelete}
+              disabled={deleteUserMutation.isPending}
+              className="h-12 w-full rounded-2xl bg-red-500 text-base font-bold text-white shadow-[0_8px_20px_-4px_rgba(239,68,68,0.3)] transition-all hover:bg-red-600 active:scale-[0.98] disabled:opacity-70"
+            >
+              {deleteUserMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 size-5 animate-spin" />
+                  Deleting User...
+                </>
+              ) : (
+                "Delete User"
+              )}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteDialogOpen(false)}
+              className="h-12 w-full rounded-2xl text-base font-bold text-brand-secondary hover:bg-brand-soft hover:text-brand-ink"
+            >
+              Cancel
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </AdminLayout>
   );
 }
