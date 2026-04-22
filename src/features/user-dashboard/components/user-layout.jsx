@@ -132,7 +132,7 @@ export function UserLayout({
         </button>
       </div>
 
-      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row">
+      <div className=" flex h-full w-full  flex-col lg:flex-row">
         <aside
           className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"
             } fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col border-r bg-[#f0f4f5] text-brand-ink transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:w-[72px] lg:h-screen lg:translate-x-0`}
