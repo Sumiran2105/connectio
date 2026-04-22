@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
+  CheckCheck,
   ChevronLeft,
   Hash,
+  MessageSquare,
   Search,
   ShieldCheck,
   SquarePen,
@@ -14,6 +16,7 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { ChatAvatar } from "../components/chat-avatar";
 import { UserLayout } from "../components/user-layout";
+import { ChatComposer } from "../components/chat-composer";
 
 function normalizeTeams(data) {
   if (Array.isArray(data)) {
@@ -68,11 +71,10 @@ function TeamSidebarItem({ team, isActive, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
-        isActive
+      className={`w-full rounded-2xl border px-4 py-3 text-left transition ${isActive
           ? "border-brand-primary/20 bg-white shadow-sm"
           : "border-transparent bg-transparent hover:border-gray-200 hover:bg-white"
-      }`}
+        }`}
     >
       <div className="flex items-start gap-3">
         <ChatAvatar name={team.name} size="size-11" />
@@ -90,23 +92,28 @@ function TeamSidebarItem({ team, isActive, onClick }) {
   );
 }
 
-function TeamMetricCard({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-3xl border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-2 text-gray-400">
-        <Icon className="size-4" />
-        <p className="text-[11px] font-bold uppercase tracking-[0.22em]">{label}</p>
-      </div>
-      <p className="mt-4 text-3xl font-semibold text-gray-950">{value}</p>
-    </div>
-  );
-}
+
+
+const MOCK_MESSAGES = {
+  "engineering-team": [
+    { id: "tm1", from: "them", text: "Hey team, status check for the sprint?", time: "11:00 AM" },
+    { id: "tm2", from: "me", text: "Frontend tasks are 80% done.", time: "11:05 AM" },
+  ],
+  "product-design": [
+    { id: "tm3", from: "them", text: "New wireframes are ready for review.", time: "02:00 PM" },
+    { id: "tm4", from: "them", text: "Check the Figma link in the channel.", time: "02:01 PM" },
+  ],
+};
 
 export function TeamsPage() {
   const session = useAuthStore((state) => state.session);
   const [search, setSearch] = useState("");
   const [activeTeamId, setActiveTeamId] = useState(null);
+  const [activeTab, setActiveTab] = useState("chat");
   const [isMobilePanelOpen, setIsMobilePanelOpen] = useState(false);
+  const [messageInput, setMessageInput] = useState("");
+  const [conversations, setConversations] = useState(MOCK_MESSAGES);
+  const bottomRef = useRef(null);
 
   const teamsQuery = useQuery({
     queryKey: ["my-teams", session?.accessToken],
@@ -147,11 +154,52 @@ export function TeamsPage() {
     teams[0] ||
     null;
 
+  const currentMessages = activeTeam ? conversations[activeTeam.id] || conversations[activeTeam.name.toLowerCase().replace(/\s+/g, "-")] || [] : [];
+
   useEffect(() => {
     if (!activeTeamId && teams[0]) {
       setActiveTeamId(teams[0].id);
     }
   }, [activeTeamId, teams]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [currentMessages]);
+
+  function sendMessage() {
+    const text = messageInput.trim();
+    if (!text || !activeTeam) return;
+
+    const teamKey = activeTeam.id;
+    const newMsg = {
+      id: `tm-${Date.now()}`,
+      from: "me",
+      text,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
+
+    setConversations((prev) => ({
+      ...prev,
+      [teamKey]: [...(prev[teamKey] || []), newMsg],
+    }));
+
+    setMessageInput("");
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  function handleAddReaction(messageId, emoji) {
+    console.log("Add reaction:", messageId, emoji);
+  }
+
+  function handleRemoveReaction(messageId, emoji) {
+    console.log("Remove reaction:", messageId, emoji);
+  }
 
   function openTeam(team) {
     setActiveTeamId(team.id);
@@ -161,14 +209,13 @@ export function TeamsPage() {
   return (
     <UserLayout
       showFloatingActions={false}
-      contentClassName="overflow-hidden px-0 py-0 sm:px-0 lg:px-0 lg:py-0"
-      contentInnerClassName="max-w-none h-full"
+      contentClassName="!p-0 h-full overflow-hidden"
+      contentInnerClassName="!max-w-none !w-full !m-0 h-full"
     >
-      <div className="flex h-[calc(100vh-5rem)] min-h-[640px] w-full overflow-hidden bg-white">
+      <div className="flex h-full w-full overflow-hidden bg-white">
         <aside
-          className={`shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white ${
-            isMobilePanelOpen ? "hidden sm:flex" : "flex w-full sm:w-[22rem]"
-          }`}
+          className={`shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white sm:flex sm:w-[22rem] ${isMobilePanelOpen ? "hidden" : "flex w-full"
+            }`}
         >
           <div className="border-b border-gray-200 px-6 py-5">
             <div className="mb-5 flex items-center justify-between">
@@ -240,9 +287,8 @@ export function TeamsPage() {
         </aside>
 
         <section
-          className={`min-w-0 flex-1 flex-col bg-white ${
-            isMobilePanelOpen ? "flex" : "hidden sm:flex"
-          }`}
+          className={`min-w-0 flex-1 flex-col bg-white ${isMobilePanelOpen ? "flex" : "hidden sm:flex"
+            }`}
         >
           {activeTeam ? (
             <>
@@ -269,107 +315,119 @@ export function TeamsPage() {
 
               <div className="shrink-0 border-b border-gray-200 bg-gray-50 px-6 py-3">
                 <div className="flex items-center gap-6">
-                  {["overview", "members", "channels"].map((tab) => (
-                    <span
+                  {["chat", "members", "channels"].map((tab) => (
+                    <button
                       key={tab}
-                      className={`border-b-2 pb-2 text-sm font-medium capitalize ${
-                        tab === "overview"
-                          ? "border-brand-primary text-brand-primary"
-                          : "border-transparent text-gray-600"
-                      }`}
+                      type="button"
+                      onClick={() => setActiveTab(tab)}
+                      className={`border-b-2 pb-2 text-sm font-medium capitalize transition ${activeTab === tab
+                        ? "border-brand-primary text-brand-primary"
+                        : "border-transparent text-gray-600 hover:text-gray-900"
+                        }`}
                     >
                       {tab}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
             </>
           ) : null}
 
-          <div className="flex-1 overflow-y-auto bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6 [scrollbar-width:thin]">
+          <div className="flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6 [scrollbar-width:thin]">
             {!activeTeam ? (
               <div className="flex min-h-[420px] h-full flex-col items-center justify-center text-center">
                 <div className="mb-4 flex size-16 items-center justify-center rounded-3xl bg-brand-soft text-brand-primary">
-                  <Users2 className="size-6" />
+                  <MessageSquare className="size-6" />
                 </div>
                 <h3 className="text-xl font-semibold text-gray-950">Select a team</h3>
                 <p className="mt-2 max-w-sm text-sm text-gray-500">
-                  Pick a team from the left to explore its membership and channel footprint.
+                  Pick a team from the left to start messaging with your squad.
                 </p>
               </div>
             ) : (
-              <div className="space-y-6">
-                <div className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
-                    Team profile
-                  </p>
-                  <p className="mt-4 max-w-3xl text-sm leading-7 text-gray-600">
-                    {activeTeam.description}
-                  </p>
-                </div>
+              <div className="space-y-4">
+                {currentMessages.map((message, index) => {
+                  const isMe = message.from === "me";
+                  const previousMessage = currentMessages[index - 1];
+                  const showAvatar = !isMe && previousMessage?.from !== "them";
 
-                <div className="grid gap-4 md:grid-cols-3">
-                  <TeamMetricCard icon={Users2} label="Members" value={activeTeam.members} />
-                  <TeamMetricCard icon={Hash} label="Channels" value={activeTeam.channels} />
-                  <TeamMetricCard icon={ShieldCheck} label="Role" value={activeTeam.role} />
-                </div>
+                  return (
+                    <div
+                      key={message.id}
+                      className={`group flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}
+                    >
+                      {!isMe ? (
+                        <div className="h-8 w-8 shrink-0">
+                          {showAvatar ? (
+                            <ChatAvatar name={activeTeam.name} size="size-8" />
+                          ) : null}
+                        </div>
+                      ) : null}
 
-                <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
-                  <div className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
-                      Workspace summary
-                    </p>
-                    <div className="mt-5 space-y-4">
-                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-gray-900">People collaboration</p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {activeTeam.memberLabel} currently belong to this team space.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-gray-900">Channel structure</p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          {activeTeam.channelLabel} are connected to this team for collaboration.
-                        </p>
-                      </div>
-                      <div className="rounded-2xl bg-gray-50 px-4 py-4">
-                        <p className="text-sm font-semibold text-gray-900">Your access</p>
-                        <p className="mt-1 text-sm text-gray-500">
-                          You currently participate in this team as a <span className="font-medium text-gray-700">{activeTeam.role}</span>.
-                        </p>
+                      <div className={`flex max-w-[72%] flex-col ${isMe ? "items-end" : "items-start"}`}>
+                        <div
+                          className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${isMe
+                            ? "rounded-br-md bg-brand-primary text-white"
+                            : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
+                            }`}
+                        >
+                          {message.text}
+                        </div>
+
+                        <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
+                          <span className="text-[11px] text-gray-400">{message.time}</span>
+                          {isMe ? <CheckCheck className="size-3.5 text-brand-primary" /> : null}
+                        </div>
+
+                        {message.reactions?.length ? (
+                          <div className={`mt-2 flex flex-wrap gap-1.5 ${isMe ? "justify-end" : "justify-start"}`}>
+                            {message.reactions.map((reaction) => (
+                              <button
+                                key={`${message.id}-${reaction.emoji}`}
+                                type="button"
+                                onClick={() => handleRemoveReaction(message.id, reaction.emoji)}
+                                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-2 py-1 text-xs text-gray-700 shadow-sm"
+                              >
+                                <span>{reaction.emoji}</span>
+                                <span>{reaction.count}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ) : null}
+
+                        <div
+                          className={`mt-2 flex flex-wrap gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${isMe ? "justify-end" : "justify-start"
+                            }`}
+                        >
+                          {["👍", "❤️", "😂"].map((emoji) => (
+                            <button
+                              key={`${message.id}-${emoji}-add`}
+                              type="button"
+                              onClick={() => handleAddReaction(message.id, emoji)}
+                              className="inline-flex items-center justify-center rounded-full border border-dashed border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 shadow-sm transition hover:border-brand-primary hover:text-brand-primary"
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
                       </div>
                     </div>
-                  </div>
-
-                  <aside className="rounded-[28px] border border-gray-200 bg-white p-6 shadow-sm">
-                    <p className="text-xs font-bold uppercase tracking-[0.22em] text-gray-400">
-                      Snapshot
-                    </p>
-                    <div className="mt-5 space-y-4">
-                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                          Membership
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-gray-950">{activeTeam.memberLabel}</p>
-                      </div>
-                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                          Channels available
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-gray-950">{activeTeam.channelLabel}</p>
-                      </div>
-                      <div className="rounded-2xl border border-gray-200 px-4 py-4">
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-gray-400">
-                          Role
-                        </p>
-                        <p className="mt-2 text-base font-semibold text-brand-primary">{activeTeam.role}</p>
-                      </div>
-                    </div>
-                  </aside>
-                </div>
+                  );
+                })}
+                <div ref={bottomRef} />
               </div>
             )}
           </div>
+
+          {activeTeam ? (
+            <ChatComposer
+              isSending={false}
+              messageInput={messageInput}
+              onChange={(val) => setMessageInput(val)}
+              onKeyDown={handleKeyDown}
+              onSend={sendMessage}
+            />
+          ) : null}
         </section>
       </div>
     </UserLayout>
