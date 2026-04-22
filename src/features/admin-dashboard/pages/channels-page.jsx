@@ -1,29 +1,21 @@
+import { AddMemberDialog, ChannelSettingsDialog, DeleteChannelDialog, MembersDialog, } from "./channels/channel-dialogs";
 import React, { useState } from "react";
-import { useForm, useFieldArray, Controller } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
 import {
   Hash,
   Plus,
   Search,
   Settings,
   Users,
-  Shield,
-  MessageSquare,
-  ChevronRight,
   Globe,
   Lock,
   PlusCircle,
-  X,
-  CheckCircle2,
-  AlertCircle,
   Smile,
   Image as ImageIcon,
   Paperclip,
-  FileText,
   Send,
-  MoreHorizontal,
-  Trash2
+  Trash2,
 } from "lucide-react";
 import { AdminLayout } from "../components/admin-layout";
 import { Button } from "@/components/ui/button";
@@ -40,7 +32,6 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import {
   Select,
@@ -49,87 +40,52 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { apiClient } from "@/lib/client";
-import { CHANNELS_CREATE, CHANNELS_LIST, CHANNELS_DELETE, TEAMS_LIST } from "@/config/api";
+import { CHANNELS_CREATE, CHANNELS_LIST, CHANNELS_DELETE, TEAMS_LIST, CHANNEL_MEMBERS, CHANNEL_MEMBERS_BULK, TEAMS_MEMBERS, CHANNEL_UPDATE, USERS_SEARCH, COMPANY_USERS } from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
-
-
-
-// Schema based on user input
-const channelSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  slug: z.string().min(1, "Slug is required").regex(/^[a-z0-9-]+$/, "Slug must be lowercase alphanumeric and dashes"),
-  visibility: z.enum(["public", "private"]).default("public"),
-  is_cross_team: z.boolean().default(false),
-  description: z.string().optional(),
-  company_id: z.string().uuid("Invalid Company ID"),
-  team_id: z.string().uuid("Invalid Team ID"),
-  is_private: z.boolean().default(false),
-  avatar_url: z.string().optional(),
-  banner_url: z.string().optional(),
-  topic: z.string().optional(),
-  purpose: z.string().optional(),
-  parent_channel_id: z.string().uuid().optional().nullable(),
-  is_discoverable: z.boolean().default(true),
-  message_retention_days: z.number().min(1).default(365),
-  max_members: z.number().min(1).default(100),
-  default_access: z.enum(["member", "guest", "admin"]).default("member"),
-  settings: z.object({
-    notifications_default: z.enum(["all", "mentions", "nothing"]).default("all"),
-    allow_mentions: z.boolean().default(true),
-    allow_file_uploads: z.boolean().default(true),
-    allow_link_previews: z.boolean().default(true),
-    allow_bots: z.boolean().default(true),
-    allow_guest_access: z.boolean().default(false),
-    moderation_settings: z.object({}).optional(),
-  }),
-  moderation_settings: z.object({}).optional(),
-});
-
-const DEFAULT_VALUES = {
-  name: "",
-  slug: "",
-  visibility: "public",
-  is_cross_team: false,
-  description: "",
-  company_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6", // Placeholder from schema
-  team_id: "3fa85f64-5717-4562-b3fc-2c963f66afa6",    // Placeholder from schema
-  is_private: false,
-  avatar_url: "",
-  banner_url: "",
-  topic: "",
-  purpose: "",
-  parent_channel_id: null,
-  is_discoverable: true,
-  message_retention_days: 365,
-  max_members: 100,
-  default_access: "member",
-  settings: {
-    notifications_default: "all",
-    allow_mentions: true,
-    allow_file_uploads: true,
-    allow_link_previews: true,
-    allow_bots: true,
-    allow_guest_access: false,
-    moderation_settings: {},
-  },
-  moderation_settings: {},
-};
+import { toast } from "sonner";
+ 
+import {
+  DEFAULT_VALUES,
+  channelSchema,
+  getTeamCompanyId,
+  getUserEmail,
+  getUserId,
+  getUserName,
+  getUserRecord,
+} from "./channels/channel-utils";
 
 export function ChannelsPage() {
   const [teams, setTeams] = useState([]);
-  const [selectedTeamId, setSelectedTeamId] = useState("");
   const [channels, setChannels] = useState([]);
   const [selectedChannel, setSelectedChannel] = useState(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isAddMemberDialogOpen, setIsAddMemberDialogOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [isFetchingTeamMembers, setIsFetchingTeamMembers] = useState(false);
+  const [memberSearchQuery, setMemberSearchQuery] = useState("");
+  const [selectedMemberIds, setSelectedMemberIds] = useState(new Set());
+  const [memberRole, setMemberRole] = useState("user");
+  const [addMemberSource, setAddMemberSource] = useState("team");
+  const [isAddingMember, setIsAddingMember] = useState(false);
+  const [addMemberError, setAddMemberError] = useState("");
+
+  const [isMembersPanelOpen, setIsMembersPanelOpen] = useState(false);
+  const [channelMembers, setChannelMembers] = useState([]);
+  const [isFetchingChannelMembers, setIsFetchingChannelMembers] = useState(false);
+
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDeletingChannel, setIsDeletingChannel] = useState(false);
+
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [settingsForm, setSettingsForm] = useState({});
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const session = useAuthStore((state) => state.session);
   const token = session?.accessToken;
 
-  // Fetch teams first
   React.useEffect(() => {
     const fetchTeams = async () => {
       try {
@@ -138,10 +94,8 @@ export function ChannelsPage() {
         });
 
         const rawData = response.data;
-        // Handle various response structures (array, departments, items)
         const teamDataRaw = Array.isArray(rawData) ? rawData : (rawData?.departments || rawData?.items || []);
 
-        // Transform to ensure uniform id and name fields
         const transformedTeams = teamDataRaw.map(team => ({
           ...team,
           id: team.id || team.team_id || team.uuid || team.department_id,
@@ -149,7 +103,6 @@ export function ChannelsPage() {
         }));
 
         setTeams(transformedTeams);
-        // Removed auto-selection of first team to allow "Select Team" placeholder to show
       } catch (error) {
         console.error("Error fetching teams:", error);
       }
@@ -157,7 +110,6 @@ export function ChannelsPage() {
     if (token) fetchTeams();
   }, [token]);
 
-  // Fetch all channels on mount
   React.useEffect(() => {
     const fetchChannels = async () => {
       try {
@@ -191,23 +143,35 @@ export function ChannelsPage() {
     resolver: zodResolver(channelSchema),
     defaultValues: {
       ...DEFAULT_VALUES,
-      team_id: selectedTeamId || DEFAULT_VALUES.team_id,
     },
   });
 
-  // Sync team_id in form when selectedTeamId changes
-  React.useEffect(() => {
-    if (selectedTeamId) {
-      setValue("team_id", selectedTeamId);
-    }
-  }, [selectedTeamId, setValue]);
+  const selectedTeamId = watch("team_id");
+  const selectedTeam = teams.find((team) => team.id === selectedTeamId);
 
   // Sync company_id in form when session changes
   React.useEffect(() => {
-    if (session?.company_id) {
-      setValue("company_id", session.company_id);
+    const resolvedCompanyId = session?.company_id || getTeamCompanyId(selectedTeam);
+    if (resolvedCompanyId) {
+      setValue("company_id", resolvedCompanyId, { shouldValidate: true });
     }
-  }, [session, setValue]);
+  }, [session, selectedTeam, setValue]);
+
+  React.useEffect(() => {
+    if (!teams.length) return;
+    if (!selectedTeamId) {
+      setValue("team_id", teams[0].id, { shouldValidate: true });
+    }
+  }, [teams, selectedTeamId, setValue]);
+
+  React.useEffect(() => {
+    if (!isDialogOpen) return;
+    reset({
+      ...DEFAULT_VALUES,
+      company_id: session?.company_id || getTeamCompanyId(teams[0]) || "",
+      team_id: teams[0]?.id || "",
+    });
+  }, [isDialogOpen, reset, session?.company_id, teams]);
 
   const onSubmit = async (data) => {
     try {
@@ -233,8 +197,10 @@ export function ChannelsPage() {
       setIsDialogOpen(false);
       reset({
         ...DEFAULT_VALUES,
-        team_id: selectedTeamId,
+        company_id: session?.company_id || "",
+        team_id: teams[0]?.id || "",
       });
+      toast.success("Channel created successfully!");
     } catch (error) {
       console.error("Critical error in channel creation:", {
         message: error.message,
@@ -243,26 +209,340 @@ export function ChannelsPage() {
       });
 
       const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to create channel. Please check your inputs and try again.";
-      alert(`Error: ${errorMessage}`);
+      toast.error(errorMessage);
     }
   };
 
-  const handleDeleteChannel = async (channelId) => {
-    if (!window.confirm("Are you sure you want to delete this channel? This action cannot be undone.")) return;
+  const onInvalidSubmit = (invalidErrors) => {
+    console.error("Channel form validation blocked submit:", invalidErrors);
 
+    const firstErrorMessage =
+      invalidErrors.team_id?.message ||
+      invalidErrors.company_id?.message ||
+      invalidErrors.name?.message ||
+      invalidErrors.slug?.message ||
+      "Please fill all required channel details before creating the channel.";
+
+    toast.error(firstErrorMessage);
+  };
+
+  // Fetch team members when the add-people dialog opens
+  const openAddMemberDialog = async (source = "team") => {
+    if (!selectedChannel) return;
+    const teamId = selectedChannel.team_id;
+    setAddMemberError("");
+    setMemberSearchQuery("");
+    setSelectedMemberIds(new Set());
+    setMemberRole("user");
+    setAddMemberSource(source);
+    setTeamMembers([]);
+    setIsAddMemberDialogOpen(true);
+
+    if (source === "other") {
+      return;
+    }
+
+    if (!teamId) {
+      setAddMemberError("This channel has no associated team. Cannot load members.");
+      return;
+    }
+
+    setIsFetchingTeamMembers(true);
     try {
-      await apiClient.delete(CHANNELS_DELETE(channelId), {
+      const response = await apiClient.get(TEAMS_MEMBERS(teamId), {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
+      const raw = response.data;
+      const members = Array.isArray(raw)
+        ? raw
+        : raw?.members || raw?.items || raw?.users || [];
+      setTeamMembers(members);
+    } catch (error) {
+      console.error("Error fetching team members:", error);
+      setAddMemberError(
+        error.response?.data?.detail ||
+        error.response?.data?.message ||
+        "Failed to load team members."
+      );
+    } finally {
+      setIsFetchingTeamMembers(false);
+    }
+  };
 
-      setChannels(prev => prev.filter(c => c.id !== channelId));
-      if (selectedChannel?.id === channelId) {
-        setSelectedChannel(null);
+  const toggleMemberSelection = (userId) => {
+    setSelectedMemberIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(userId)) next.delete(userId);
+      else next.add(userId);
+      return next;
+    });
+  };
+
+  React.useEffect(() => {
+    if (!isAddMemberDialogOpen || addMemberSource !== "other") return;
+
+    const query = memberSearchQuery.trim();
+    setSelectedMemberIds(new Set());
+    setAddMemberError("");
+
+    if (query.length < 2) {
+      setTeamMembers([]);
+      return;
+    }
+
+    let isActive = true;
+    const timeout = window.setTimeout(async () => {
+      setIsFetchingTeamMembers(true);
+      try {
+        const response = await apiClient.get(USERS_SEARCH, {
+          params: { query },
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
+        if (!isActive) return;
+
+        const raw = response.data;
+        const users = Array.isArray(raw) ? raw : raw?.users || raw?.items || raw?.results || [];
+        setTeamMembers(users);
+      } catch (error) {
+        if (!isActive) return;
+        console.error("Error searching users:", error);
+        setTeamMembers([]);
+        setAddMemberError(
+          error.response?.data?.detail ||
+          error.response?.data?.message ||
+          "Failed to search users."
+        );
+      } finally {
+        if (isActive) setIsFetchingTeamMembers(false);
       }
+    }, 300);
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeout);
+    };
+  }, [addMemberSource, isAddMemberDialogOpen, memberSearchQuery, token]);
+
+  const handleAddMembers = async () => {
+    if (!selectedChannel?.id || selectedMemberIds.size === 0) return;
+    setIsAddingMember(true);
+    setAddMemberError("");
+
+    const ids = Array.from(selectedMemberIds);
+
+    try {
+      if (ids.length === 1) {
+        // Single member — use individual endpoint
+        await apiClient.post(
+          CHANNEL_MEMBERS(selectedChannel.id),
+          { user_id: ids[0], role: memberRole },
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+      } else {
+        // Multiple members — bulk endpoint expects a plain array of user ID strings
+        await apiClient.post(
+          CHANNEL_MEMBERS_BULK(selectedChannel.id),
+          ids, // ["uuid1", "uuid2", ...]
+          { headers: token ? { Authorization: `Bearer ${token}` } : {} }
+        );
+      }
+
+      setIsAddMemberDialogOpen(false);
+      setSelectedMemberIds(new Set());
+      setMemberRole("user");
+      toast.success(
+        ids.length === 1
+          ? "Member added to channel successfully."
+          : `${ids.length} members added to channel successfully.`
+      );
+    } catch (error) {
+      console.error("Error adding members to channel:", error);
+      const detail = error.response?.data?.detail;
+      // FastAPI returns detail as an array of validation errors
+      const message =
+        typeof detail === "string"
+          ? detail
+          : Array.isArray(detail)
+          ? detail.map((d) => d?.msg || JSON.stringify(d)).join("; ")
+          : error.response?.data?.message ||
+            "Failed to add members to channel.";
+      setAddMemberError(message);
+    } finally {
+      setIsAddingMember(false);
+    }
+  };
+
+  const handleDeleteChannel = async () => {
+    if (!selectedChannel?.id) return;
+    setIsDeletingChannel(true);
+    try {
+      await apiClient.delete(CHANNELS_DELETE(selectedChannel.id), {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      setChannels(prev => prev.filter(c => c.id !== selectedChannel.id));
+      setSelectedChannel(null);
+      setIsDeleteDialogOpen(false);
+      toast.success("Channel deleted.");
     } catch (error) {
       console.error("Error deleting channel:", error);
-      const errorMessage = error.response?.data?.detail || error.response?.data?.message || "Failed to delete channel.";
-      alert(`Error: ${errorMessage}`);
+      toast.error(error.response?.data?.detail || error.response?.data?.message || "Failed to delete channel.");
+    } finally {
+      setIsDeletingChannel(false);
+    }
+  };
+
+  // Open members panel and fetch channel members
+  const openMembersPanel = async () => {
+    if (!selectedChannel?.id) return;
+    setChannelMembers([]);
+    setIsMembersPanelOpen(true);
+    setIsFetchingChannelMembers(true);
+    try {
+      console.debug("openMembersPanel: fetching members for channel", selectedChannel.id);
+      // Fetch channel membership records (user_id + role only)
+      const settled = await Promise.allSettled([
+        apiClient.get(CHANNEL_MEMBERS(selectedChannel.id), {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }),
+        selectedChannel.team_id
+          ? apiClient.get(TEAMS_MEMBERS(selectedChannel.team_id), {
+              headers: token ? { Authorization: `Bearer ${token}` } : {},
+            })
+          : Promise.resolve(null),
+        apiClient.get(COMPANY_USERS, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }),
+      ]);
+
+      const [membersResp, teamResp, usersResp] = settled || [];
+      console.debug("openMembersPanel: fetch settled results", {
+        membersRespStatus: membersResp?.status,
+        teamRespStatus: teamResp?.status,
+        usersRespStatus: usersResp?.status,
+      });
+
+      // Expose raw fetch results to window for easier debugging in the browser
+      try {
+        // Avoid circular refs by serializing only essential fields
+        window.__lastMembersFetch = {
+          membersResp: membersResp && membersResp.status === "fulfilled" ? membersResp.value?.data : membersResp,
+          teamResp: teamResp && teamResp.status === "fulfilled" ? teamResp.value?.data : teamResp,
+          usersResp: usersResp && usersResp.status === "fulfilled" ? usersResp.value?.data : usersResp,
+        };
+      } catch (e) {
+        // ignore
+      }
+
+      let members = [];
+      try {
+        const rawMembers = membersResp && membersResp.status === "fulfilled" && membersResp.value ? membersResp.value.data : [];
+        members = Array.isArray(rawMembers) ? rawMembers : rawMembers?.members || rawMembers?.items || [];
+      } catch (e) {
+        console.error("openMembersPanel: error parsing members response", e, membersResp);
+        members = [];
+      }
+
+      console.debug("openMembersPanel: members count", members.length);
+
+      // Build a lookup map from team members (which include full name/email)
+      const userMap = {};
+      try {
+        if (teamResp && teamResp.status === "fulfilled" && teamResp.value) {
+          const rawTeam = teamResp.value.data;
+          const teamList = Array.isArray(rawTeam) ? rawTeam : rawTeam?.members || rawTeam?.items || [];
+          console.debug("openMembersPanel: team list count", teamList.length);
+          teamList.forEach((tm) => {
+            try {
+              const uid = getUserId(tm);
+              if (uid) userMap[uid] = getUserRecord(tm);
+            } catch (e) {
+              console.warn("openMembersPanel: skipping team member due to parse error", e, tm);
+            }
+          });
+        }
+      } catch (e) {
+        console.error("openMembersPanel: error processing team members", e, teamResp);
+      }
+
+      try {
+        if (usersResp && usersResp.status === "fulfilled" && usersResp.value) {
+          const rawUsers = usersResp.value.data;
+          const companyUsers = Array.isArray(rawUsers) ? rawUsers : rawUsers?.users || rawUsers?.items || rawUsers?.results || [];
+          console.debug("openMembersPanel: company users count", companyUsers.length);
+          companyUsers.forEach((user) => {
+            try {
+              const uid = getUserId(user);
+              if (uid) userMap[uid] = getUserRecord(user);
+            } catch (e) {
+              console.warn("openMembersPanel: skipping company user due to parse error", e, user);
+            }
+          });
+        }
+      } catch (e) {
+        console.error("openMembersPanel: error processing company users", e, usersResp);
+      }
+
+      const enriched = [];
+      for (const member of members) {
+        try {
+          const uid = getUserId(member);
+          enriched.push({ ...member, _user: userMap[uid] || null });
+        } catch (e) {
+          console.warn("openMembersPanel: skipping member due to parse error", e, member);
+        }
+      }
+
+      console.debug("openMembersPanel: enriched members computed", enriched.length);
+      try { window.__lastMembersFetch.enriched = enriched; } catch (e) {}
+      setChannelMembers(enriched);
+    } catch (error) {
+      console.error("Error fetching channel members:", error);
+      const msg = error?.response?.data?.detail || error?.response?.data?.message || error?.message || JSON.stringify(error);
+      try { window.__lastMembersFetchError = { message: msg, raw: error?.response?.data || error }; } catch (e) {}
+      // Show more helpful message in the toast so we can debug from the UI
+      toast.error(msg || "Failed to load channel members.");
+    } finally {
+      setIsFetchingChannelMembers(false);
+    }
+  };
+
+  // Open settings and pre-populate form with current channel values
+  const openSettings = () => {
+    if (!selectedChannel) return;
+    setSettingsForm({
+      name: selectedChannel.name || "",
+      description: selectedChannel.description || "",
+      topic: selectedChannel.topic || "",
+      purpose: selectedChannel.purpose || "",
+      visibility: selectedChannel.is_private ? "private" : "public",
+      is_discoverable: selectedChannel.is_discoverable ?? true,
+      max_members: selectedChannel.max_members || 100,
+      message_retention_days: selectedChannel.message_retention_days || 365,
+    });
+    setIsSettingsOpen(true);
+  };
+
+  const handleUpdateChannel = async () => {
+    if (!selectedChannel?.id) return;
+    setIsSavingSettings(true);
+    try {
+      const payload = {
+        ...settingsForm,
+        is_private: settingsForm.visibility === "private",
+      };
+      const response = await apiClient.patch(CHANNEL_UPDATE(selectedChannel.id), payload, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const updated = response.data;
+      setChannels(prev => prev.map(c => c.id === selectedChannel.id ? { ...c, ...updated } : c));
+      setSelectedChannel(prev => ({ ...prev, ...updated }));
+      setIsSettingsOpen(false);
+      toast.success("Channel settings saved.");
+    } catch (error) {
+      console.error("Error updating channel:", error);
+      toast.error(error.response?.data?.detail || error.response?.data?.message || "Failed to save settings.");
+    } finally {
+      setIsSavingSettings(false);
     }
   };
 
@@ -285,7 +565,7 @@ export function ChannelsPage() {
   }, [visibilityValue, setValue]);
 
   return (
-    <AdminLayout>
+    <AdminLayout showFloatingActions={false}>
       <div className="fixed top-20 bottom-0 left-0 lg:left-[292px] right-0 bg-white z-[20] flex flex-row overflow-hidden border-t md:border-t-0 border-brand-line">
 
         {/* Mobile Backdrop */}
@@ -302,27 +582,6 @@ export function ChannelsPage() {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}>
           <div className="p-6 space-y-6">
-            <div className="space-y-2">
-              <Label className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-secondary/70 ml-1">Active Team</Label>
-              <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
-                <SelectTrigger className="w-full bg-white border-brand-line rounded-xl h-12 shadow-sm focus:ring-brand-primary/10">
-                  <SelectValue placeholder="Select team" />
-                </SelectTrigger>
-                <SelectContent position="popper" className="rounded-2xl border-brand-line p-1">
-                  {teams?.map?.((team) => (
-                    <SelectItem key={team.id} value={team.id} className="rounded-xl py-2.5 focus:bg-brand-soft focus:text-brand-primary">
-                      <div className="flex items-center gap-2">
-                        <div className="size-5 rounded-md bg-brand-primary/10 flex items-center justify-center text-[10px] font-bold text-brand-primary">
-                          {team.name?.charAt(0).toUpperCase()}
-                        </div>
-                        <span className="font-semibold text-brand-ink">{team.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold tracking-tight text-brand-ink">Channels</h2>
               <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
@@ -339,11 +598,43 @@ export function ChannelsPage() {
                     </DialogDescription>
                   </DialogHeader>
 
-                  <form onSubmit={handleSubmit(onSubmit)} className="px-6 md:px-12 pb-12 space-y-12">
+                  <form onSubmit={handleSubmit(onSubmit, onInvalidSubmit)} className="px-6 md:px-12 pb-12 space-y-12">
                     {/* Basic Information */}
                     <div className="space-y-6">
                       <h3 className="text-sm font-black text-brand-secondary uppercase tracking-[0.2em] border-l-4 border-brand-primary pl-3">Basic Information</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label className="text-brand-ink font-semibold">Team</Label>
+                          <Controller
+                            name="team_id"
+                            control={control}
+                            render={({ field }) => (
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <SelectTrigger className="rounded-xl border-brand-line h-12">
+                                  <SelectValue placeholder="Select a team" />
+                                </SelectTrigger>
+                                <SelectContent position="popper" className="rounded-2xl border-brand-line p-1">
+                                  {teams?.map?.((team) => (
+                                    <SelectItem
+                                      key={team.id}
+                                      value={team.id}
+                                      className="rounded-xl py-2.5 focus:bg-brand-soft focus:text-brand-primary"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div className="size-5 rounded-md bg-brand-primary/10 flex items-center justify-center text-[10px] font-bold text-brand-primary">
+                                          {team.name?.charAt(0).toUpperCase()}
+                                        </div>
+                                        <span className="font-semibold text-brand-ink">{team.name}</span>
+                                      </div>
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                          {errors.team_id && <p className="text-xs text-red-500 font-medium">{errors.team_id.message}</p>}
+                        </div>
+
                         <div className="space-y-2">
                           <Label htmlFor="name" className="text-brand-ink font-semibold">Channel Name</Label>
                           <div className="relative">
@@ -358,7 +649,13 @@ export function ChannelsPage() {
                           {errors.name && <p className="text-xs text-red-500 font-medium">{errors.name.message}</p>}
                         </div>
 
-                        <div className="space-y-2">
+                        {errors.company_id && (
+                          <div className="md:col-span-2 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                            {errors.company_id.message}
+                          </div>
+                        )}
+
+                        <div className="space-y-2 md:col-span-2">
                           <Label htmlFor="slug" className="text-brand-ink font-semibold">URL Slug</Label>
                           <Input
                             id="slug"
@@ -797,8 +1094,8 @@ export function ChannelsPage() {
           </div>
         </aside>
 
-        {/* Content Area - Chat Simulation / Selected Channel Info */}
-        <main className="flex flex-1 flex-col bg-white">
+        {/* Content Area - Channel Message Center */}
+        <main className="flex min-w-0 flex-1 flex-col bg-white">
           {/* Header */}
           <header className="flex h-16 items-center justify-between border-b border-brand-line px-4 md:px-8">
             <div className="flex items-center gap-3">
@@ -826,29 +1123,49 @@ export function ChannelsPage() {
             </div>
 
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="rounded-xl text-brand-secondary">
+              {/* People / Members icon */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl text-brand-secondary hover:text-brand-primary hover:bg-brand-primary/5"
+                onClick={openMembersPanel}
+                disabled={!selectedChannel}
+                title="Channel Members"
+              >
                 <Users className="size-4" />
               </Button>
+
+              {/* Delete icon */}
               <Button
                 variant="ghost"
                 size="icon"
                 className="rounded-xl text-brand-secondary hover:text-red-500 hover:bg-red-50"
-                onClick={() => handleDeleteChannel(selectedChannel?.id)}
+                onClick={() => setIsDeleteDialogOpen(true)}
                 disabled={!selectedChannel}
+                title="Delete Channel"
               >
                 <Trash2 className="size-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="rounded-xl text-brand-secondary">
+
+              {/* Settings icon */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="rounded-xl text-brand-secondary hover:text-brand-primary hover:bg-brand-primary/5"
+                onClick={openSettings}
+                disabled={!selectedChannel}
+                title="Channel Settings"
+              >
                 <Settings className="size-4" />
               </Button>
             </div>
           </header>
 
-          {/* Messages Area / Welcome Screen */}
-          <div className="flex flex-1 flex-col items-center justify-center p-8 text-center bg-brand-soft/5">
+          {/* Message Center */}
+          <div className="min-h-0 flex-1 bg-white">
             {!selectedChannel ? (
-              <div className="flex flex-col items-center animate-in fade-in duration-500">
-                <div className="size-20 rounded-3xl bg-white shadow-xl shadow-brand-ink/5 flex items-center justify-center mb-6">
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center animate-in fade-in duration-500">
+                <div className="mb-6 flex size-20 items-center justify-center rounded-3xl bg-brand-soft shadow-xl shadow-brand-ink/5">
                   <Hash className="size-10 text-brand-primary/20" />
                 </div>
                 {isLoading ? (
@@ -877,90 +1194,102 @@ export function ChannelsPage() {
                 )}
               </div>
             ) : (
-              <div className="animate-in slide-in-from-bottom-4 duration-500">
-                <div className="size-20 rounded-3xl bg-white shadow-xl shadow-brand-ink/5 flex items-center justify-center mb-6 mx-auto">
-                  <MessageSquare className="size-10 text-brand-primary/40" />
+              <ScrollArea className="h-full">
+                <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-end px-5 py-8 md:px-10">
+                  <div className="space-y-4" />
                 </div>
-                <h4 className="text-xl font-bold text-brand-ink">Welcome to #{selectedChannel.name}</h4>
-                <p className="mt-2 max-w-md text-sm text-brand-secondary leading-relaxed mb-8">
-                  This is the very beginning of the <span className="font-semibold text-brand-primary">#{selectedChannel.name}</span> channel.
-                  {selectedChannel.is_private && " This is a private channel, only invited members can see this."}
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full max-w-lg mx-auto">
-                  <button className="flex items-center gap-3 p-4 rounded-2xl border border-brand-line bg-white hover:border-brand-primary/30 transition-colors text-left group">
-                    <div className="p-2 rounded-xl bg-brand-soft text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                      <PlusCircle className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-brand-ink">Add People</p>
-                      <p className="text-[10px] text-brand-secondary">Invite team members</p>
-                    </div>
-                  </button>
-                  <button className="flex items-center gap-3 p-4 rounded-2xl border border-brand-line bg-white hover:border-brand-primary/30 transition-colors text-left group">
-                    <div className="p-2 rounded-xl bg-brand-soft text-brand-primary group-hover:bg-brand-primary group-hover:text-white transition-colors">
-                      <Settings className="size-5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-brand-ink">Channel Settings</p>
-                      <p className="text-[10px] text-brand-secondary">Manage permissions</p>
-                    </div>
-                  </button>
-                </div>
-              </div>
+              </ScrollArea>
             )}
           </div>
 
-          {/* Message Input Bottom Bar */}
-          <div className="p-4 md:p-6 border-t border-brand-line bg-white/50 backdrop-blur-sm">
-            <div className="mx-auto max-w-4xl relative group">
-              <div className="flex flex-col rounded-3xl border-2 border-brand-line/40 bg-white shadow-[0_8px_40px_rgba(0,0,0,0.04)] focus-within:border-brand-primary/30 focus-within:shadow-[0_12px_48px_rgba(68,83,74,0.08)] transition-all duration-300">
+          {/* Message Composer (compact) */}
+          <div className="border-t border-brand-line bg-white px-4 py-4 md:px-8">
+            <div className="mx-auto flex max-w-5xl items-center gap-3 rounded-full border border-brand-line bg-white px-4 py-3 shadow-sm">
+              <Button variant="ghost" size="icon" className="size-10 shrink-0 rounded-full text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary">
+                <Paperclip className="size-5" />
+              </Button>
 
-                {/* Main Textarea */}
-                <Textarea
-                  placeholder={selectedChannel ? `Message #${selectedChannel.name}` : "Select a channel to chat"}
+              <input
+                type="text"
+                placeholder={selectedChannel ? `Message #${selectedChannel.name}` : "Type a message"}
+                disabled={!selectedChannel}
+                className="flex-1 bg-transparent outline-none text-sm placeholder:text-brand-secondary/50 disabled:cursor-not-allowed"
+              />
+
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="icon" className="rounded-full text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary">
+                  <Smile className="size-5" />
+                </Button>
+
+                <Button variant="ghost" size="icon" className="rounded-full text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary">
+                  <Plus className="size-5" />
+                </Button>
+
+                <Button
                   disabled={!selectedChannel}
-                  className="min-h-[100px] w-full border-none bg-transparent px-6 py-5 text-base focus-visible:ring-0 resize-none placeholder:text-brand-ink/20 disabled:cursor-not-allowed"
-                />
-
-                {/* Toolbar */}
-                <div className="flex items-center justify-between px-4 py-3 border-t border-brand-line/30 bg-brand-soft/5">
-                  <div className="flex items-center gap-1 md:gap-2">
-                    <Button variant="ghost" size="icon" className="rounded-full size-9 text-brand-secondary/60 hover:text-brand-primary hover:bg-brand-primary/5 transition-colors">
-                      <Smile className="size-[20px]" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full size-9 text-brand-secondary/60 hover:text-brand-primary hover:bg-brand-primary/5 transition-colors">
-                      <ImageIcon className="size-[20px]" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="rounded-full size-9 text-brand-secondary/60 hover:text-brand-primary hover:bg-brand-primary/5 transition-colors">
-                      <Paperclip className="size-[20px]" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="hidden sm:flex rounded-full size-9 text-brand-secondary/60 hover:text-brand-primary hover:bg-brand-primary/5 transition-colors">
-                      <FileText className="size-[20px]" />
-                    </Button>
-                    <div className="h-6 w-px bg-brand-line/50 mx-1 md:mx-2" />
-                    <Button variant="ghost" size="icon" className="rounded-full size-9 text-brand-secondary/60 hover:text-brand-primary hover:bg-brand-primary/5 transition-colors">
-                      <Plus className="size-[22px]" />
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <div className="hidden sm:block h-6 w-px bg-brand-line/50 mr-2" />
-                    <Button className="rounded-2xl bg-brand-primary hover:bg-brand-primary/90 text-white px-6 h-10 shadow-lg shadow-brand-primary/20 transition-all active:scale-95 group">
-                      <span className="font-bold mr-2 text-sm">Send</span>
-                      <Send className="size-4 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                    </Button>
-                  </div>
-                </div>
+                  className="size-11 rounded-full bg-emerald-200 p-0 text-white shadow-lg hover:scale-95 transition-transform disabled:opacity-50"
+                >
+                  <Send className="size-5 text-white" />
+                </Button>
               </div>
             </div>
-            <p className="mt-4 text-[10px] text-center text-brand-secondary/40 font-bold uppercase tracking-[0.2em] opacity-0 group-focus-within:opacity-100 transition-opacity">
-              Hold <kbd className="px-1.5 py-0.5 rounded border border-brand-line bg-white font-sans mx-1">Shift</kbd> + <kbd className="px-1.5 py-0.5 rounded border border-brand-line bg-white font-sans mx-1">Enter</kbd> for a new line
-            </p>
           </div>
         </main>
+
+        <>
+          <AddMemberDialog
+            open={isAddMemberDialogOpen}
+            onOpenChange={setIsAddMemberDialogOpen}
+            selectedChannel={selectedChannel}
+            addMemberSource={addMemberSource}
+            memberSearchQuery={memberSearchQuery}
+            setMemberSearchQuery={setMemberSearchQuery}
+            memberRole={memberRole}
+            setMemberRole={setMemberRole}
+            addMemberError={addMemberError}
+            teamMembers={teamMembers}
+            isFetchingTeamMembers={isFetchingTeamMembers}
+            selectedMemberIds={selectedMemberIds}
+            toggleMemberSelection={toggleMemberSelection}
+            isAddingMember={isAddingMember}
+            handleAddMembers={handleAddMembers}
+          />
+
+          <MembersDialog
+            open={isMembersPanelOpen}
+            onOpenChange={setIsMembersPanelOpen}
+            selectedChannel={selectedChannel}
+            isFetchingChannelMembers={isFetchingChannelMembers}
+            channelMembers={channelMembers}
+            onAddMember={() => {
+              setIsMembersPanelOpen(false);
+              openAddMemberDialog("team");
+            }}
+            onAddOtherTeamMember={() => {
+              setIsMembersPanelOpen(false);
+              openAddMemberDialog("other");
+            }}
+          />
+
+          <DeleteChannelDialog
+            open={isDeleteDialogOpen}
+            onOpenChange={setIsDeleteDialogOpen}
+            selectedChannel={selectedChannel}
+            isDeletingChannel={isDeletingChannel}
+            onDelete={handleDeleteChannel}
+          />
+
+          <ChannelSettingsDialog
+            open={isSettingsOpen}
+            onOpenChange={setIsSettingsOpen}
+            selectedChannel={selectedChannel}
+            settingsForm={settingsForm}
+            setSettingsForm={setSettingsForm}
+            isSavingSettings={isSavingSettings}
+            onSave={handleUpdateChannel}
+          />
+        </>
       </div>
     </AdminLayout>
   );
 }
-

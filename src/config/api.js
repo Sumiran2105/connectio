@@ -52,6 +52,8 @@ export const CHANNELS_LIST = "/api/v1/channels";
 export const CHANNELS_MY_CHANNELS = "/api/v1/channels/my-channels";
 export const CHANNELS_DELETE = (channelId) => `/api/v1/channels/${channelId}`;
 export const CHANNEL_MEMBERS = (channelId) => `/api/v1/channels/${channelId}/members`;
+export const CHANNEL_MEMBERS_BULK = (channelId) => `/api/v1/channels/${channelId}/members/bulk`;
+export const CHANNEL_UPDATE = (channelId) => `/api/v1/channels/${channelId}`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>
   `/api/v1/channels/${channelId}/messages/${messageId}`;
 export const MESSAGE_REACTIONS = (messageId) => `/api/v1/messages/${messageId}/reactions`;

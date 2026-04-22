@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { useAuthStore } from "@/store/auth-store";
 
-export function AdminLayout({ children }) {
+export function AdminLayout({ children, showFloatingActions = true }) {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
@@ -311,7 +311,7 @@ export function AdminLayout({ children }) {
             </div>
           </div>
         </section>
-        <FloatingActionMenu items={quickActions} />
+        {showFloatingActions ? <FloatingActionMenu items={quickActions} /> : null}
       </div>
     </main>
   );
