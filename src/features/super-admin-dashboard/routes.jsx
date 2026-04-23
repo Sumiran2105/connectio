@@ -1,6 +1,5 @@
 import { Route } from "react-router-dom";
 import { Navigate } from "react-router-dom";
-import { AddAdminPage } from "./pages/add-admin";
 import { AddCompanyPage } from "./pages/add-company";
 import { CompaniesPage } from "./pages/companies";
 import { CompanyAdminsPage } from "./pages/company-admins";
@@ -64,14 +63,6 @@ export const SuperAdminRoutes = (
       element={
         <ProtectedSuperAdminRoute>
           <CompanyAdminsPage />
-        </ProtectedSuperAdminRoute>
-      }
-    />
-    <Route
-      path="/super-admin/dashboard/admins/create"
-      element={
-        <ProtectedSuperAdminRoute>
-          <AddAdminPage />
         </ProtectedSuperAdminRoute>
       }
     />

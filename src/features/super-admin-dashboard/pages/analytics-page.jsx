@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { 
   ArrowUpRight, 
   BadgeIndianRupee, 
@@ -8,117 +9,127 @@ import {
   FileBarChart2,
   Calendar,
   Layers,
-  ArrowRight
+  ArrowRight,
+  BarChart3,
+  PieChart
 } from "lucide-react";
 import { SuperAdminLayout } from "../components/super-admin-layout";
+
+
+// Mock data for analytics endpoints
+const mockRevenueData = {
+  totalRevenue: 1245000,
+  currency: "INR",
+  timestamp: new Date().toISOString(),
+};
+
+const mockMonthlyRevenueData = {
+  monthlyRevenue: 325000,
+  month: "April 2026",
+  percentageChange: 8.2,
+  timestamp: new Date().toISOString(),
+};
+
+const mockPlansData = {
+  plans: [
+    { name: "Basic Plan", count: 48, revenue: 240000, activeUsers: 156 },
+    { name: "Pro Plan", count: 32, revenue: 480000, activeUsers: 284 },
+    { name: "Enterprise Plan", count: 18, revenue: 525000, activeUsers: 412 },
+  ],
+  timestamp: new Date().toISOString(),
+};
+
+const mockCompaniesData = {
+  activeCompanies: 98,
+  totalCompanies: 156,
+  weeklyAddition: 5,
+  growthPercentage: 5.2,
+  topCompanies: [
+    { id: 1, name: "Acme Digital", plan: "Enterprise", revenue: 45000, users: 52 },
+    { id: 2, name: "Nova Partners", plan: "Pro", revenue: 28500, users: 38 },
+    { id: 3, name: "Horizon Tech", plan: "Enterprise", revenue: 22000, users: 28 },
+    { id: 4, name: "Soylent Corp", plan: "Pro", revenue: 18200, users: 22 },
+    { id: 5, name: "Initech", plan: "Basic", revenue: 10800, users: 14 },
+  ],
+  timestamp: new Date().toISOString(),
+};
+
+const mockUsersData = {
+  totalUsers: 1240,
+  monthlyGrowth: 15.8,
+  activeUsers: 1050,
+  inactiveUsers: 190,
+  byPlan: [
+    { plan: "Enterprise", count: 412, engagement: "88%" },
+    { plan: "Pro", count: 284, engagement: "72%" },
+    { plan: "Basic", count: 156, engagement: "45%" },
+    { plan: "Trial", count: 388, engagement: "12%" },
+  ],
+  timestamp: new Date().toISOString(),
+};
 
 const stats = [
   {
     label: "Total Revenue",
-    value: "₹1,24,500",
+    value: `₹${(mockRevenueData.totalRevenue / 100000).toFixed(2)}L`,
     change: "+12.5%",
     trend: "up",
     icon: BadgeIndianRupee,
     color: "text-emerald-600",
     bg: "bg-emerald-50",
+    
   },
   {
     label: "Monthly Revenue",
-    value: "₹32,000",
-    change: "+8.2%",
+    value: `₹${(mockMonthlyRevenueData.monthlyRevenue / 1000).toFixed(0)}K`,
+    change: `+${mockMonthlyRevenueData.percentageChange}%`,
     trend: "up",
     icon: Calendar,
     color: "text-blue-600",
     bg: "bg-blue-50",
+    
   },
   {
     label: "Plan Analytics",
-    value: "48 Active",
-    change: "Enterprise focus",
+    value: `${mockPlansData.plans.reduce((sum, p) => sum + p.count, 0)} Active`,
+    change: "3 Plan Tiers",
     trend: "neutral",
     icon: Layers,
     color: "text-purple-600",
     bg: "bg-purple-50",
+    
   },
   {
     label: "Active Companies",
-    value: "156",
-    change: "+5 this week",
+    value: mockCompaniesData.activeCompanies.toString(),
+    change: `+${mockCompaniesData.weeklyAddition} this week`,
     trend: "up",
     icon: Building2,
     color: "text-orange-600",
     bg: "bg-orange-50",
+    
   },
   {
     label: "User Growth",
-    value: "1,240",
-    change: "+15.8%",
+    value: `${(mockUsersData.totalUsers / 1000).toFixed(1)}K`,
+    change: `+${mockUsersData.monthlyGrowth}%`,
     trend: "up",
     icon: TrendingUp,
     color: "text-pink-600",
     bg: "bg-pink-50",
-  },
-];
-
-const analyticLists = [
-  {
-    title: "Top Revenue Companies",
-    description: "Highest contributing tenants this quarter",
-    items: [
-      { name: "Acme Digital", value: "₹45,000", detail: "Enterprise Plan" },
-      { name: "Nova Partners", value: "₹28,500", detail: "Pro Plan" },
-      { name: "Horizon Tech", value: "₹22,000", detail: "Enterprise Plan" },
-      { name: "Soylent Corp", value: "₹18,200", detail: "Pro Plan" },
-      { name: "Initech", value: "₹10,800", detail: "Basic Plan" },
-    ],
-  },
-  {
-    title: "User Engagement by Plan",
-    description: "Daily active users across subscription tiers",
-    items: [
-      { name: "Enterprise Tier", value: "88% DAU", detail: "High Activity" },
-      { name: "Pro Tier", value: "72% DAU", detail: "Steady Usage" },
-      { name: "Basic Tier", value: "45% DAU", detail: "Occasional" },
-      { name: "Trial Users", value: "12% DAU", detail: "Low Conversion" },
-      { name: "Support Tier", value: "95% SLA", detail: "Priority" },
-    ],
-  },
-  {
-    title: "Recent Plan Upgrades",
-    description: "Companies that moved to a higher tier",
-    items: [
-      { name: "Cyberdyne", value: "Pro → Ent", detail: "2 days ago" },
-      { name: "Stark Ind.", value: "Basic → Pro", detail: "3 days ago" },
-      { name: "Wayne Ent.", value: "Pro → Ent", detail: "1 week ago" },
-      { name: "Globex", value: "Basic → Pro", detail: "1 week ago" },
-      { name: "Umbrella", value: "Pro → Ent", detail: "2 weeks ago" },
-    ],
-  },
-  {
-    title: "Platform Usage Metrics",
-    description: "Resource consumption by category",
-    items: [
-      { name: "Data Storage", value: "3.2 TB", detail: "68% Capacity" },
-      { name: "API Requests", value: "1.2M", detail: "Normal Range" },
-      { name: "Compute Units", value: "850", detail: "Stable" },
-      { name: "Active Sessions", value: "4.5k", detail: "+12% Peak" },
-      { name: "Audit Logs", value: "15 GB", detail: "Purge in 5d" },
-    ],
-  },
-  {
-    title: "Support & Health Status",
-    description: "System performance and helpdesk stats",
-    items: [
-      { name: "Critical Alerts", value: "0", detail: "Clean Health" },
-      { name: "Pending Tickets", value: "12", detail: "Response: 1.8h" },
-      { name: "Uptime (30d)", value: "99.99%", detail: "Exceeding SLA" },
-      { name: "Server Latency", value: "45ms", detail: "Optimal" },
-      { name: "User NPS", value: "72", detail: "Excellent" },
-    ],
+    
   },
 ];
 
 export function AnalyticsPage() {
+  const [analyticsData, setAnalyticsData] = useState({
+    revenue: mockRevenueData,
+    monthlyRevenue: mockMonthlyRevenueData,
+    plans: mockPlansData,
+    companies: mockCompaniesData,
+    users: mockUsersData,
+  });
+
   return (
     <SuperAdminLayout>
       <div className="mx-auto max-w-7xl space-y-8 pb-12">
@@ -133,21 +144,13 @@ export function AnalyticsPage() {
               Business Intelligence Overview
             </h1>
             <p className="text-sm text-brand-secondary">
-              Real-time insights across revenue, companies, and user engagement.
+              Real-time insights from analytics API endpoints with comprehensive metrics.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="hidden h-10 w-px bg-brand-line/50 sm:block" />
-            <div className="flex flex-col text-right">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brand-secondary/60">
-                Last Updated
-              </p>
-              <p className="text-sm font-semibold text-brand-ink">Just now</p>
-            </div>
-          </div>
+         
         </div>
 
-        {/* 5 Stat Cards */}
+        {/* 5 Stat Cards from API Endpoints */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           {stats.map((stat) => {
             const Icon = stat.icon;
@@ -155,24 +158,27 @@ export function AnalyticsPage() {
               <div
                 key={stat.label}
                 className="group relative overflow-hidden rounded-[28px] border border-brand-line bg-white p-5 transition-all duration-300 hover:border-brand-primary/30 hover:shadow-lg hover:shadow-brand-primary/5"
+                title={`From: ${stat.endpoint}`}
               >
-                <div className="flex flex-col gap-4">
-                  <div className={`flex size-10 items-center justify-center rounded-2xl ${stat.bg} ${stat.color} transition-transform duration-300 group-hover:scale-110`}>
+                <div className="flex items-center gap-4 justify-between">
+                  <div className="flex flex-col gap-3 flex-1">
+                    <div>
+                      <p className="text-xs font-medium text-brand-secondary">
+                        {stat.label}
+                      </p>
+                      <h3 className="mt-1 text-2xl font-bold text-brand-ink">
+                        {stat.value}
+                      </h3>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className={`text-[10px] font-bold ${stat.trend === 'up' ? 'text-emerald-600' : 'text-brand-secondary'}`}>
+                        {stat.change}
+                      </span>
+                      <ArrowUpRight className={`size-3 ${stat.trend === 'up' ? 'text-emerald-600' : 'hidden'}`} />
+                    </div>
+                  </div>
+                  <div className={`flex size-10 items-center justify-center rounded-2xl ${stat.bg} ${stat.color} transition-transform duration-300 group-hover:scale-110 flex-shrink-0`}>
                     <Icon className="size-5" />
-                  </div>
-                  <div>
-                    <p className="text-xs font-medium text-brand-secondary">
-                      {stat.label}
-                    </p>
-                    <h3 className="mt-1 text-2xl font-bold text-brand-ink">
-                      {stat.value}
-                    </h3>
-                  </div>
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className={`text-[10px] font-bold ${stat.trend === 'up' ? 'text-emerald-600' : 'text-brand-secondary'}`}>
-                      {stat.change}
-                    </span>
-                    <ArrowUpRight className={`size-3 ${stat.trend === 'up' ? 'text-emerald-600' : 'hidden'}`} />
                   </div>
                 </div>
                 {/* Subtle background decoration */}
@@ -182,56 +188,179 @@ export function AnalyticsPage() {
           })}
         </div>
 
-        {/* Analytics List - 5 Detailed Items */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-          {analyticLists.map((list, index) => (
-            <section
-              key={list.title}
-              className={`flex flex-col rounded-[32px] border border-brand-line bg-white p-6 shadow-sm transition-all duration-300 hover:shadow-md ${
-                index >= 3 ? "lg:col-span-1.5 lg:max-w-none" : ""
-              }`}
-            >
-              <div className="mb-6 flex items-start justify-between">
-                <div>
-                  <h4 className="text-base font-bold text-brand-ink">{list.title}</h4>
-                  <p className="text-xs text-brand-secondary mt-1">{list.description}</p>
-                </div>
-                <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral text-brand-secondary group-hover:bg-brand-soft">
-                  <ArrowRight className="size-4" />
-                </div>
+        {/* Revenue Overview Section */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Revenue Summary Card */}
+          <section className="flex flex-col rounded-[32px] border border-brand-line bg-white p-6 shadow-sm hover:shadow-md transition-all">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h4 className="text-base font-bold text-brand-ink">Revenue Overview</h4>
+                <p className="text-xs text-brand-secondary mt-1">Total and monthly revenue breakdown</p>
               </div>
+              <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral">
+                <BadgeIndianRupee className="size-4 text-brand-secondary" />
+              </div>
+            </div>
+            <div className="space-y-4 flex-1">
+              <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+                <p className="text-xs font-medium mb-1">Total Revenue</p>
+                <h5 className="text-3xl font-bold ">₹{(analyticsData.revenue.totalRevenue / 100000).toFixed(2)}L</h5>
+                <p className="text-xs text-brand-secondary mt-2">Cumulative all-time revenue</p>
+              </div>
+              <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+                <p className="text-xs font-medium  mb-1">Monthly Revenue</p>
+                <h5 className="text-3xl font-bold ">₹{(analyticsData.monthlyRevenue.monthlyRevenue / 1000).toFixed(0)}K</h5>
+                <p className="text-xs text-brand-secondary mt-2">April 2026 • +{analyticsData.monthlyRevenue.percentageChange}% growth</p>
+              </div>
+            </div>
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-line py-3 text-xs font-bold text-brand-secondary transition-all hover:bg-brand-neutral hover:text-brand-ink">
+              <BarChart3 className="size-4" />
+              View Revenue Trends
+            </button>
+          </section>
 
-              <div className="space-y-1 flex-1">
-                {list.items.map((item, i) => (
-                  <div
-                    key={item.name}
-                    className={`flex items-center justify-between rounded-2xl p-3 transition-colors hover:bg-brand-neutral/60 ${
-                      i !== list.items.length - 1 ? "" : ""
-                    }`}
-                  >
-                    <div className="space-y-0.5">
-                      <p className="text-sm font-semibold text-brand-ink">
-                        {item.name}
-                      </p>
-                      <p className="text-[10px] text-brand-secondary/60 font-medium">
-                        {item.detail}
-                      </p>
+          {/* Plan Analytics Card */}
+          <section className="flex flex-col rounded-[32px] border border-brand-line bg-white p-6 shadow-sm hover:shadow-md transition-all">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h4 className="text-base font-bold text-brand-ink">Plan Analytics</h4>
+                <p className="text-xs text-brand-secondary mt-1">Active subscriptions by tier</p>
+              </div>
+              <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral">
+                <Layers className="size-4 text-brand-secondary" />
+              </div>
+            </div>
+            <div className="space-y-2 flex-1">
+              {analyticsData.plans.plans.map((plan, index) => (
+                <div key={plan.name} className="rounded-2xl bg-brand-neutral/40 p-4 hover:bg-brand-neutral/60 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-brand-ink">{plan.name}</p>
+                    <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-lg">{plan.count} Active</span>
+                  </div>
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-brand-secondary">Revenue</span>
+                      <span className="font-semibold text-brand-ink">₹{(plan.revenue / 1000).toFixed(0)}K</span>
                     </div>
-                    <div className="text-right">
-                      <p className="text-sm font-bold text-brand-primary">
-                        {item.value}
-                      </p>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-brand-secondary">Active Users</span>
+                      <span className="font-semibold text-brand-ink">{plan.activeUsers} users</span>
                     </div>
                   </div>
-                ))}
-              </div>
-
-              <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-line py-3 text-xs font-bold text-brand-secondary transition-all hover:bg-brand-neutral hover:text-brand-ink">
-                View Full Report
-              </button>
-            </section>
-          ))}
+                </div>
+              ))}
+            </div>
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-line py-3 text-xs font-bold text-brand-secondary transition-all hover:bg-brand-neutral hover:text-brand-ink">
+              <PieChart className="size-4" />
+              View Plan Details
+            </button>
+          </section>
         </div>
+
+        {/* Companies and Users Analytics */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          {/* Top Revenue Companies */}
+          <section className="flex flex-col rounded-[32px] border border-brand-line bg-white p-6 shadow-sm hover:shadow-md transition-all">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h4 className="text-base font-bold text-brand-ink">Top Revenue Companies</h4>
+                <p className="text-xs text-brand-secondary mt-1">Active: {analyticsData.companies.activeCompanies} • Total: {analyticsData.companies.totalCompanies}</p>
+              </div>
+              <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral">
+                <Building2 className="size-4 text-brand-secondary" />
+              </div>
+            </div>
+            <div className="space-y-1 flex-1">
+              {analyticsData.companies.topCompanies.map((company) => (
+                <div key={company.id} className="flex items-center justify-between rounded-2xl p-3 hover:bg-brand-neutral/60 transition-colors">
+                  <div className="space-y-0.5">
+                    <p className="text-sm font-semibold text-brand-ink">{company.name}</p>
+                    <p className="text-[10px] text-brand-secondary/60 font-medium">{company.plan} • {company.users} users</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-emerald-600">₹{(company.revenue / 1000).toFixed(1)}K</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-line py-3 text-xs font-bold text-brand-secondary transition-all hover:bg-brand-neutral hover:text-brand-ink">
+              <ArrowRight className="size-4" />
+              View All Companies
+            </button>
+          </section>
+
+          {/* User Growth by Plan */}
+          <section className="flex flex-col rounded-[32px] border border-brand-line bg-white p-6 shadow-sm hover:shadow-md transition-all">
+            <div className="mb-6 flex items-start justify-between">
+              <div>
+                <h4 className="text-base font-bold text-brand-ink">User Growth by Plan</h4>
+                <p className="text-xs text-brand-secondary mt-1">Total: {analyticsData.users.totalUsers} • Active: {analyticsData.users.activeUsers}</p>
+              </div>
+              <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral">
+                <Users className="size-4 text-brand-secondary" />
+              </div>
+            </div>
+            <div className="space-y-2 flex-1">
+              {analyticsData.users.byPlan.map((tier) => (
+                <div key={tier.plan} className="rounded-2xl bg-brand-neutral/40 p-4 hover:bg-brand-neutral/60 transition-colors">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-sm font-semibold text-brand-ink">{tier.plan}</p>
+                    <span className="text-xs font-bold text-brand-primary bg-brand-primary/10 px-2 py-1 rounded-lg">{tier.count} Users</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-brand-secondary">Engagement Rate</span>
+                    <span className="text-xs font-semibold text-brand-ink">{tier.engagement}</span>
+                  </div>
+                  <div className="mt-2 h-2 bg-brand-line rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-brand-primary to-brand-secondary"
+                      style={{ width: tier.engagement }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="mt-6 flex w-full items-center justify-center gap-2 rounded-2xl border border-brand-line py-3 text-xs font-bold text-brand-secondary transition-all hover:bg-brand-neutral hover:text-brand-ink">
+              <TrendingUp className="size-4" />
+              View Growth Report
+            </button>
+          </section>
+        </div>
+
+        {/* Company Growth Metrics */}
+        <section className="rounded-[32px] border border-brand-line bg-white p-6 shadow-sm hover:shadow-md transition-all">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h4 className="text-base font-bold text-brand-ink">Company Growth Metrics</h4>
+              <p className="text-xs text-brand-secondary mt-1">Weekly additions and growth rate</p>
+            </div>
+            <div className="flex size-8 items-center justify-center rounded-xl bg-brand-neutral">
+              <BarChart3 className="size-4 text-brand-secondary" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+              <p className="text-xs font-medium  mb-2">Active Companies</p>
+              <h5 className="text-2xl font-bold ">{analyticsData.companies.activeCompanies}</h5>
+              <p className="text-xs  mt-1">Currently active</p>
+            </div>
+            <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+              <p className="text-xs font-medium  mb-2">Total Companies</p>
+              <h5 className="text-2xl font-bold ">{analyticsData.companies.totalCompanies}</h5>
+              <p className="text-xs  mt-1">All time</p>
+            </div>
+            <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+              <p className="text-xs font-medium  mb-2">Weekly Addition</p>
+              <h5 className="text-2xl font-bold ">+{analyticsData.companies.weeklyAddition}</h5>
+              <p className="text-xs  mt-1">This week</p>
+            </div>
+            <div className="rounded-2xl bg-brand-neutral p-4 border border-gray-200 hover:border-gray-400 transition-colors">
+              <p className="text-xs font-medium  mb-2">Growth Rate</p>
+              <h5 className="text-2xl font-bold ">+{analyticsData.companies.growthPercentage}%</h5>
+              <p className="text-xs  mt-1">Monthly growth</p>
+            </div>
+          </div>
+        </section>
       </div>
     </SuperAdminLayout>
   );

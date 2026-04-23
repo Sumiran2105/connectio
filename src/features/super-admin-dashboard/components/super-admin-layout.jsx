@@ -20,6 +20,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { useAuthStore } from "@/store/auth-store";
 
 export function SuperAdminLayout({ children }) {
@@ -36,7 +43,6 @@ export function SuperAdminLayout({ children }) {
         { label: "Overview", icon: LayoutGrid, path: "/super-admin/dashboard" },
         { label: "Pending Companies", icon: CircleAlert, path: "/super-admin/dashboard/pending-companies" },
         { label: "Add Company", icon: Plus, path: "/super-admin/dashboard/companies/create" },
-        { label: "Add Company Admin", icon: UserRoundCog, path: "/super-admin/dashboard/admins/create" },
         { label: "All Companies", icon: Building2, path: "/super-admin/dashboard/companies" },
         { label: "Company Admins", icon: UserRoundCog, path: "/super-admin/dashboard/admins" },
         // { label: "Approvals", icon: Users, path: "/super-admin/dashboard/approvals" },
@@ -232,30 +238,62 @@ export function SuperAdminLayout({ children }) {
 
                 <button
                   type="button"
-                  className="relative flex h-11 w-11 items-center justify-center rounded-2xl border border-brand-line bg-brand-neutral text-brand-secondary transition hover:bg-brand-soft hover:text-brand-ink"
+                  className="relative flex h-11 w-16 items-center justify-center rounded-2xl border border-brand-line bg-brand-neutral text-brand-secondary transition hover:bg-brand-soft hover:text-brand-ink"
                 >
                   <BellRing className="size-4.5" />
-                  <span className="absolute right-3 top-3 size-2 rounded-full bg-red-500" />
+                  <span className="absolute right-5 top-3 size-2 rounded-full bg-red-500" />
                 </button>
 
                 <div className="flex items-center justify-between gap-3 rounded-2xl border border-brand-line bg-brand-neutral px-3 py-2 sm:justify-start">
                   <div className="text-left sm:text-right">
-                    <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand-secondary">
+                    <p className="text-[11px] font-semibold uppercase text-brand-secondary">
                       Super Admin
                     </p>
                     <p className="text-sm font-semibold text-brand-ink">
                       {identity.displayName}
                     </p>
                   </div>
-                  <Avatar size="lg" className="bg-brand-primary/10">
-                    <AvatarFallback className="bg-brand-primary text-white">
-                      {identity.displayName
-                        .split(" ")
-                        .map((part) => part[0])
-                        .join("")
-                        .slice(0, 2)}
-                    </AvatarFallback>
-                  </Avatar>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="rounded-full border border-brand-line hover:bg-brand-soft transition">
+                        <Avatar size="lg" className="bg-brand-primary/10">
+                          <AvatarFallback className="bg-brand-primary text-white cursor-pointer">
+                            {identity.displayName
+                              .split(" ")
+                              .map((part) => part[0])
+                              .join("")
+                              .slice(0, 2)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48 bg-white border border-brand-line rounded-2xl shadow-lg">
+                      <div className="px-2 py-1.5">
+                        <p className="text-sm font-semibold text-brand-ink">
+                          {identity.displayName}
+                        </p>
+                        <p className="text-xs text-brand-secondary">
+                          {identity.email}
+                        </p>
+                      </div>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={() => navigate("/super-admin/dashboard/settings")}
+                        className="cursor-pointer"
+                      >
+                        <Settings2 className="size-4 mr-2" />
+                        <span>Settings</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onClick={handleSignOut}
+                        className="cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <LogOut className="size-4 mr-2" />
+                        <span>Sign out</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </div>
             </div>

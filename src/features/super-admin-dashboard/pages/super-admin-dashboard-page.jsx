@@ -41,20 +41,6 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { SuperAdminLayout } from "../components/super-admin-layout";
 
-const recentFollowUps = [
-  {
-    title: "Billing review with finance",
-    detail: "10 Apr 2026 at 11:30 AM",
-  },
-  {
-    title: "Pending activation follow-up",
-    detail: "11 Apr 2026 at 3:00 PM",
-  },
-  {
-    title: "Platform health check",
-    detail: "12 Apr 2026 at 9:30 AM",
-  },
-];
 
 function normalizeCollection(data, keys = []) {
   if (Array.isArray(data)) {
@@ -280,11 +266,7 @@ export function SuperAdminDashboardPage() {
     },
   ];
 
-  const isDashboardLoading =
-    overviewQuery.isLoading ||
-    companiesQuery.isLoading ||
-    pendingCompaniesQuery.isLoading ||
-    companyAdminsQuery.isLoading;
+  
 
   function handleApproveIntent(company) {
     setSelectedCompanyForApproval(company);
@@ -323,65 +305,62 @@ export function SuperAdminDashboardPage() {
 
   return (
     <SuperAdminLayout>
-      <div className="space-y-8 pb-10">
-        <section className="rounded-[36px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)] md:p-8">
-          <div className="flex flex-col gap-8 xl:flex-row xl:items-end xl:justify-between">
-            <div className="max-w-3xl space-y-4">
-              <div className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                <Shield className="size-3.5 text-brand-primary" />
+      <div className="space-y-10 pb-12">
+        {/* Hero Section */}
+        <section className="rounded-3xl ">
+          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+            <div className="max-w-3xl space-y-5">
+              <div className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-primary">
+                <Shield className="size-3.5" />
                 Super Admin Dashboard
               </div>
-              <div className="space-y-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-brand-ink sm:text-4xl">
-                  Oversee onboarding, admins, billing, and platform activity from one command center.
+              <div className="space-y-4">
+                <h1 className="text-4xl font-bold tracking-tight text-brand-ink lg:text-5xl">
+                  Platform Command Center
                 </h1>
-                <p className="max-w-2xl text-sm leading-7 text-brand-secondary sm:text-base">
-                  Review new company registrations, approve and invite company admins, and keep
-                  the platform onboarding queue moving from a single dashboard.
+                <p className="max-w-2xl text-base leading-8 text-brand-secondary/80">
+                  Oversee company onboarding, manage admin accounts, monitor platform activity, and make critical approval decisions from a unified control center.
                 </p>
               </div>
             </div>
 
-            <div className="flex flex-wrap gap-3">
-              <Button
-                type="button"
-                className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
-                onClick={() => navigate("/super-admin/dashboard/companies/create")}
-              >
-                <Plus className="size-4" />
-                Add company
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                onClick={() => navigate("/super-admin/dashboard/admins/create")}
-              >
-                <UserRoundCog className="size-4" />
-                Add company admin
-              </Button>
-            </div>
+            <Button
+              type="button"
+              className="h-12  rounded-2xl bg-brand-primary px-6 text-white shadow-lg hover:shadow-xl hover:bg-brand-primary/90 transition-all duration-200"
+              onClick={() => navigate("/super-admin/dashboard/companies/create")}
+            >
+              <Plus className="size-5" />
+              <span className="ml-2 font-semibold">Add Company</span>
+            </Button>
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+        {/* Overview Cards Grid */}
+        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-6">
           {overviewCards.map((card) => {
             const Icon = card.icon;
 
             return (
               <article
                 key={card.label}
-                className="rounded-[28px] border border-brand-line bg-white p-5 shadow-[0_14px_40px_rgba(68,83,74,0.06)]"
+                className="group relative overflow-hidden rounded-3xl border border-brand-line bg-white p-6 shadow-md hover:shadow-lg transition-all duration-300 flex flex-col justify-between"
               >
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm text-brand-secondary">{card.label}</p>
-                    <p className="mt-4 text-3xl font-semibold tracking-tight text-brand-ink">
+                <div className="absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-5 transition-opacity" />
+                <div className="relative space-y-4">
+                  <div className="space-y-2">
+                    <p className="text-xs font-semibold uppercase tracking-widest text-brand-secondary">
+                      {card.label}
+                    </p>
+                    <p className="text-3xl font-bold tracking-tight text-brand-ink">
                       {card.value}
                     </p>
-                    <p className="mt-3 text-sm leading-6 text-brand-secondary">{card.note}</p>
                   </div>
-                  <div className={`flex size-12 items-center justify-center rounded-2xl ${card.accent}`}>
+                  <p className="text-xs leading-6 text-brand-secondary/70">
+                    {card.note}
+                  </p>
+                </div>
+                <div className="absolute right-6 top-1/4 -translate-y-1/2">
+                  <div className={`flex items-center justify-center rounded-xl p-3 ${card.accent} transition-transform group-hover:scale-110 duration-300`}>
                     <Icon className="size-5" />
                   </div>
                 </div>
@@ -390,121 +369,23 @@ export function SuperAdminDashboardPage() {
           })}
         </section>
 
-        {/* <section className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Platform Snapshot
+        {/* Data Tables Section */}
+        <section className="grid gap-8 lg:grid-cols-2">
+          {/* Pending Companies */}
+          <div className="overflow-hidden rounded-3xl border border-brand-line bg-white shadow-lg">
+            <div className="flex items-center justify-between gap-4 border-b border-brand-line bg-gradient-to-r from-brand-neutral/50 to-transparent px-8 py-6">
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-secondary">
+                  Pending Approvals
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Registration and approval pipeline
-                </h3>
-              </div>
-              <div className="rounded-2xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand-primary">
-                {overview.total ?? 0} total
-              </div>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-4">
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                  Verified
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-brand-ink">
-                  {(overview.total ?? 0) - (overview.pending_verification ?? 0)}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                  Companies that completed domain verification.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                  Awaiting Approval
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-brand-ink">
-                  {(overview.pending_admin ?? 0) + pendingCompanies.length}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                  Companies ready for super admin review.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                  Admin Directory
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-brand-ink">
-                  {allCompanyAdmins.length}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                  Company admins currently visible to the platform.
-                </p>
-              </div>
-              <div className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
-                  Queue State
-                </p>
-                <p className="mt-3 text-2xl font-semibold text-brand-ink">
-                  {pendingCompanies.length ? "Action needed" : "Clear"}
-                </p>
-                <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                  {pendingCompanies.length
-                    ? `${pendingCompanies.length} companies are still waiting in review.`
-                    : "No company approvals are blocked right now."}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Suggested Next Metrics
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Useful backend additions later
-                </h3>
-              </div>
-              <BellRing className="size-5 text-brand-secondary" />
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {[
-                "Total company admins invited",
-                "Companies verified today",
-                "Average approval turnaround time",
-                "Rejected companies this week",
-              ].map((item) => (
-                <div
-                  key={item}
-                  className="rounded-[22px] border border-dashed border-brand-line bg-brand-neutral px-4 py-4"
-                >
-                  <p className="text-sm font-semibold text-brand-ink">{item}</p>
-                  <p className="mt-2 text-sm leading-6 text-brand-secondary">
-                    This can be added as a dedicated dashboard metric when the backend exposes it.
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section> */}
-
-        <section className="grid gap-6 xl:grid-cols-2">
-          <div className="overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-center justify-between gap-4 border-b border-brand-line px-6 py-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Pending Companies
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Company registration approvals
+                <h3 className="text-2xl font-bold text-brand-ink">
+                  Company Registrations
                 </h3>
               </div>
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-2xl border-brand-line bg-white px-4 text-brand-ink hover:bg-brand-soft"
+                className="h-10 rounded-xl border-brand-line bg-white px-4 text-sm font-semibold text-brand-ink hover:bg-brand-neutral transition-colors"
                 onClick={() => navigate("/super-admin/dashboard/companies")}
               >
                 View all
@@ -513,33 +394,33 @@ export function SuperAdminDashboardPage() {
 
             <div className="overflow-x-auto">
               {pendingCompaniesQuery.isLoading ? (
-                <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
+                <div className="flex min-h-64 items-center justify-center gap-3 px-8 py-10 text-brand-secondary">
                   <LoaderCircle className="size-5 animate-spin" />
-                  Loading pending companies
+                  <span className="font-medium">Loading pending companies</span>
                 </div>
               ) : pendingCompaniesQuery.isError ? (
-                <div className="px-6 py-10 text-sm text-brand-tertiary">
+                <div className="px-8 py-10 text-sm font-medium text-brand-tertiary">
                   Unable to load pending companies right now.
                 </div>
               ) : pendingCompanies.length ? (
                 <table className="min-w-full border-collapse">
-                  <thead className="bg-brand-neutral">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                  <thead>
+                    <tr className="bg-brand-neutral/40">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Company
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Admin Email
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Created On
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      <th className="px-8 py-4 text-center text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Action
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-brand-line">
                     {pendingCompanies.map((company) => {
                       const isApproving =
                         approveCompanyMutation.isPending &&
@@ -549,28 +430,28 @@ export function SuperAdminDashboardPage() {
                         rejectCompanyMutation.variables?.companyId === company.id;
 
                       return (
-                        <tr key={company.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                          <td className="px-6 py-4">
+                        <tr key={company.id} className="hover:bg-brand-neutral/30 transition-colors">
+                          <td className="px-8 py-5">
                             <p className="text-sm font-semibold text-brand-ink">{company.name}</p>
-                            <p className="mt-1 text-sm text-brand-secondary">{company.domain}</p>
+                            <p className="mt-1 text-xs text-brand-secondary">{company.domain}</p>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-8 py-5">
                             <p className="text-sm text-brand-ink">{company.adminEmail || "Not available"}</p>
-                            <p className="mt-1 text-sm text-brand-secondary">{company.phoneNumber}</p>
+                            <p className="mt-1 text-xs text-brand-secondary">{company.phoneNumber}</p>
                           </td>
-                          <td className="px-6 py-4">
+                          <td className="px-8 py-5">
                             <p className="text-sm text-brand-secondary">{company.createdOn}</p>
                             <span
-                              className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(company.status)}`}
+                              className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest ${statusClass(company.status)}`}
                             >
                               {company.status}
                             </span>
                           </td>
-                          <td className="px-6 py-4">
-                            <div className="flex flex-wrap gap-2">
-                              <Button
+                          <td className="px-8 py-5">
+                            <div className="flex justify-center gap-2">
+                              <button
                                 type="button"
-                                className="h-9 rounded-xl bg-brand-primary px-4 text-white hover:bg-brand-primary/90"
+                                className="relative inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:shadow-lg hover:bg-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={isApproving || isRejecting}
                                 onClick={() => handleApproveIntent(company)}
                               >
@@ -585,11 +466,10 @@ export function SuperAdminDashboardPage() {
                                     Approve
                                   </>
                                 )}
-                              </Button>
-                              <Button
+                              </button>
+                              <button
                                 type="button"
-                                variant="outline"
-                                className="h-9 rounded-xl border-rose-200 px-4 text-rose-700 hover:bg-rose-50"
+                                className="relative inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                                 disabled={isApproving || isRejecting}
                                 onClick={() => handleRejectIntent(company)}
                               >
@@ -604,7 +484,7 @@ export function SuperAdminDashboardPage() {
                                     Reject
                                   </>
                                 )}
-                              </Button>
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -613,27 +493,30 @@ export function SuperAdminDashboardPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="px-6 py-10 text-sm text-brand-secondary">
-                  No pending company registrations right now.
+                <div className="px-8 py-12 text-center">
+                  <p className="text-sm font-medium text-brand-secondary">
+                    No pending company registrations right now.
+                  </p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-center justify-between gap-4 border-b border-brand-line px-6 py-5">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Company Admins
+          {/* Company Admins */}
+          <div className="overflow-hidden rounded-3xl border border-brand-line bg-white shadow-lg">
+            <div className="flex items-center justify-between gap-4 border-b border-brand-line bg-gradient-to-r from-brand-neutral/50 to-transparent px-8 py-6">
+              <div className="space-y-2">
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-secondary">
+                  Recent Activity
                 </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Recent company admin activity
+                <h3 className="text-2xl font-bold text-brand-ink">
+                  Company Admins
                 </h3>
               </div>
               <Button
                 type="button"
                 variant="outline"
-                className="h-10 rounded-2xl border-brand-line bg-white px-4 text-brand-ink hover:bg-brand-soft"
+                className="h-10 rounded-xl border-brand-line bg-white px-4 text-sm font-semibold text-brand-ink hover:bg-brand-neutral transition-colors"
                 onClick={() => navigate("/super-admin/dashboard/admins")}
               >
                 View all
@@ -642,40 +525,40 @@ export function SuperAdminDashboardPage() {
 
             <div className="overflow-x-auto">
               {companyAdminsQuery.isLoading ? (
-                <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
+                <div className="flex min-h-64 items-center justify-center gap-3 px-8 py-10 text-brand-secondary">
                   <LoaderCircle className="size-5 animate-spin" />
-                  Loading company admins
+                  <span className="font-medium">Loading company admins</span>
                 </div>
               ) : companyAdminsQuery.isError ? (
-                <div className="px-6 py-10 text-sm text-brand-tertiary">
+                <div className="px-8 py-10 text-sm font-medium text-brand-tertiary">
                   Unable to load company admin activity right now.
                 </div>
               ) : recentAdmins.length ? (
                 <table className="min-w-full border-collapse">
-                  <thead className="bg-brand-neutral">
-                    <tr>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
-                        Name
+                  <thead>
+                    <tr className="bg-brand-neutral/40">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
+                        Admin Name
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Company
                       </th>
-                      <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                      <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Status
                       </th>
                     </tr>
                   </thead>
-                  <tbody>
+                  <tbody className="divide-y divide-brand-line">
                     {recentAdmins.map((admin) => (
-                      <tr key={admin.id} className="border-t border-brand-line hover:bg-brand-neutral/50">
-                        <td className="px-6 py-4">
+                      <tr key={admin.id} className="hover:bg-brand-neutral/30 transition-colors">
+                        <td className="px-8 py-5">
                           <p className="text-sm font-semibold text-brand-ink">{admin.name}</p>
-                          <p className="mt-1 text-sm text-brand-secondary">{admin.email}</p>
+                          <p className="mt-1 text-xs text-brand-secondary">{admin.email}</p>
                         </td>
-                        <td className="px-6 py-4 text-sm text-brand-secondary">{admin.company}</td>
-                        <td className="px-6 py-4">
+                        <td className="px-8 py-5 text-sm font-medium text-brand-secondary">{admin.company}</td>
+                        <td className="px-8 py-5">
                           <span
-                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] ${statusClass(admin.status)}`}
+                            className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest ${statusClass(admin.status)}`}
                           >
                             {admin.status}
                           </span>
@@ -685,118 +568,17 @@ export function SuperAdminDashboardPage() {
                   </tbody>
                 </table>
               ) : (
-                <div className="px-6 py-10 text-sm text-brand-secondary">
-                  No company admin activity found yet.
+                <div className="px-8 py-12 text-center">
+                  <p className="text-sm font-medium text-brand-secondary">
+                    No company admin activity found yet.
+                  </p>
                 </div>
               )}
             </div>
           </div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-start gap-3">
-              <div className="flex size-12 items-center justify-center rounded-2xl bg-brand-soft">
-                <CalendarClock className="size-5 text-brand-primary" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Upcoming
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Scheduled follow-ups
-                </h3>
-              </div>
-            </div>
-
-            <div className="mt-6 space-y-4">
-              {recentFollowUps.map((item) => (
-                <div key={item.title} className="rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-                  <p className="text-sm font-semibold text-brand-ink">{item.title}</p>
-                  <p className="mt-2 text-sm leading-6 text-brand-secondary">{item.detail}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-brand-line bg-white p-6 shadow-[0_16px_50px_rgba(68,83,74,0.06)]">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
-                  Shortcuts
-                </p>
-                <h3 className="mt-2 text-xl font-semibold text-brand-ink">
-                  Direct links into platform modules
-                </h3>
-              </div>
-              <BellRing className="size-5 text-brand-secondary" />
-            </div>
-
-            <div className="mt-6 grid gap-4 sm:grid-cols-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 justify-start rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                onClick={() => navigate("/super-admin/dashboard/companies")}
-              >
-                <Building2 className="size-4" />
-                All companies
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 justify-start rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                onClick={() => navigate("/super-admin/dashboard/admins")}
-              >
-                <Users className="size-4" />
-                All company admins
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 justify-start rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                onClick={() => navigate("/super-admin/dashboard/billing")}
-              >
-                <CreditCard className="size-4" />
-                Billing
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-12 justify-start rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft"
-                onClick={() => navigate("/super-admin/dashboard/notifications")}
-              >
-                <BellRing className="size-4" />
-                Notifications
-              </Button>
-            </div>
-
-            <div className="mt-6 rounded-[24px] border border-brand-line bg-brand-neutral p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 items-center justify-center rounded-2xl bg-brand-soft">
-                  {isDashboardLoading ? (
-                    <LoaderCircle className="size-4 animate-spin text-brand-primary" />
-                  ) : pendingCompanies.length ? (
-                    <CircleAlert className="size-4 text-amber-600" />
-                  ) : (
-                    <CheckCheck className="size-4 text-emerald-600" />
-                  )}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-brand-ink">Onboarding queue status</p>
-                  <p className="mt-1 text-sm leading-6 text-brand-secondary">
-                    {isDashboardLoading
-                      ? "Refreshing the latest company registrations and admin records."
-                      : pendingCompanies.length
-                        ? `${pendingCompanies.length} company registration requests are waiting for approval.`
-                        : "No company approvals are pending right now."}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
+        {/* Approval Dialog */}
         <Dialog
           open={Boolean(selectedCompanyForApproval)}
           onOpenChange={(open) => {
@@ -805,41 +587,46 @@ export function SuperAdminDashboardPage() {
             }
           }}
         >
-          <DialogContent className="rounded-[28px] border border-brand-line bg-white sm:max-w-xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-brand-ink">
-                Confirm approval and invite
+          <DialogContent className="rounded-3xl border border-brand-line bg-white">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold text-brand-ink">
+                Confirm Company Approval
               </DialogTitle>
-              <DialogDescription className="text-sm leading-6 text-brand-secondary">
-                The company{" "}
+              <DialogDescription className="text-base leading-7 text-brand-secondary">
+                You are about to approve{" "}
                 <span className="font-semibold text-brand-ink">
                   {selectedCompanyForApproval?.name || "this company"}
-                </span>{" "}
-                will be approved. After approval, the company admin can log in using the password set during company creation.
-                Please confirm to continue.
+                </span>
+                . The company admin will then be able to access their workspace.
               </DialogDescription>
             </DialogHeader>
 
-            <div className="rounded-[22px] border border-brand-line bg-brand-neutral p-4 text-sm text-brand-secondary">
-              <p>
-                <span className="font-semibold text-brand-ink">Company:</span>{" "}
-                {selectedCompanyForApproval?.name || "Not available"}
-              </p>
-              <p className="mt-2">
-                <span className="font-semibold text-brand-ink">Domain:</span>{" "}
-                {selectedCompanyForApproval?.domain || "Not available"}
-              </p>
-              <p className="mt-2">
-                <span className="font-semibold text-brand-ink">Admin email:</span>{" "}
-                {selectedCompanyForApproval?.adminEmail || "Not available"}
-              </p>
+            <div className="rounded-2xl border border-brand-line bg-brand-neutral/40 p-5 space-y-4">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-secondary">Company Name</p>
+                <p className="mt-2 text-sm font-semibold text-brand-ink">
+                  {selectedCompanyForApproval?.name || "Not available"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-secondary">Domain</p>
+                <p className="mt-2 text-sm font-semibold text-brand-ink">
+                  {selectedCompanyForApproval?.domain || "Not available"}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-bold uppercase tracking-widest text-brand-secondary">Admin Email</p>
+                <p className="mt-2 text-sm font-semibold text-brand-ink">
+                  {selectedCompanyForApproval?.adminEmail || "Not available"}
+                </p>
+              </div>
             </div>
 
-            <DialogFooter className="gap-3 sm:justify-end">
+            <DialogFooter className="gap-3 sm:justify-end pt-4">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-2xl border-brand-line px-5"
+                className="h-11 rounded-xl border-brand-line px-6 font-semibold"
                 disabled={approveCompanyMutation.isPending}
                 onClick={() => setSelectedCompanyForApproval(null)}
               >
@@ -847,16 +634,17 @@ export function SuperAdminDashboardPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 rounded-2xl bg-brand-primary px-5 text-white hover:bg-brand-primary/90"
+                className="h-11 rounded-xl bg-brand-primary px-6 text-white font-semibold shadow-lg hover:shadow-xl hover:bg-brand-primary/90 transition-all"
                 disabled={approveCompanyMutation.isPending}
                 onClick={handleConfirmApprove}
               >
-                {approveCompanyMutation.isPending ? "Approving..." : "Confirm approval"}
+                {approveCompanyMutation.isPending ? "Approving..." : "Approve Company"}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
 
+        {/* Rejection Dialog */}
         <Dialog
           open={Boolean(selectedCompanyForRejection)}
           onOpenChange={(open) => {
@@ -866,17 +654,17 @@ export function SuperAdminDashboardPage() {
             }
           }}
         >
-          <DialogContent className="rounded-[28px] border border-brand-line bg-white sm:max-w-xl">
-            <DialogHeader>
-              <DialogTitle className="text-xl font-semibold text-brand-ink">
-                Reject company request
+          <DialogContent className="rounded-3xl border border-brand-line bg-white">
+            <DialogHeader className="space-y-3">
+              <DialogTitle className="text-2xl font-bold text-brand-ink">
+                Reject Company Request
               </DialogTitle>
-              <DialogDescription className="text-sm leading-6 text-brand-secondary">
-                Enter the reason for rejecting{" "}
+              <DialogDescription className="text-base leading-7 text-brand-secondary">
+                Please provide a reason for rejecting{" "}
                 <span className="font-semibold text-brand-ink">
                   {selectedCompanyForRejection?.name || "this company"}
                 </span>
-                .
+                . This will be communicated to the applicant.
               </DialogDescription>
             </DialogHeader>
 
@@ -884,14 +672,14 @@ export function SuperAdminDashboardPage() {
               value={rejectionReason}
               onChange={(event) => setRejectionReason(event.target.value)}
               placeholder="Enter rejection reason"
-              className="h-12 rounded-2xl border-brand-line bg-brand-neutral"
+              className="h-12 rounded-xl border-brand-line bg-brand-neutral text-brand-ink placeholder:text-brand-secondary/50"
             />
 
-            <DialogFooter className="gap-3 sm:justify-end">
+            <DialogFooter className="gap-3 sm:justify-end pt-4">
               <Button
                 type="button"
                 variant="outline"
-                className="h-11 rounded-2xl border-brand-line px-5"
+                className="h-11 rounded-xl border-brand-line px-6 font-semibold"
                 disabled={rejectCompanyMutation.isPending}
                 onClick={() => {
                   setSelectedCompanyForRejection(null);
@@ -902,11 +690,11 @@ export function SuperAdminDashboardPage() {
               </Button>
               <Button
                 type="button"
-                className="h-11 rounded-2xl bg-rose-600 px-5 text-white hover:bg-rose-700"
+                className="h-11 rounded-xl bg-rose-600 px-6 text-white font-semibold shadow-lg hover:shadow-xl hover:bg-rose-700 transition-all"
                 disabled={rejectCompanyMutation.isPending}
                 onClick={handleConfirmReject}
               >
-                {rejectCompanyMutation.isPending ? "Rejecting..." : "Confirm reject"}
+                {rejectCompanyMutation.isPending ? "Rejecting..." : "Reject Company"}
               </Button>
             </DialogFooter>
           </DialogContent>

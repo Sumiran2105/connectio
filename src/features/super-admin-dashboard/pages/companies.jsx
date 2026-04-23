@@ -172,9 +172,9 @@ export function CompaniesPage() {
             </div>
           ) : filteredCompanies.length ? (
             <div className="overflow-hidden rounded-[24px] border border-brand-line">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
                 <table className="min-w-full border-collapse">
-                  <thead>
+                  <thead className="sticky top-0 z-10">
                     <tr className="bg-brand-neutral">
                       <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
                         Company Name

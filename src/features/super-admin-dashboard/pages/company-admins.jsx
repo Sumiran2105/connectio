@@ -160,7 +160,7 @@ export function CompanyAdminsPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto overflow-y-auto max-h-[600px]">
             {companyAdminsQuery.isLoading ? (
               <div className="flex min-h-56 items-center justify-center gap-3 px-6 py-10 text-brand-secondary">
                 <LoaderCircle className="size-5 animate-spin" />
@@ -172,7 +172,7 @@ export function CompanyAdminsPage() {
               </div>
             ) : filteredRows.length ? (
                 <table className="min-w-full border-collapse">
-                  <thead className="bg-brand-neutral">
+                  <thead className="bg-brand-neutral sticky top-0 z-10">
                     <tr>
                       <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-[0.22em] text-brand-secondary">
                         Company Name
