@@ -68,6 +68,23 @@ export const getTeamCompanyId = (team) =>
   team?.tenant_id ||
   "";
 
+export const getChannelId = (channel) =>
+  channel?.id ||
+  channel?.channel_id ||
+  channel?.uuid ||
+  null;
+
+export const normalizeChannel = (channel) => {
+  const id = getChannelId(channel);
+
+  return {
+    ...channel,
+    id,
+    channel_id: channel?.channel_id || id,
+    name: channel?.name || channel?.channel_name || "Untitled channel",
+  };
+};
+
 export const getUserRecord = (record) =>
   record?.user ||
   record?.member ||
@@ -121,6 +138,7 @@ export const getUserAvatar = (record) => {
 
 export const getRoleLabel = (role) => {
   const normalized = String(role || "user").toLowerCase();
-  if (normalized === "owner") return "Admin";
+  if (normalized === "owner" || normalized === "admin") return "Admin";
+  if (normalized === "member" || normalized === "user") return "User";
   return normalized.replace(/_/g, " ");
 };
