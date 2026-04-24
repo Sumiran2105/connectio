@@ -239,7 +239,7 @@ export function SuperAdminDashboardPage() {
     {
       label: "Pending Verification",
       value: String(overview.pending_verification ?? 0),
-      note: "Company registrations still waiting on domain OTP verification",
+      note: "Company registrations pending domain OTP verification",
       icon: CircleDashed,
       accent: "bg-amber-50 text-amber-700",
     },
@@ -307,8 +307,18 @@ export function SuperAdminDashboardPage() {
     <SuperAdminLayout>
       <div className="space-y-10 pb-12">
         {/* Hero Section */}
-        <section className="rounded-3xl ">
-          <div className="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <section className="rounded-3xl relative">
+          <div className="absolute top-0 right-0">
+            <Button
+              type="button"
+              className="h-12 rounded-2xl bg-brand-primary px-6 text-white shadow-lg hover:shadow-xl hover:bg-brand-primary/90 transition-all duration-200"
+              onClick={() => navigate("/super-admin/dashboard/companies/create")}
+            >
+              <Plus className="size-5" />
+              <span className="ml-2 font-semibold">Add Company</span>
+            </Button>
+          </div>
+          <div className="flex flex-col gap-8">
             <div className="max-w-3xl space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-primary/10 px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-brand-primary">
                 <Shield className="size-3.5" />
@@ -323,15 +333,6 @@ export function SuperAdminDashboardPage() {
                 </p>
               </div>
             </div>
-
-            <Button
-              type="button"
-              className="h-12  rounded-2xl bg-brand-primary px-6 text-white shadow-lg hover:shadow-xl hover:bg-brand-primary/90 transition-all duration-200"
-              onClick={() => navigate("/super-admin/dashboard/companies/create")}
-            >
-              <Plus className="size-5" />
-              <span className="ml-2 font-semibold">Add Company</span>
-            </Button>
           </div>
         </section>
 
@@ -523,7 +524,7 @@ export function SuperAdminDashboardPage() {
               </Button>
             </div>
 
-            <div className="overflow-x-auto">
+            <div className="h-96 overflow-y-auto">
               {companyAdminsQuery.isLoading ? (
                 <div className="flex min-h-64 items-center justify-center gap-3 px-8 py-10 text-brand-secondary">
                   <LoaderCircle className="size-5 animate-spin" />
@@ -534,9 +535,9 @@ export function SuperAdminDashboardPage() {
                   Unable to load company admin activity right now.
                 </div>
               ) : recentAdmins.length ? (
-                <table className="min-w-full border-collapse">
-                  <thead>
-                    <tr className="bg-brand-neutral/40">
+                <table className="w-full border-collapse">
+                  <thead className="sticky top-0">
+                    <tr className="bg-brand-neutral">
                       <th className="px-8 py-4 text-left text-xs font-bold uppercase tracking-widest text-brand-secondary">
                         Admin Name
                       </th>
@@ -551,11 +552,11 @@ export function SuperAdminDashboardPage() {
                   <tbody className="divide-y divide-brand-line">
                     {recentAdmins.map((admin) => (
                       <tr key={admin.id} className="hover:bg-brand-neutral/30 transition-colors">
-                        <td className="px-8 py-5">
+                        <td className="px-8 py-5 break-words">
                           <p className="text-sm font-semibold text-brand-ink">{admin.name}</p>
-                          <p className="mt-1 text-xs text-brand-secondary">{admin.email}</p>
+                          <p className="mt-1 text-xs text-brand-secondary break-all">{admin.email}</p>
                         </td>
-                        <td className="px-8 py-5 text-sm font-medium text-brand-secondary">{admin.company}</td>
+                        <td className="px-8 py-5 text-sm font-medium text-brand-secondary break-words">{admin.company}</td>
                         <td className="px-8 py-5">
                           <span
                             className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-widest ${statusClass(admin.status)}`}

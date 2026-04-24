@@ -20,6 +20,8 @@ export const SUPERADMIN_PENDING_COMPANIES = "/superadmin/companies/pending";
 export const SUPERADMIN_REJECT_COMPANY = (companyId) => `/superadmin/companies/${companyId}/reject`;
 export const SUPERADMIN_DASHBOARD_OVERVIEW = "/superadmin/dashboard";
 
+export const COMPANY_DASHBOARD = "/company/dashboard";
+export const COMPANY_KPI_TRENDS = (rangeType = "weekly") => `/company/kpi/trends?range_type=${rangeType}`;
 export const COMPANY_PENDING_USERS = "/company/users/pending";
 export const COMPANY_USERS = "/company/users";
 export const COMPANY_INVITE_USER = "/company/users/invite";

@@ -184,7 +184,7 @@ export function CompanyUsers() {
           </Button>
         </div>
 
-        <div className="overflow-hidden rounded-[32px] border border-brand-line bg-white shadow-[0_24px_80px_rgba(68,83,74,0.08)]">
+        <div className="overflow-y-auto   max-h-[600px] rounded-[32px] border border-brand-line bg-white shadow-[0_24px_80px_rgba(68,83,74,0.08)]">
           {usersQuery.isLoading ? (
             <div className="flex min-h-64 items-center justify-center gap-3 text-brand-secondary">
               <div className="size-8 animate-spin rounded-full border-4 border-brand-primary/20 border-t-brand-primary" />
@@ -192,7 +192,7 @@ export function CompanyUsers() {
             </div>
           ) : filteredUsers.length > 0 ? (
             <table className="w-full border-collapse text-left">
-              <thead>
+              <thead className="sticky top-0 z-10 bg-brand-neutral bg-opacity-90 backdrop-blur-sm">
                 <tr className="border-b border-brand-line bg-brand-neutral/50">
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-brand-secondary/60">User</th>
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-brand-secondary/60">Role</th>

@@ -49,7 +49,7 @@ export function InviteUser() {
 
   return (
     <AdminLayout>
-      <div className="mx-auto max-w-2xl animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <div className=" animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="mb-8 space-y-2">
         <button
           onClick={() => navigate("/admin/dashboard")}

@@ -23,6 +23,13 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { useAuthStore } from "@/store/auth-store";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
 export function AdminLayout({ children, showFloatingActions = true }) {
   const navigate = useNavigate();
@@ -124,7 +131,7 @@ export function AdminLayout({ children, showFloatingActions = true }) {
         </button>
       </div>
 
-      <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row overflow-hidden">
+      <div className=" flex h-full w-full flex-col lg:flex-row overflow-hidden">
         {/* Sidebar */}
         <aside
           className={`${isMobileMenuOpen ? "flex" : "hidden"
@@ -237,7 +244,7 @@ export function AdminLayout({ children, showFloatingActions = true }) {
         )}
 
         {/* Content Area */}
-        <section className="relative flex-1 flex flex-col h-full overflow-hidden">
+        <section className="relative flex-1 flex flex-col h-full overflow-hidden ">
           {/* Top Navigation Bar */}
           <header className="h-20 bg-white/40 backdrop-blur-md border-b border-brand-line/10 px-6 lg:px-10 flex items-center justify-between gap-4 sticky top-0 z-30">
             {/* Breadcrumbs */}
@@ -268,7 +275,7 @@ export function AdminLayout({ children, showFloatingActions = true }) {
             </div>
 
             {/* Search Bar */}
-            <div className="flex-1 max-w-md relative group">
+            <div className="flex-1 max-w-md relative group border border-gray-300 rounded-2xl bg-[#EBF1F2]/60 transition-all focus-within:ring-2 focus-within:ring-brand-primary/10">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-brand-ink/30 group-focus-within:text-brand-primary transition-colors" />
               <input
                 type="text"
@@ -288,20 +295,47 @@ export function AdminLayout({ children, showFloatingActions = true }) {
               {/* Vertical Divider */}
               <div className="h-8 w-px bg-brand-line/30 hidden sm:block" />
 
-              {/* User Profile */}
-              <div className="flex items-center gap-3 cursor-pointer group">
-                <div className="text-right hidden sm:block">
-                  <p className="text-sm font-bold text-brand-ink leading-none group-hover:text-brand-primary transition-colors">{identity.displayName}</p>
-                  <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Admin</p>
-                </div>
-                <div className="size-10 rounded-full border-2 border-white shadow-md overflow-hidden bg-brand-soft transition-transform group-hover:scale-105">
-                  <img
-                    src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop"
-                    alt="Profile"
-                    className="size-full object-cover"
-                  />
-                </div>
-              </div>
+              {/* User Profile Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="flex items-center gap-3 rounded-xl hover:bg-brand-neutral/20 transition-colors p-2">
+                    <div className="text-right hidden sm:block">
+                      <p className="text-sm font-bold text-brand-ink leading-none">{identity.displayName}</p>
+                      <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Admin</p>
+                    </div>
+                    <div className="size-10 rounded-full border-2 border-brand-line shadow-md overflow-hidden bg-brand-soft cursor-pointer hover:ring-2 hover:ring-brand-primary/30 transition-all">
+                      <img
+                        src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop"
+                        alt="Profile"
+                        className="size-full object-cover"
+                      />
+                    </div>
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56 bg-white border border-brand-line rounded-2xl shadow-lg">
+                  <div className="px-4 py-3">
+                    <p className="text-sm font-bold text-brand-ink">{identity.displayName}</p>
+                    <p className="text-xs text-brand-secondary mt-1">{identity.email}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-brand-primary mt-2">{identity.role.replaceAll("_", " ")}</p>
+                  </div>
+                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuItem
+                    onClick={() => navigate("/admin/dashboard/settings")}
+                    className="cursor-pointer px-4 py-2.5 hover:bg-brand-primary rounded-lg transition-colors group"
+                  >
+                    <Settings className="size-4 mr-3 text-brand-primary group-hover:text-white transition-colors" />
+                    <span className="font-medium text-brand-ink group-hover:text-white transition-colors">Settings</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator className="my-2" />
+                  <DropdownMenuItem
+                    onClick={handleSignOut}
+                    className="cursor-pointer px-4 py-2.5 hover:bg-red-500 rounded-lg transition-colors group"
+                  >
+                    <LogOut className="size-4 mr-3 text-red-500 group-hover:text-white transition-colors" />
+                    <span className="font-medium text-red-600 group-hover:text-white transition-colors">Sign out</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 
