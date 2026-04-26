@@ -16,6 +16,7 @@ import {
   BarChart3,
   History,
   ShieldCheck,
+  MessageCircle,
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -31,7 +32,12 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
-export function AdminLayout({ children, showFloatingActions = true }) {
+export function AdminLayout({
+  children,
+  contentClassName = "",
+  contentInnerClassName = "",
+  showFloatingActions = true,
+}) {
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
@@ -56,6 +62,7 @@ export function AdminLayout({ children, showFloatingActions = true }) {
     {
       title: "Collaboration",
       items: [
+        { label: "Chat", icon: MessageCircle, path: "/admin/dashboard/chat" },
         { label: "Channels", icon: Hash, path: "/admin/dashboard/channels" },
         { label: "Teams", icon: Users2, path: "/admin/dashboard/teams" },
         { label: "Meetings", icon: Calendar, path: "/admin/dashboard/meetings" },
@@ -339,8 +346,8 @@ export function AdminLayout({ children, showFloatingActions = true }) {
             </div>
           </header>
 
-          <div className="flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10 overflow-y-auto">
-            <div className="mx-auto max-w-[1200px]">
+          <div className={`flex-1 px-5 py-6 sm:px-8 lg:px-12 lg:py-10 overflow-y-auto ${contentClassName}`}>
+            <div className={`mx-auto max-w-[1200px] ${contentInnerClassName}`}>
               {children}
             </div>
           </div>

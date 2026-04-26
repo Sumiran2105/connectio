@@ -3,7 +3,7 @@ import { CheckCheck, ChevronLeft, Hash, MessageSquare } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ChatAvatar } from "@/features/user-dashboard/components/chat-avatar";
+import { ChatAvatar } from "@/features/chat/components/chat-avatar";
 
 const MessageBubble = memo(function MessageBubble({
   message,

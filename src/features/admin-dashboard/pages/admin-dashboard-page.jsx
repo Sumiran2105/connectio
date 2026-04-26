@@ -61,28 +61,24 @@ export function AdminDashboardPage() {
     {
       label: "Total Users",
       value: dashboardData?.total_users || 0,
-      note: "All registered users in the workspace",
       icon: Users,
       accent: "bg-brand-soft text-brand-primary",
     },
     {
       label: "Active Users",
       value: dashboardData?.active_users || 0,
-      note: "Users currently active in the workspace",
       icon: UserCheck,
       accent: "bg-emerald-50 text-emerald-700",
     },
     {
       label: "Pending Users",
       value: dashboardData?.pending_users || 0,
-      note: "Users awaiting approval or verification",
       icon: Users,
       accent: "bg-amber-50 text-amber-700",
     },
     {
       label: "Total Meetings",
       value: dashboardData?.total_meetings || 0,
-      note: "Scheduled and completed meetings",
       icon: CalendarClock,
       accent: "bg-sky-50 text-sky-700",
     },
@@ -103,9 +99,9 @@ export function AdminDashboardPage() {
                 <h1 className="text-4xl font-bold tracking-tight text-brand-ink lg:text-5xl">
                   Company Admin Dashboard
                 </h1>
-                <p className="max-w-2xl text-base leading-8 text-brand-secondary/80">
+                {/* <p className="max-w-2xl text-base leading-8 text-brand-secondary/80">
                   Monitor workspace activity, manage users, schedule meetings, and oversee collaboration across your organization.
-                </p>
+                </p> */}
               </div>
             </div>
           </div>
@@ -144,9 +140,7 @@ export function AdminDashboardPage() {
                       {card.value}
                     </p>
                   </div>
-                  <p className="text-xs leading-6 text-brand-secondary/70">
-                    {card.note}
-                  </p>
+                  {/* note removed */}
                 </div>
                 <div className="absolute right-6 top-1/4 -translate-y-1/2">
                   <div className={`flex items-center justify-center rounded-xl p-3 ${card.accent} transition-transform group-hover:scale-110 duration-300`}>

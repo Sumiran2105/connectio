@@ -14,9 +14,9 @@ import {
 import { TEAMS_MY_TEAMS } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { ChatAvatar } from "../components/chat-avatar";
+import { ChatAvatar } from "@/features/chat/components/chat-avatar";
 import { UserLayout } from "../components/user-layout";
-import { ChatComposer } from "../components/chat-composer";
+import { ChatComposer } from "@/features/chat/components/chat-composer";
 
 function normalizeTeams(data) {
   if (Array.isArray(data)) {
