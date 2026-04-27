@@ -10,6 +10,7 @@ import { CalendarPage } from "./pages/calendar-page";
 import { AiPage } from "./pages/ai-page";
 import { TeamsPage } from "./pages/teams-page";
 import { ChannelsPage } from "./pages/channels-page";
+import { SettingsPage } from "./pages/settings-page";
 
 function ProtectedUserRoute({ children }) {
   const session = useAuthStore((state) => state.session);
@@ -84,6 +85,14 @@ export const UserRoutes = (
       element={
         <ProtectedUserRoute>
           <AiPage />
+        </ProtectedUserRoute>
+      }
+    />
+    <Route
+      path="/user/dashboard/settings"
+      element={
+        <ProtectedUserRoute>
+          <SettingsPage />
         </ProtectedUserRoute>
       }
     />

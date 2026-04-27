@@ -10,6 +10,7 @@ import {
   Menu,
   MessageCircle,
   Search,
+  Settings,
   Users2,
   Video,
   X,
@@ -61,6 +62,7 @@ export function UserLayout({
     { label: "Files", icon: FileText, path: "/user/dashboard/files" },
     { label: "Calendar", icon: Calendar, path: "/user/dashboard/calendar" },
     { label: "AI", icon: Bot, path: "/user/dashboard/ai" },
+    { label: "Settings", icon: Settings, path: "/user/dashboard/settings" },
   ];
 
   const identity = useMemo(() => {

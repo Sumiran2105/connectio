@@ -9,6 +9,7 @@ export const AUTH_REGISTER = "/auth/register";
 export const AUTH_VERIFY_OTP = (companyId) => `/auth/verify-otp/${companyId}`;
 export const AUTH_RESEND_OTP = (companyId) => `/auth/resend-otp/${companyId}`;
 export const USER_PROFILE = "/auth/users/me/profile";
+export const USER_UPDATE_PROFILE = (userId) => `/auth/users/${userId}/profile`;
 
 export const SUPERADMIN_CREATE_COMPANY = "/superadmin/create-company";
 export const SUPERADMIN_VERIFY_COMPANY_OTP = (companyId) => `/superadmin/verify-otp/${companyId}`;
