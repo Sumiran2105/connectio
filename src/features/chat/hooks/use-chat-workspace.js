@@ -35,6 +35,22 @@ import {
   sortMessagesChronologically,
 } from "../lib/chat-utils";
 
+/**
+ * Normalize a contact object to always have a consistent 'id' field
+ * This ensures that contacts with user_id or email are properly identified
+ */
+function normalizeContactId(contact) {
+  if (!contact) return null;
+  
+  const id = contact.id || contact.user_id || contact.email;
+  if (!id) return null;
+  
+  return {
+    ...contact,
+    id, // Ensure id is always set
+  };
+}
+
 export function useChatWorkspace() {
   const session = useAuthStore((state) => state.session);
   const queryClient = useQueryClient();
@@ -441,7 +457,7 @@ export function useChatWorkspace() {
         const existing = currentById.get(String(channel.user_id));
         const existingMessages = existing?.messages || conversations[channel.user_id] || [];
 
-        return {
+        const contact = normalizeContactId({
           id: channel.user_id,
           name: channel.name || existing?.name || "Unknown user",
           role: existingMessages[existingMessages.length - 1]?.text || existing?.role || "Conversation",
@@ -449,7 +465,9 @@ export function useChatWorkspace() {
           channelId: channel.channel_id,
           unread: 0,
           messages: existingMessages,
-        };
+        });
+
+        return contact;
       });
       const merged = new Map();
 
@@ -488,11 +506,15 @@ export function useChatWorkspace() {
     });
 
     setActiveContact((current) => {
-      const refreshedContacts = dmChannelsQuery.data.map((channel) => ({
-        id: channel.user_id,
-        name: channel.name || "Unknown user",
-        channelId: channel.channel_id,
-      }));
+      const refreshedContacts = dmChannelsQuery.data.map((channel) => {
+        const contact = normalizeContactId({
+          id: channel.user_id,
+          name: channel.name || "Unknown user",
+          channelId: channel.channel_id,
+        });
+
+        return contact;
+      });
 
       if (current) {
         const refreshed = refreshedContacts.find((contact) => contact.id === current.id);
@@ -675,22 +697,30 @@ export function useChatWorkspace() {
   }
 
   function openConversation(contact) {
-    const nextMessages = (conversations[contact.id] || contact.messages || []).map((message) =>
+    // Normalize the contact to ensure consistent ID field
+    const normalizedContact = normalizeContactId(contact);
+    
+    if (!normalizedContact) {
+      console.warn("Invalid contact provided to openConversation", contact);
+      return;
+    }
+
+    const nextMessages = (conversations[normalizedContact.id] || normalizedContact.messages || []).map((message) =>
       message.from === "them" ? { ...message, read: true } : message
     );
 
-    setConversations((current) => ({ ...current, [contact.id]: nextMessages }));
+    setConversations((current) => ({ ...current, [normalizedContact.id]: nextMessages }));
     setContacts((current) =>
       current.map((item) =>
-        item.id === contact.id ? { ...item, messages: nextMessages } : item
+        item.id === normalizedContact.id ? { ...item, messages: nextMessages } : item
       )
     );
 
-    if (contact.channelId) {
-      queryClient.setQueryData(["channel-unread-count", contact.channelId, contact.id], 0);
+    if (normalizedContact.channelId) {
+      queryClient.setQueryData(["channel-unread-count", normalizedContact.channelId, normalizedContact.id], 0);
     }
 
-    setActiveContact(contact);
+    setActiveContact(normalizedContact);
     setIsMobileChatOpen(true);
     setIsNewChatMode(false);
     setSearchQuery("");
@@ -698,7 +728,7 @@ export function useChatWorkspace() {
 
   function handleSelectSearchUser(user) {
     const contactId = user.id || user.user_id || user.email;
-    const normalizedContact = {
+    const normalizedContact = normalizeContactId({
       id: contactId,
       name: user.full_name || user.name || user.display_name || user.email || "Unknown user",
       role: user.email || user.user_role || "New conversation",
@@ -706,7 +736,7 @@ export function useChatWorkspace() {
       channelId: user.channel_id || user.dm_channel_id || user.direct_channel_id || null,
       unread: 0,
       messages: conversations[contactId] || [],
-    };
+    });
 
     setContacts((current) =>
       current.some((item) => item.id === normalizedContact.id)

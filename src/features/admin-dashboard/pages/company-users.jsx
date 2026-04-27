@@ -85,6 +85,13 @@ export function CompanyUsers() {
   });
 
   const handleMessage = (user) => {
+    navigate("/admin/dashboard/chat", {
+      state: {
+        selectedUserId: user.id,
+        selectedUserName: user.name,
+        selectedUserEmail: user.email,
+      },
+    });
     toast.info(`Opening chat with ${user.name || user.email}...`, {
       description: "Chat module is initializing.",
       icon: <MessageSquare className="size-4 text-brand-primary" />,
