@@ -8,6 +8,7 @@ export const AUTH_ADMIN_REGISTER = "/auth/admin-register";
 export const AUTH_REGISTER = "/auth/register";
 export const AUTH_VERIFY_OTP = (companyId) => `/auth/verify-otp/${companyId}`;
 export const AUTH_RESEND_OTP = (companyId) => `/auth/resend-otp/${companyId}`;
+export const USER_PROFILE = "/auth/users/me/profile";
 
 export const SUPERADMIN_CREATE_COMPANY = "/superadmin/create-company";
 export const SUPERADMIN_VERIFY_COMPANY_OTP = (companyId) => `/superadmin/verify-otp/${companyId}`;
@@ -27,6 +28,8 @@ export const COMPANY_USERS = "/company/users";
 export const COMPANY_INVITE_USER = "/company/users/invite";
 export const COMPANY_APPROVE_USER = (userId) => `/company/users/${userId}/approve`;
 export const COMPANY_REJECT_USER = (userId) => `/company/users/${userId}/reject`;
+export const COMPANY_UPDATE_PROFILE = "/company/auth/update-profile";
+export const COMPANY_CHANGE_PASSWORD = "/company/auth/change-password";
 
 export const TEAMS_CREATE = "/teams/";
 export const TEAMS_LIST = "/teams/";
