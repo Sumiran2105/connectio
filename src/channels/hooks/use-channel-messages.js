@@ -15,7 +15,7 @@ import {
   normalizeCollection,
   normalizeServerMessage,
   sortMessagesChronologically,
-} from "@/features/chat/lib/chat-utils";
+} from "@/chat/utils/chat-utils";
 
 function normalizeChannelMessages(data, currentUserId) {
   return sortMessagesChronologically(

@@ -33,21 +33,17 @@ import {
   normalizeSearchResults,
   normalizeServerMessage,
   sortMessagesChronologically,
-} from "../lib/chat-utils";
+} from "../utils/chat-utils";
 
-/**
- * Normalize a contact object to always have a consistent 'id' field
- * This ensures that contacts with user_id or email are properly identified
- */
 function normalizeContactId(contact) {
   if (!contact) return null;
-  
+
   const id = contact.id || contact.user_id || contact.email;
   if (!id) return null;
-  
+
   return {
     ...contact,
-    id, // Ensure id is always set
+    id,
   };
 }
 
@@ -457,7 +453,7 @@ export function useChatWorkspace() {
         const existing = currentById.get(String(channel.user_id));
         const existingMessages = existing?.messages || conversations[channel.user_id] || [];
 
-        const contact = normalizeContactId({
+        return normalizeContactId({
           id: channel.user_id,
           name: channel.name || existing?.name || "Unknown user",
           role: existingMessages[existingMessages.length - 1]?.text || existing?.role || "Conversation",
@@ -466,8 +462,6 @@ export function useChatWorkspace() {
           unread: 0,
           messages: existingMessages,
         });
-
-        return contact;
       });
       const merged = new Map();
 
@@ -506,15 +500,13 @@ export function useChatWorkspace() {
     });
 
     setActiveContact((current) => {
-      const refreshedContacts = dmChannelsQuery.data.map((channel) => {
-        const contact = normalizeContactId({
+      const refreshedContacts = dmChannelsQuery.data.map((channel) =>
+        normalizeContactId({
           id: channel.user_id,
           name: channel.name || "Unknown user",
           channelId: channel.channel_id,
-        });
-
-        return contact;
-      });
+        })
+      );
 
       if (current) {
         const refreshed = refreshedContacts.find((contact) => contact.id === current.id);
@@ -697,13 +689,9 @@ export function useChatWorkspace() {
   }
 
   function openConversation(contact) {
-    // Normalize the contact to ensure consistent ID field
     const normalizedContact = normalizeContactId(contact);
-    
-    if (!normalizedContact) {
-      console.warn("Invalid contact provided to openConversation", contact);
-      return;
-    }
+
+    if (!normalizedContact) return;
 
     const nextMessages = (conversations[normalizedContact.id] || normalizedContact.messages || []).map((message) =>
       message.from === "them" ? { ...message, read: true } : message
@@ -737,6 +725,8 @@ export function useChatWorkspace() {
       unread: 0,
       messages: conversations[contactId] || [],
     });
+
+    if (!normalizedContact) return;
 
     setContacts((current) =>
       current.some((item) => item.id === normalizedContact.id)
@@ -776,6 +766,7 @@ export function useChatWorkspace() {
     activePresenceLabel,
     activeTab,
     bottomRef,
+    contacts,
     conversations,
     currentMessages,
     deferredNewChatQuery,

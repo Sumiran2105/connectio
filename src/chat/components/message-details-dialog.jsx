@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatMessageTime } from "../lib/chat-utils";
+import { formatMessageTime } from "../utils/chat-utils";
 
 export function MessageDetailsDialog({
   addReaction,

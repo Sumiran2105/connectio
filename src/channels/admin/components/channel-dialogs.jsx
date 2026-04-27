@@ -36,7 +36,7 @@ import {
   getUserEmail,
   getUserId,
   getUserName,
-} from "./channel-utils";
+} from "@/channels/utils/channel-utils";
 
 function UserAvatar({ avatar, name }) {
   if (avatar) {

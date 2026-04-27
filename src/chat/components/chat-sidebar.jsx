@@ -94,14 +94,11 @@ export function ChatSidebar({
             ) : null}
 
             {sidebarResults.map((contact) => {
-              // Normalize contact ID to handle different field names (id, user_id, email)
               const contactId = contact.id || contact.user_id || contact.email;
-              // Ensure we're comparing the same ID format consistently
               const normalizedContact = {
                 ...contact,
-                id: contactId, // Override id to ensure consistency
+                id: contactId,
               };
-              
               const contactName = isNewChatMode
                 ? contact.full_name || contact.name || contact.display_name || "Unknown user"
                 : contact.name;
@@ -121,7 +118,9 @@ export function ChatSidebar({
                   key={contactId}
                   type="button"
                   onClick={() =>
-                    isNewChatMode ? onSelectSearchUser(normalizedContact) : onOpenConversation(normalizedContact)
+                    isNewChatMode
+                      ? onSelectSearchUser(normalizedContact)
+                      : onOpenConversation(normalizedContact)
                   }
                   className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
                     isActive

@@ -1,8 +1,8 @@
 import { Settings, Trash2, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { ChannelComposer } from "@/features/channels/components/channel-composer";
-import { ChannelMessagePanel } from "@/features/channels/components/channel-message-panel";
+import { ChannelComposer } from "@/channels/components/channel-composer";
+import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
 
 export function ChannelChat({
   selectedChannel,

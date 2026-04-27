@@ -4,7 +4,7 @@ import { useAuthStore } from "@/store/auth-store";
 import { UserDashboardPage } from "./pages/user-dashboard-page";
 import { UserPlaceholderPage } from "./pages/user-placeholder-page";
 import { FilesPage } from "./pages/files-page";
-import { ChatPage } from "@/features/chat/pages/chat-page";
+import { ChatPage } from "@/chat/pages/chat-page";
 import { MeetPage } from "./pages/meet-page";
 import { CalendarPage } from "./pages/calendar-page";
 import { AiPage } from "./pages/ai-page";

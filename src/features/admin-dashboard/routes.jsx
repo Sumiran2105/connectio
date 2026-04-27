@@ -7,7 +7,7 @@ import { CompanyApprovals } from "./pages/company-approvals";
 import { CompanyUsers } from "./pages/company-users";
 import { InviteUser } from "./pages/invite-user";
 import { SettingsPage } from "./pages/settings-page";
-import { ChatPage } from "@/features/chat/pages/chat-page";
+import { ChatPage } from "@/chat/pages/chat-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
 import { useAuthStore } from "@/store/auth-store";

@@ -24,7 +24,7 @@ import {
   getUserId,
   getUserRecord,
   normalizeChannel,
-} from "./channel-utils";
+} from "@/channels/utils/channel-utils";
 
 function getArrayPayload(payload, keys = []) {
   if (Array.isArray(payload)) return payload;

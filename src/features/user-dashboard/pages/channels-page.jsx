@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { SquarePen } from "lucide-react";
 
-import { ChannelComposer } from "@/features/channels/components/channel-composer";
-import { ChannelMessagePanel } from "@/features/channels/components/channel-message-panel";
-import { SharedChannelSidebar } from "@/features/channels/components/channel-sidebar";
-import { useChannelMessages } from "@/features/channels/hooks/use-channel-messages";
+import { ChannelComposer } from "@/channels/components/channel-composer";
+import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
+import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
+import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
 import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
-import { useUserChannels } from "./use-user-channels";
+import { useUserChannels } from "@/channels/hooks/use-user-channels";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);

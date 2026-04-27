@@ -1,5 +1,3 @@
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
 import { AdminLayout } from "@/features/admin-dashboard/components/admin-layout";
 import { UserLayout } from "@/features/user-dashboard/components/user-layout";
 import { ChatConversationPane } from "../components/chat-conversation-pane";
@@ -9,50 +7,12 @@ import { useChatWorkspace } from "../hooks/use-chat-workspace";
 
 export function ChatPage({ layout = "user" }) {
   const chat = useChatWorkspace();
-  const location = useLocation();
   const Layout = layout === "admin" ? AdminLayout : UserLayout;
   const layoutProps = {
     showFloatingActions: false,
     contentClassName: "overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6",
     contentInnerClassName: "max-w-none h-full min-h-0",
   };
-
-  // Handle opening conversation with a pre-selected user
-  useEffect(() => {
-    const selectedUserId = location.state?.selectedUserId;
-    
-    // Skip if no selected user or contacts not loaded yet
-    if (!selectedUserId) {
-      return;
-    }
-
-    // Try to find the user in existing contacts
-    const selectedUser = chat.contacts?.find((contact) => {
-      const contactId = contact.id || contact.user_id;
-      return String(contactId) === String(selectedUserId);
-    });
-
-    if (selectedUser) {
-      // User found in contacts, open their conversation
-      chat.openConversation(selectedUser);
-    } else {
-      // User not in contacts yet, create a temporary contact
-      const tempContact = {
-        id: selectedUserId,
-        user_id: selectedUserId,
-        name: location.state?.selectedUserName || "Unknown user",
-        role: location.state?.selectedUserEmail || "New conversation",
-        online: false,
-        channelId: null,
-        unread: 0,
-        messages: [],
-      };
-      chat.openConversation(tempContact);
-    }
-
-    // Clear the state to prevent re-opening on navigation back
-    window.history.replaceState({}, document.title, window.location.pathname);
-  }, [location.key]);
 
   return (
     <Layout {...layoutProps}>

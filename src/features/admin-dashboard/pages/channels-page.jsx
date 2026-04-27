@@ -1,17 +1,17 @@
-import React, { useState } from "react";
-import { useChannelMessages } from "@/features/channels/hooks/use-channel-messages";
+import { useState } from "react";
+import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
 import { useAuthStore } from "@/store/auth-store";
 import { AdminLayout } from "../components/admin-layout";
-import { ChannelChat } from "./channels/channel-chat";
-import { ChannelSidebar } from "./channels/channel-sidebar";
+import { ChannelChat } from "@/channels/admin/components/channel-chat";
+import { ChannelSidebar } from "@/channels/admin/components/channel-sidebar";
 import {
   AddMemberDialog,
   ChannelSettingsDialog,
   DeleteChannelDialog,
   MembersDialog,
-} from "./channels/channel-dialogs";
-import { getChannelId } from "./channels/channel-utils";
-import { useAdminChannels } from "./channels/use-admin-channels";
+} from "@/channels/admin/components/channel-dialogs";
+import { useAdminChannels } from "@/channels/hooks/use-admin-channels";
+import { getChannelId } from "@/channels/utils/channel-utils";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);

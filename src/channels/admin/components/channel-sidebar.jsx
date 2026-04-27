@@ -1,7 +1,7 @@
 import { PlusCircle } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { SharedChannelSidebar } from "@/features/channels/components/channel-sidebar";
+import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
 import { CreateChannelDialog } from "./create-channel-dialog";
 
 export function ChannelSidebar({
