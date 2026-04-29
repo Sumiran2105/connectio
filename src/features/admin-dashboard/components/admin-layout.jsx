@@ -24,6 +24,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { useAuthStore } from "@/store/auth-store";
+import { getImageUrl } from "@/lib/image-utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -43,6 +44,8 @@ export function AdminLayout({
   const session = useAuthStore((state) => state.session);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sidebarImgError, setSidebarImgError] = useState(false);
+  const [headerImgError, setHeaderImgError] = useState(false);
 
   const sidebarGroups = [
     {
@@ -89,6 +92,7 @@ export function AdminLayout({
       email,
       displayName: displayName || "Admin",
       role: session?.role || "ADMIN",
+      image: session?.image || session?.profile_image || null,
     };
   }, [session]);
 
@@ -176,8 +180,17 @@ export function AdminLayout({
 
             {/* Profile Section */}
             <div className="mt-8 flex items-center gap-3 rounded-[24px] border border-white/[0.12] bg-white/[0.08] p-4 transition-colors hover:bg-white/10">
-              <div className="flex size-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-brand-secondary/40 to-brand-soft/20 font-bold text-white shadow-sm ring-1 ring-white/20">
-                {identity.displayName.charAt(0)}
+              <div className="flex size-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-tr from-brand-secondary/40 to-brand-soft/20 font-bold text-white shadow-sm ring-1 ring-white/20">
+                {identity.image && !sidebarImgError ? (
+                  <img 
+                    src={getImageUrl(identity.image)} 
+                    alt={identity.displayName} 
+                    className="size-full object-cover" 
+                    onError={() => setSidebarImgError(true)}
+                  />
+                ) : (
+                  identity.displayName.charAt(0)
+                )}
               </div>
               <div className="flex-1 overflow-hidden">
                 <p className="truncate text-sm font-bold text-white">{identity.displayName}</p>
@@ -310,12 +323,17 @@ export function AdminLayout({
                       <p className="text-sm font-bold text-brand-ink leading-none">{identity.displayName}</p>
                       <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Admin</p>
                     </div>
-                    <div className="size-10 rounded-full border-2 border-brand-line shadow-md overflow-hidden bg-brand-soft cursor-pointer hover:ring-2 hover:ring-brand-primary/30 transition-all">
-                      <img
-                        src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=150&auto=format&fit=crop"
-                        alt="Profile"
-                        className="size-full object-cover"
-                      />
+                    <div className="size-10 rounded-full border-2 border-brand-line shadow-md overflow-hidden bg-brand-soft cursor-pointer hover:ring-2 hover:ring-brand-primary/30 transition-all flex items-center justify-center">
+                      {identity.image && !headerImgError ? (
+                        <img
+                          src={getImageUrl(identity.image)}
+                          alt="Profile"
+                          className="size-full object-cover"
+                          onError={() => setHeaderImgError(true)}
+                        />
+                      ) : (
+                        <span className="text-xs font-bold text-brand-primary">{identity.displayName.charAt(0)}</span>
+                      )}
                     </div>
                   </button>
                 </DropdownMenuTrigger>

@@ -1,4 +1,4 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { AdminLayout } from "../components/admin-layout";
@@ -11,6 +11,7 @@ import { COMPANY_UPDATE_PROFILE, COMPANY_CHANGE_PASSWORD, USER_PROFILE } from "@
 import { MfaResetDialog } from "@/features/auth/components/mfa-reset-dialog";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
+import { getImageUrl } from "@/lib/image-utils";
 import {
   Bell,
   Lock,
@@ -25,16 +26,20 @@ import {
   EyeOff,
   Upload,
   X,
-  Camera
+  Camera,
+  Pencil
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function SettingsPage() {
   const [activeTab, setActiveTab] = useState("profile");
   const session = useAuthStore((state) => state.session);
+  const setSession = useAuthStore((state) => state.setSession);
+  const queryClient = useQueryClient();
   const fileInputRef = useRef(null);
   const [imagePreview, setImagePreview] = useState("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const hasSyncedRef = useRef(false);
 
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["userProfile"],
@@ -59,6 +64,20 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
+    if (userProfile && !hasSyncedRef.current) {
+      // Sync the fetched profile data with the session store to update the UI globally
+      const currentName = session?.full_name || session?.name;
+      const currentImage = session?.profile_image || session?.image;
+
+      const newName = userProfile.full_name || userProfile.name;
+      const newImage = userProfile.profile_image || userProfile.image;
+
+      if (newName !== currentName || newImage !== currentImage) {
+        setSession({ ...session, ...userProfile });
+      }
+      hasSyncedRef.current = true;
+    }
+
     const data = userProfile || session;
     if (data) {
       setProfileForm({
@@ -68,10 +87,10 @@ export function SettingsPage() {
         image: null,
       });
       if (data.image || data.profile_image) {
-        setImagePreview(data.image || data.profile_image);
+        setImagePreview(getImageUrl(data.image || data.profile_image));
       }
     }
-  }, [userProfile, session]);
+  }, [userProfile, session, setSession]);
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
@@ -90,7 +109,7 @@ export function SettingsPage() {
       formData.append("mobile_number", payload.mobile_number.trim());
       formData.append("address", payload.address.trim());
       if (payload.image) {
-        formData.append("image", payload.image);
+        formData.append("profile_image", payload.image);
       }
 
       const response = await apiClient.put(
@@ -108,6 +127,13 @@ export function SettingsPage() {
     onSuccess: (data) => {
       toast.success(data.message || "Profile updated successfully.");
       setIsEditingProfile(false);
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
+
+      // Update session with the new user data if available
+      const updatedUser = data.user || data.data || data.profile || data;
+      if (updatedUser && typeof updatedUser === 'object') {
+        setSession({ ...session, ...updatedUser });
+      }
     },
     onError: (error) => {
       const message =
@@ -176,7 +202,8 @@ export function SettingsPage() {
 
   const removeImage = () => {
     setProfileForm(prev => ({ ...prev, image: null }));
-    setImagePreview(session?.image || "");
+    const data = userProfile || session;
+    setImagePreview(getImageUrl(data?.image || data?.profile_image || ""));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -272,111 +299,86 @@ export function SettingsPage() {
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex flex-col sm:flex-row items-center gap-6 pb-8 border-b border-brand-line/50">
                     <div className="relative group">
-                      <div className="size-24 rounded-full border-2 border-brand-primary/20 bg-brand-soft flex items-center justify-center overflow-hidden shadow-inner transition-transform group-hover:scale-105">
+                      <div className="size-24 rounded-full border-2 border-brand-primary/20 bg-brand-soft flex items-center justify-center overflow-hidden shadow-inner transition-transform">
                         {imagePreview ? (
                           <img src={imagePreview} alt="Profile" className="size-full object-cover" />
                         ) : (
                           <User className="size-10 text-brand-primary/30" />
                         )}
-                        <div className="absolute inset-0 bg-brand-ink/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                          <Camera className="size-6 text-white" />
-                        </div>
                       </div>
-                      {profileForm.image && (
+                      
+                      {isEditingProfile && (
+                        <button
+                          type="button"
+                          onClick={() => fileInputRef.current?.click()}
+                          className="absolute bottom-0 right-0 size-8 rounded-full bg-brand-primary text-white flex items-center justify-center shadow-lg hover:bg-brand-primary/90 transition-all hover:scale-110 border-2 border-white"
+                        >
+                          <Pencil className="size-4" />
+                        </button>
+                      )}
+
+                      {profileForm.image && isEditingProfile && (
                         <button
                           onClick={removeImage}
-                          className="absolute -top-2 -right-2 size-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors"
+                          className="absolute -top-1 -right-1 size-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-lg hover:bg-red-600 transition-colors z-10 border-2 border-white"
                         >
                           <X className="size-3.5" />
                         </button>
                       )}
                     </div>
-                    <div className="text-center sm:text-left space-y-3">
+                    <div className="text-center sm:text-left space-y-1">
                       <div>
                         <h4 className="font-bold text-brand-ink">Profile Image</h4>
-                        <p className="text-xs text-brand-secondary mt-1">PNG, JPG or GIF. Max size 2MB.</p>
+                        <p className="text-xs text-brand-secondary">PNG, JPG or GIF. Max size 2MB.</p>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          type="button"
-                          onClick={() => fileInputRef.current?.click()}
-                          disabled={!isEditingProfile}
-                          className="rounded-xl bg-brand-primary text-white hover:bg-brand-primary/90 h-10 px-4 disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                          <Upload className="size-4 mr-2" />
-                          {imagePreview ? "Change Photo" : "Upload Photo"}
-                        </Button>
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          onChange={handleFileChange}
-                          accept="image/*"
-                          className="hidden"
-                          disabled={!isEditingProfile}
-                        />
-                        {imagePreview && isEditingProfile && (
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            onClick={removeImage}
-                            className="rounded-xl text-brand-secondary hover:text-red-500"
-                          >
-                            Reset
-                          </Button>
-                        )}
-                      </div>
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleFileChange}
+                        accept="image/*"
+                        className="hidden"
+                        disabled={!isEditingProfile}
+                      />
                     </div>
                   </div>
 
                   <form onSubmit={handleUpdateProfile} className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-2.5 md:col-span-2">
+                    <div className="space-y-2.5 md:col-span-1">
                       <Label className="text-brand-ink font-semibold">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-brand-secondary/50" />
-                        <Input
-                          disabled={!isEditingProfile}
-                          value={profileForm.full_name}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, full_name: e.target.value }))}
-                          placeholder="Enter your full name"
-                          className="h-12 rounded-xl pl-11 bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
-                        />
-                      </div>
+                      <Input
+                        disabled={!isEditingProfile}
+                        value={profileForm.full_name}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, full_name: e.target.value }))}
+                        placeholder="Enter your full name"
+                        className="h-12 rounded-xl bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
+                      />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-2">
+                    <div className="space-y-2.5 md:col-span-1">
                       <Label className="text-brand-ink font-semibold">Email Address</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-brand-secondary/50" />
-                        <Input defaultValue={session?.email} disabled className="h-12 rounded-xl pl-11 bg-brand-neutral/50 opacity-70 border-brand-line/50" />
-                      </div>
+                      <Input defaultValue={session?.email} disabled className="h-12 rounded-xl bg-brand-neutral/50 opacity-70 border-brand-line/50" />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-2">
+                    <div className="space-y-2.5 md:col-span-1">
                       <Label className="text-brand-ink font-semibold">Phone Number</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-brand-secondary/50" />
-                        <Input
-                          disabled={!isEditingProfile}
-                          value={profileForm.mobile_number}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, mobile_number: e.target.value }))}
-                          placeholder="Enter your phone number"
-                          className="h-12 rounded-xl pl-11 bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
-                        />
-                      </div>
+                      <Input
+                        disabled={!isEditingProfile}
+                        value={profileForm.mobile_number}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, mobile_number: e.target.value }))}
+                        placeholder="Enter your phone number"
+                        className="h-12 rounded-xl bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
+                      />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-2">
+                    <div className="space-y-2.5 md:col-span-1">
                       <Label className="text-brand-ink font-semibold">Address</Label>
-                      <div className="relative">
-                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 size-4.5 text-brand-secondary/50" />
-                        <Input
-                          disabled={!isEditingProfile}
-                          value={profileForm.address}
-                          onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
-                          placeholder="Enter your address"
-                          className="h-12 rounded-xl pl-11 bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
-                        />
-                      </div>
+                      <Input
+                        disabled={!isEditingProfile}
+                        value={profileForm.address}
+                        onChange={(e) => setProfileForm(prev => ({ ...prev, address: e.target.value }))}
+                        placeholder="Enter your address"
+                        className="h-12 rounded-xl bg-brand-neutral/50 border-brand-line/50 focus:bg-white disabled:opacity-70"
+                      />
                     </div>
 
                     <div className="flex justify-end gap-3 pt-4 md:col-span-2">
@@ -402,7 +404,7 @@ export function SettingsPage() {
                                 address: data?.address || "",
                                 image: null,
                               });
-                              setImagePreview(data?.image || data?.profile_image || "");
+                              setImagePreview(getImageUrl(data?.image || data?.profile_image || ""));
                             }}
                             className="rounded-2xl h-11 px-6 text-brand-secondary hover:text-brand-ink"
                           >
@@ -429,7 +431,7 @@ export function SettingsPage() {
 
               {activeTab === "company" && (
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                  <div className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2.5">
                       <Label className="text-brand-ink font-semibold">Workspace Name</Label>
                       <Input defaultValue="Acme Corp Global" className="h-12 rounded-xl bg-brand-neutral/50 border-brand-line/50 focus:bg-white" />
@@ -463,7 +465,7 @@ export function SettingsPage() {
 
                   <form onSubmit={handleChangePassword} className="space-y-6 pt-2 border-t border-brand-line/50 mt-8">
                     <h3 className="font-bold text-brand-ink text-lg">Change Password</h3>
-                    <div className="space-y-4 text-left">
+                    <div className="grid gap-6 md:grid-cols-2">
                       <div className="space-y-2.5">
                         <Label className="text-brand-ink font-semibold">Current Password</Label>
                         <div className="relative">
