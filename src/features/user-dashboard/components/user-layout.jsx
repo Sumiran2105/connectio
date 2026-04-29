@@ -25,6 +25,7 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { customStatusLabel, formatStatusLabel, normalizePresence } from "./presence-panel";
 import { UserProfileCard } from "./user-profile-card";
+import { getImageUrl } from "@/lib/image-utils";
 
 export function UserLayout({
   children,
@@ -38,6 +39,7 @@ export function UserLayout({
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   const presenceQuery = useQuery({
     queryKey: ["presence-me"],
@@ -78,6 +80,7 @@ export function UserLayout({
       email,
       displayName: displayName || "User",
       role: session?.role || "USER",
+      image: session?.image || session?.profile_image || null,
     };
   }, [session]);
 
@@ -239,7 +242,16 @@ export function UserLayout({
                     </p>
                   </div>
                   <div className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-brand-soft font-semibold text-brand-primary shadow-md">
-                    {identity.displayName.charAt(0)}
+                    {identity.image && !imgError ? (
+                      <img 
+                        src={getImageUrl(identity.image)} 
+                        alt={identity.displayName} 
+                        className="size-full object-cover" 
+                        onError={() => setImgError(true)}
+                      />
+                    ) : (
+                      identity.displayName.charAt(0)
+                    )}
                   </div>
                 </div>
                 <UserProfileCard
