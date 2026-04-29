@@ -11,6 +11,8 @@ import { AiPage } from "./pages/ai-page";
 import { TeamsPage } from "./pages/teams-page";
 import { ChannelsPage } from "./pages/channels-page";
 import { SettingsPage } from "./pages/settings-page";
+import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
+import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
 
 function ProtectedUserRoute({ children }) {
   const session = useAuthStore((state) => state.session);
@@ -22,8 +24,34 @@ function ProtectedUserRoute({ children }) {
   return children;
 }
 
+function PendingMfaRoute({ children }) {
+  const pendingMfaSession = useAuthStore((state) => state.pendingMfaSession);
+
+  if (!pendingMfaSession?.mfaToken && !pendingMfaSession?.userId) {
+    return <Navigate to="/login?mode=workspace" replace />;
+  }
+
+  return children;
+}
+
 export const UserRoutes = (
   <>
+    <Route
+      path="/user/mfa/setup"
+      element={
+        <PendingMfaRoute>
+          <AdminMfaSetupPage />
+        </PendingMfaRoute>
+      }
+    />
+    <Route
+      path="/user/mfa/verify"
+      element={
+        <PendingMfaRoute>
+          <AdminMfaVerifyPage />
+        </PendingMfaRoute>
+      }
+    />
     <Route
       path="/user/dashboard"
       element={

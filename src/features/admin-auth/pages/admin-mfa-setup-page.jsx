@@ -65,8 +65,8 @@ export function AdminMfaSetupPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_100%)] px-6 py-10">
-      <section className="w-full max-w-2xl rounded-[32px] border border-brand-line bg-white p-7 shadow-[0_24px_80px_rgba(68,83,74,0.12)] sm:p-8">
+    <main className="flex  items-center justify-center bg-[linear-gradient(180deg,_#f6f6ff_0%,_#eef3ef_100%)] px-6 py-10">
+      <section className=" rounded-[32px] border border-brand-line bg-white p-7 shadow-[0_24px_80px_rgba(68,83,74,0.12)] sm:p-8">
         <div className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-soft px-3 py-1 text-xs font-semibold uppercase tracking-[0.28em] text-brand-secondary">
           <ShieldCheck className="size-3.5 text-brand-primary" />
           MFA Setup
@@ -79,11 +79,7 @@ export function AdminMfaSetupPage() {
                 ? "Register this device for secure user access."
                 : "Register this device for secure admin access."}
             </h1>
-            <p className="text-sm leading-7 text-brand-secondary">
-              We’ll call <code>/auth/mfa/setup</code> with the temporary MFA
-              token, render the QR code, and then move to OTP verification after
-              the authenticator app is connected.
-            </p>
+          
           </div>
 
           <div className="flex size-14 shrink-0 items-center justify-center rounded-3xl bg-brand-primary text-white shadow-lg shadow-brand-primary/20">
@@ -149,7 +145,7 @@ export function AdminMfaSetupPage() {
                 <div className="mt-4 space-y-3 text-sm leading-6 text-brand-ink">
                   <p>1. Scan the QR code with your authenticator app.</p>
                   <p>2. Enter the generated OTP on the next screen.</p>
-                  <p>3. We’ll verify setup through <code>/auth/mfa/verify</code>.</p>
+                  <p>3. After scanning the QR click on continue and enter otp.</p>
                 </div>
               </div>
 

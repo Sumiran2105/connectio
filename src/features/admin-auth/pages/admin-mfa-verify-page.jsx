@@ -128,19 +128,7 @@ export function AdminMfaVerifyPage() {
                 ? "Verify the authenticator setup."
                 : "Enter the one-time password."}
             </h1>
-            <p className="text-sm leading-7 text-brand-secondary">
-              {isSetupVerification ? (
-                <>
-                  This step sends the OTP to <code>/auth/mfa/verify</code> using the
-                  temporary MFA token from setup.
-                </>
-              ) : (
-                <>
-                  This step sends the OTP to <code>/auth/login/mfa</code> using the
-                  <code className="mx-1">user_id</code> returned by login.
-                </>
-              )}
-            </p>
+          
           </div>
 
           <div className="flex size-14 shrink-0 items-center justify-center rounded-3xl bg-brand-tertiary text-white shadow-lg shadow-brand-tertiary/20">
@@ -155,11 +143,7 @@ export function AdminMfaVerifyPage() {
           <p className="mt-2 text-lg font-semibold text-brand-ink">
             {pendingMfaSession.email}
           </p>
-          {!isSetupVerification && pendingMfaSession.userId ? (
-            <p className="mt-2 text-sm text-brand-secondary">
-              user_id: {pendingMfaSession.userId}
-            </p>
-          ) : null}
+         
         </div>
 
         <form className="mt-8 space-y-5" onSubmit={onSubmit}>
@@ -225,6 +209,17 @@ export function AdminMfaVerifyPage() {
               }
             >
               {isSetupVerification ? "Back to setup" : "Back to login"}
+            </Button>
+            <Button
+            type="button"
+            variant="outline"
+            className="h-12 rounded-2xl border-brand-line bg-white px-5 text-brand-ink hover:bg-brand-soft "
+            onClick={() => {
+              const targetPath = isUserFlow ? "/user/mfa/setup" : "/admin/mfa/setup";
+              navigate(targetPath, { replace: true });
+            }}
+            >
+              Reset MFA
             </Button>
 
             <Button
