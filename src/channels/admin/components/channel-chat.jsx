@@ -22,6 +22,14 @@ export function ChannelChat({
   isSending,
   onAddReaction,
   onRemoveReaction,
+  onEditMessage,
+  onDeleteMessage,
+  onPinMessage,
+  onUnpinMessage,
+  onMarkMessageRead,
+  onShowDeliveryStatus,
+  onLoadThreadMessages,
+  onForwardMessage,
 }) {
   return (
     <ChannelMessagePanel
@@ -74,6 +82,14 @@ export function ChannelChat({
       bottomRef={bottomRef}
       onAddReaction={onAddReaction}
       onRemoveReaction={onRemoveReaction}
+      onEditMessage={onEditMessage}
+      onDeleteMessage={onDeleteMessage}
+      onPinMessage={onPinMessage}
+      onUnpinMessage={onUnpinMessage}
+      onMarkMessageRead={onMarkMessageRead}
+      onShowDeliveryStatus={onShowDeliveryStatus}
+      onLoadThreadMessages={onLoadThreadMessages}
+      onForwardMessage={onForwardMessage}
       composer={
         <ChannelComposer
           isSending={isSending}

@@ -7,10 +7,13 @@ import { apiClient } from "@/lib/client";
 import {
   CHANNEL_MEMBERS,
   CHANNEL_MEMBERS_BULK,
+  CHANNELS_ARCHIVE,
+  CHANNELS_GET,
   CHANNEL_UPDATE,
   CHANNELS_CREATE,
   CHANNELS_DELETE,
   CHANNELS_LIST,
+  CHANNELS_UNARCHIVE,
   COMPANY_USERS,
   TEAMS_LIST,
   TEAMS_MEMBERS,
@@ -71,6 +74,7 @@ export function useAdminChannels({ session }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [settingsForm, setSettingsForm] = useState({});
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isArchivingChannel, setIsArchivingChannel] = useState(false);
 
   const form = useForm({
     resolver: zodResolver(channelSchema),
@@ -397,18 +401,37 @@ export function useAdminChannels({ session }) {
     }
   };
 
-  const openSettings = () => {
+  const openSettings = async () => {
     if (!selectedChannel) return;
 
+    let channelForSettings = selectedChannel;
+    const channelId = getChannelId(selectedChannel);
+
+    if (channelId) {
+      try {
+        const response = await apiClient.get(CHANNELS_GET(channelId), { headers });
+        channelForSettings = normalizeChannel(response.data?.channel || response.data || selectedChannel);
+        setSelectedChannel(channelForSettings);
+        setChannels((current) =>
+          current.map((channel) =>
+            getChannelId(channel) === channelId ? { ...channel, ...channelForSettings } : channel
+          )
+        );
+      } catch (error) {
+        console.error("Error loading channel details:", error);
+        toast.error("Using current channel details because the latest settings could not be loaded.");
+      }
+    }
+
     setSettingsForm({
-      name: selectedChannel.name || "",
-      description: selectedChannel.description || "",
-      topic: selectedChannel.topic || "",
-      purpose: selectedChannel.purpose || "",
-      visibility: selectedChannel.is_private ? "private" : "public",
-      is_discoverable: selectedChannel.is_discoverable ?? true,
-      max_members: selectedChannel.max_members || 100,
-      message_retention_days: selectedChannel.message_retention_days || 365,
+      name: channelForSettings.name || "",
+      description: channelForSettings.description || "",
+      topic: channelForSettings.topic || "",
+      purpose: channelForSettings.purpose || "",
+      visibility: channelForSettings.is_private ? "private" : "public",
+      is_discoverable: channelForSettings.is_discoverable ?? true,
+      max_members: channelForSettings.max_members || 100,
+      message_retention_days: channelForSettings.message_retention_days || 365,
     });
     setIsSettingsOpen(true);
   };
@@ -423,7 +446,7 @@ export function useAdminChannels({ session }) {
         ...settingsForm,
         is_private: settingsForm.visibility === "private",
       };
-      const response = await apiClient.patch(CHANNEL_UPDATE(channelId), payload, { headers });
+      const response = await apiClient.put(CHANNEL_UPDATE(channelId), payload, { headers });
       const updatedChannel = normalizeChannel(response.data);
 
       setChannels((current) =>
@@ -439,6 +462,40 @@ export function useAdminChannels({ session }) {
       toast.error(error.response?.data?.detail || error.response?.data?.message || "Failed to save settings.");
     } finally {
       setIsSavingSettings(false);
+    }
+  };
+
+  const updateChannelArchiveState = async (shouldArchive) => {
+    const channelId = getChannelId(selectedChannel);
+    if (!channelId) return;
+
+    setIsArchivingChannel(true);
+    try {
+      const endpoint = shouldArchive ? CHANNELS_ARCHIVE(channelId) : CHANNELS_UNARCHIVE(channelId);
+      const response = await apiClient.post(endpoint, null, { headers });
+      const updatedChannel = normalizeChannel({
+        ...selectedChannel,
+        ...(response.data || {}),
+        is_archived: shouldArchive,
+      });
+
+      setChannels((current) =>
+        current.map((channel) =>
+          getChannelId(channel) === channelId ? { ...channel, ...updatedChannel } : channel
+        )
+      );
+      setSelectedChannel((current) => ({ ...current, ...updatedChannel }));
+      setIsSettingsOpen(false);
+      toast.success(shouldArchive ? "Channel archived." : "Channel unarchived.");
+    } catch (error) {
+      console.error("Error updating archive status:", error);
+      toast.error(
+        error.response?.data?.detail ||
+          error.response?.data?.message ||
+          (shouldArchive ? "Failed to archive channel." : "Failed to unarchive channel.")
+      );
+    } finally {
+      setIsArchivingChannel(false);
     }
   };
 
@@ -494,7 +551,10 @@ export function useAdminChannels({ session }) {
       settingsForm,
       setSettingsForm,
       isSavingSettings,
+      isArchivingChannel,
       onSave: handleUpdateChannel,
+      onArchive: () => updateChannelArchiveState(true),
+      onUnarchive: () => updateChannelArchiveState(false),
     },
     actions: {
       setSelectedChannel,

@@ -1,8 +1,27 @@
 import { memo, useMemo } from "react";
-import { CheckCheck, ChevronLeft, Hash, MessageSquare } from "lucide-react";
+import {
+  CheckCheck,
+  ChevronLeft,
+  Eye,
+  Forward,
+  Hash,
+  MessageSquare,
+  MoreHorizontal,
+  Pencil,
+  Pin,
+  PinOff,
+  Trash2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ChatAvatar } from "@/chat/components/chat-avatar";
 
 const MessageBubble = memo(function MessageBubble({
@@ -12,7 +31,27 @@ const MessageBubble = memo(function MessageBubble({
   avatarName,
   onAddReaction,
   onRemoveReaction,
+  onEditMessage,
+  onDeleteMessage,
+  onPinMessage,
+  onUnpinMessage,
+  onMarkMessageRead,
+  onShowDeliveryStatus,
+  onLoadThreadMessages,
+  onForwardMessage,
 }) {
+  const handleEdit = () => {
+    const nextText = window.prompt("Edit message", message.text);
+    if (!nextText || nextText.trim() === message.text) return;
+    onEditMessage?.(message.id, nextText.trim());
+  };
+
+  const handleForward = () => {
+    const targetChannelId = window.prompt("Forward to channel id");
+    if (!targetChannelId?.trim()) return;
+    onForwardMessage?.(message.id, targetChannelId.trim());
+  };
+
   return (
     <div className={`group flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
       {!isMe ? (
@@ -22,14 +61,67 @@ const MessageBubble = memo(function MessageBubble({
       ) : null}
 
       <div className={`flex max-w-[72%] flex-col ${isMe ? "items-end" : "items-start"}`}>
-        <div
-          className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${
-            isMe
-              ? "rounded-br-md bg-brand-primary text-white"
-              : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
-          }`}
-        >
-          {message.text}
+        <div className={`flex items-start gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+          <div
+            className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${
+              isMe
+                ? "rounded-br-md bg-brand-primary text-white"
+                : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
+            }`}
+          >
+            {message.pinned ? <Pin className="mr-1 inline size-3.5" /> : null}
+            {message.text}
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="mt-1 rounded-full border border-gray-200 bg-white p-1.5 text-gray-400 opacity-0 shadow-sm transition hover:text-brand-primary group-hover:opacity-100"
+                aria-label="Message actions"
+              >
+                <MoreHorizontal className="size-4" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align={isMe ? "end" : "start"} className="w-44 rounded-2xl bg-white">
+              {isMe ? (
+                <DropdownMenuItem onClick={handleEdit}>
+                  <Pencil className="mr-2 size-4" /> Edit
+                </DropdownMenuItem>
+              ) : null}
+              {message.pinned ? (
+                <DropdownMenuItem onClick={() => onUnpinMessage?.(message.id)}>
+                  <PinOff className="mr-2 size-4" /> Unpin
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem onClick={() => onPinMessage?.(message.id)}>
+                  <Pin className="mr-2 size-4" /> Pin
+                </DropdownMenuItem>
+              )}
+              {!isMe ? (
+                <DropdownMenuItem onClick={() => onMarkMessageRead?.(message.id)}>
+                  <CheckCheck className="mr-2 size-4" /> Mark read
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => onLoadThreadMessages?.(message.id)}>
+                <MessageSquare className="mr-2 size-4" /> Thread
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onShowDeliveryStatus?.(message.id)}>
+                <Eye className="mr-2 size-4" /> Delivery status
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleForward}>
+                <Forward className="mr-2 size-4" /> Forward
+              </DropdownMenuItem>
+              {isMe ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem className="text-red-600" onClick={() => onDeleteMessage?.(message.id)}>
+                    <Trash2 className="mr-2 size-4" /> Delete
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
@@ -88,6 +180,14 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
   messageAvatarName,
   onAddReaction,
   onRemoveReaction,
+  onEditMessage,
+  onDeleteMessage,
+  onPinMessage,
+  onUnpinMessage,
+  onMarkMessageRead,
+  onShowDeliveryStatus,
+  onLoadThreadMessages,
+  onForwardMessage,
   bottomRef,
   composer,
   emptySelectionTitle = "Select a channel",
@@ -114,7 +214,7 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
   );
 
   return (
-    <section className={`min-w-0 flex-1 flex-col ${shellClassName} flex`}>
+    <section className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${shellClassName}`}>
       {selectedChannel ? (
         <>
           <header className="shrink-0 border-b border-gray-200 bg-white px-4 py-4 sm:px-6">
@@ -176,7 +276,7 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
         </>
       ) : null}
 
-      <div className="min-h-0 flex-1">
+      <div className="min-h-0 flex-1 overflow-hidden">
         {!selectedChannel ? (
           <div className="flex h-full flex-col items-center justify-center p-8 text-center">
             <div className="mb-4 flex size-16 items-center justify-center rounded-3xl bg-brand-soft text-brand-primary">
@@ -201,6 +301,14 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
                       avatarName={messageAvatarName || selectedChannel.name}
                       onAddReaction={onAddReaction}
                       onRemoveReaction={onRemoveReaction}
+                      onEditMessage={onEditMessage}
+                      onDeleteMessage={onDeleteMessage}
+                      onPinMessage={onPinMessage}
+                      onUnpinMessage={onUnpinMessage}
+                      onMarkMessageRead={onMarkMessageRead}
+                      onShowDeliveryStatus={onShowDeliveryStatus}
+                      onLoadThreadMessages={onLoadThreadMessages}
+                      onForwardMessage={onForwardMessage}
                     />
                   ))}
                   <div ref={bottomRef} />

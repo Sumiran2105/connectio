@@ -130,13 +130,42 @@ export function formatMessageTime(value) {
 }
 
 export function normalizeServerMessage(message, currentUserId, peerUserId = null) {
-  const senderId = message.user_id || message.sender_id || message.created_by;
+  const senderIdentifiers = [
+    message.user_id ||
+    message.sender_id ||
+    message.sender?.id ||
+    message.sender?.user_id ||
+    message.user?.id ||
+    message.user?.user_id ||
+    message.author_id ||
+    message.created_by_id ||
+    message.created_by,
+    message.email,
+    message.user_email,
+    message.sender_email,
+    message.sender?.email,
+    message.user?.email,
+    message.created_by_email,
+  ].filter(Boolean);
+  const currentUserIdentifiers = Array.isArray(currentUserId)
+    ? currentUserId.filter(Boolean).map(String)
+    : [currentUserId].filter(Boolean).map(String);
+  const peerIdentifiers = Array.isArray(peerUserId)
+    ? peerUserId.filter(Boolean).map(String)
+    : [peerUserId].filter(Boolean).map(String);
+  const explicitFromCurrentUser =
+    message.is_own || message.is_mine || message.from_me || message.is_sender;
+  const matchesCurrentUser = senderIdentifiers.some((id) =>
+    currentUserIdentifiers.includes(String(id))
+  );
+  const matchesPeer = senderIdentifiers.some((id) => peerIdentifiers.includes(String(id)));
   const isFromCurrentUser =
-    currentUserId && senderId
-      ? String(senderId) === String(currentUserId)
-      : peerUserId && senderId
-        ? String(senderId) !== String(peerUserId)
-        : false;
+    explicitFromCurrentUser ||
+    (currentUserIdentifiers.length && senderIdentifiers.length
+      ? matchesCurrentUser
+      : peerIdentifiers.length && senderIdentifiers.length
+        ? !matchesPeer
+        : false);
 
   return {
     id: message.id || message.message_id || `${Date.now()}-${Math.random()}`,
@@ -145,7 +174,52 @@ export function normalizeServerMessage(message, currentUserId, peerUserId = null
     time: formatMessageTime(message.created_at || message.updated_at),
     timestamp: getMessageTimestamp(message),
     read: Boolean(message.is_read || message.read_at || message.delivered_at),
+    pinned: Boolean(message.is_pinned || message.pinned_at),
+    reactions: normalizeCollection(message.reactions),
+    raw: message,
   };
+}
+
+export function getJwtPayload(token) {
+  if (!token || typeof window === "undefined") {
+    return {};
+  }
+
+  try {
+    const [, payload] = String(token).split(".");
+    if (!payload) return {};
+
+    const normalizedPayload = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const paddedPayload = normalizedPayload.padEnd(
+      normalizedPayload.length + ((4 - (normalizedPayload.length % 4)) % 4),
+      "="
+    );
+
+    return JSON.parse(window.atob(paddedPayload));
+  } catch {
+    return {};
+  }
+}
+
+export function getSessionUserIdentifiers(session) {
+  const tokenPayload = getJwtPayload(session?.accessToken);
+
+  return Array.from(
+    new Set(
+      [
+        session?.userId,
+        session?.user_id,
+        session?.id,
+        session?.email,
+        tokenPayload?.sub,
+        tokenPayload?.user_id,
+        tokenPayload?.id,
+        tokenPayload?.email,
+      ]
+        .filter(Boolean)
+        .map(String)
+    )
+  );
 }
 
 export function getChatStorageKey(session) {

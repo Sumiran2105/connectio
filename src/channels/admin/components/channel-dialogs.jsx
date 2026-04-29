@@ -3,6 +3,8 @@ import {
   Hash,
   Loader2,
   Lock,
+  Archive,
+  ArchiveRestore,
   Search,
   Settings,
   Trash2,
@@ -372,7 +374,10 @@ export function ChannelSettingsDialog({
   settingsForm,
   setSettingsForm,
   isSavingSettings,
+  isArchivingChannel,
   onSave,
+  onArchive,
+  onUnarchive,
 }) {
   const updateSettings = (patch) => setSettingsForm((current) => ({ ...current, ...patch }));
 
@@ -504,7 +509,29 @@ export function ChannelSettingsDialog({
             </div>
           </div>
         </ScrollArea>
-        <div className="px-6 py-5 border-t border-brand-line flex justify-end gap-3">
+        <div className="px-6 py-5 border-t border-brand-line flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            className="rounded-2xl h-11 border-brand-line bg-white px-5 font-bold text-brand-ink hover:bg-brand-soft"
+            onClick={selectedChannel?.is_archived ? onUnarchive : onArchive}
+            disabled={isSavingSettings || isArchivingChannel}
+          >
+            {isArchivingChannel ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" /> Updating...
+              </>
+            ) : selectedChannel?.is_archived ? (
+              <>
+                <ArchiveRestore className="mr-2 size-4" /> Unarchive
+              </>
+            ) : (
+              <>
+                <Archive className="mr-2 size-4" /> Archive
+              </>
+            )}
+          </Button>
+          <div className="flex justify-end gap-3">
           <Button
             variant="ghost"
             className="rounded-2xl h-11 px-6"
@@ -528,6 +555,7 @@ export function ChannelSettingsDialog({
               </>
             )}
           </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

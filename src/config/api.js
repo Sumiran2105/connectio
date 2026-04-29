@@ -56,12 +56,28 @@ export const CHANNEL_MESSAGES = (channelId) => `/api/v1/channels/${channelId}/me
 export const CHANNELS_CREATE = "/api/v1/channels";
 export const CHANNELS_LIST = "/api/v1/channels";
 export const CHANNELS_MY_CHANNELS = "/api/v1/channels/my-channels";
+export const CHANNELS_GET = (channelId) => `/api/v1/channels/${channelId}`;
+export const CHANNELS_BY_SLUG = (slug) => `/api/v1/channels/slug/${slug}`;
 export const CHANNELS_DELETE = (channelId) => `/api/v1/channels/${channelId}`;
+export const CHANNELS_ARCHIVE = (channelId) => `/api/v1/channels/${channelId}/archive`;
+export const CHANNELS_UNARCHIVE = (channelId) => `/api/v1/channels/${channelId}/unarchive`;
 export const CHANNEL_MEMBERS = (channelId) => `/api/v1/channels/${channelId}/members`;
 export const CHANNEL_MEMBERS_BULK = (channelId) => `/api/v1/channels/${channelId}/members/bulk`;
 export const CHANNEL_UPDATE = (channelId) => `/api/v1/channels/${channelId}`;
 export const CHANNEL_MESSAGE = (channelId, messageId) =>
   `/api/v1/channels/${channelId}/messages/${messageId}`;
+export const CHANNEL_MESSAGE_THREAD = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/thread`;
+export const CHANNEL_MESSAGE_PIN = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/pin`;
+export const CHANNEL_MESSAGE_UNPIN = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/unpin`;
+export const CHANNEL_MESSAGE_FORWARD = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/forward`;
+export const CHANNEL_MESSAGE_READ = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/read`;
+export const CHANNEL_MESSAGE_DELIVERY_STATUS = (channelId, messageId) =>
+  `/api/v1/channels/${channelId}/messages/${messageId}/delivery-status`;
 export const MESSAGE_REACTIONS = (messageId) => `/api/v1/messages/${messageId}/reactions`;
 export const MESSAGE_REACTION = (messageId, emoji) =>
   `/api/v1/messages/${messageId}/reactions/${encodeURIComponent(emoji)}`;

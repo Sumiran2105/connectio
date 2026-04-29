@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { SquarePen } from "lucide-react";
 
 import { ChannelComposer } from "@/channels/components/channel-composer";
@@ -8,11 +8,13 @@ import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
 import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
 import { useUserChannels } from "@/channels/hooks/use-user-channels";
+import { getSessionUserIdentifiers } from "@/chat/utils/chat-utils";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);
   const [activeTab, setActiveTab] = useState("chat");
   const [messageInput, setMessageInput] = useState("");
+  const currentUserIdentifiers = useMemo(() => getSessionUserIdentifiers(session), [session]);
   const { channelState, sidebarState } = useUserChannels({
     accessToken: session?.accessToken,
   });
@@ -26,10 +28,18 @@ export function ChannelsPage() {
     sendMessage: sendChannelMessage,
     addReaction,
     removeReaction,
+    editMessage,
+    deleteMessage,
+    pinMessage,
+    unpinMessage,
+    markMessageRead,
+    showDeliveryStatus,
+    loadThreadMessages,
+    forwardMessage,
   } = useChannelMessages({
     channelId: activeChannel?.id,
     accessToken: session?.accessToken,
-    currentUserId: session?.userId,
+    currentUserId: currentUserIdentifiers,
   });
 
   function handleSendMessage() {
@@ -85,7 +95,7 @@ export function ChannelsPage() {
         </div>
 
         <section
-          className={`min-w-0 flex-1 flex-col bg-white ${isMobilePanelOpen ? "flex" : "hidden sm:flex"
+          className={`h-full min-h-0 min-w-0 flex-1 flex-col bg-white ${isMobilePanelOpen ? "flex" : "hidden sm:flex"
             }`}
         >
           <ChannelMessagePanel
@@ -103,6 +113,14 @@ export function ChannelsPage() {
             bottomRef={bottomRef}
             onAddReaction={addReaction}
             onRemoveReaction={removeReaction}
+            onEditMessage={editMessage}
+            onDeleteMessage={deleteMessage}
+            onPinMessage={pinMessage}
+            onUnpinMessage={unpinMessage}
+            onMarkMessageRead={markMessageRead}
+            onShowDeliveryStatus={showDeliveryStatus}
+            onLoadThreadMessages={loadThreadMessages}
+            onForwardMessage={forwardMessage}
             onBackMobile={() => setIsMobilePanelOpen(false)}
             composer={
               <ChannelComposer

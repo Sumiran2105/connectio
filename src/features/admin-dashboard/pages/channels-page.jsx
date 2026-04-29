@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
 import { useAuthStore } from "@/store/auth-store";
 import { AdminLayout } from "../components/admin-layout";
@@ -12,12 +12,14 @@ import {
 } from "@/channels/admin/components/channel-dialogs";
 import { useAdminChannels } from "@/channels/hooks/use-admin-channels";
 import { getChannelId } from "@/channels/utils/channel-utils";
+import { getSessionUserIdentifiers } from "@/chat/utils/chat-utils";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);
   const [activeTab, setActiveTab] = useState("chat");
   const [messageInput, setMessageInput] = useState("");
   const token = session?.accessToken;
+  const currentUserIdentifiers = useMemo(() => getSessionUserIdentifiers(session), [session]);
   const {
     channelState,
     sidebarState,
@@ -37,10 +39,18 @@ export function ChannelsPage() {
     sendMessage,
     addReaction,
     removeReaction,
+    editMessage,
+    deleteMessage,
+    pinMessage,
+    unpinMessage,
+    markMessageRead,
+    showDeliveryStatus,
+    loadThreadMessages,
+    forwardMessage,
   } = useChannelMessages({
     channelId: getChannelId(selectedChannel),
     accessToken: token,
-    currentUserId: session?.userId,
+    currentUserId: currentUserIdentifiers,
     enabled: Boolean(getChannelId(selectedChannel)),
   });
 
@@ -97,6 +107,14 @@ export function ChannelsPage() {
           isSending={isSending}
           onAddReaction={addReaction}
           onRemoveReaction={removeReaction}
+          onEditMessage={editMessage}
+          onDeleteMessage={deleteMessage}
+          onPinMessage={pinMessage}
+          onUnpinMessage={unpinMessage}
+          onMarkMessageRead={markMessageRead}
+          onShowDeliveryStatus={showDeliveryStatus}
+          onLoadThreadMessages={loadThreadMessages}
+          onForwardMessage={forwardMessage}
         />
 
         <AddMemberDialog
@@ -148,7 +166,10 @@ export function ChannelsPage() {
           settingsForm={settingsDialog.settingsForm}
           setSettingsForm={settingsDialog.setSettingsForm}
           isSavingSettings={settingsDialog.isSavingSettings}
+          isArchivingChannel={settingsDialog.isArchivingChannel}
           onSave={settingsDialog.onSave}
+          onArchive={settingsDialog.onArchive}
+          onUnarchive={settingsDialog.onUnarchive}
         />
       </div>
     </AdminLayout>
