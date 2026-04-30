@@ -10,14 +10,14 @@ export function ChatPage({ layout = "user" }) {
   const Layout = layout === "admin" ? AdminLayout : UserLayout;
   const layoutProps = {
     showFloatingActions: false,
-    contentClassName: "overflow-hidden px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-6",
-    contentInnerClassName: "max-w-none h-full min-h-0",
+    contentClassName: "!p-0 h-full !overflow-hidden",
+    contentInnerClassName: "!max-w-none !w-full !m-0 h-full min-h-0",
   };
 
   return (
     <Layout {...layoutProps}>
       <div className="flex h-full min-h-0 w-full overflow-hidden">
-        <div className="flex h-full min-h-0 w-full overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_24px_70px_rgba(15,23,42,0.08)] ring-1 ring-slate-200/70">
+        <div className="flex h-full min-h-0 w-full overflow-hidden bg-white">
           <ChatSidebar
             activeContact={chat.activeContact}
             conversations={chat.conversations}
