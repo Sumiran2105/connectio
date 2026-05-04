@@ -21,10 +21,10 @@ export function ChatSidebar({
   return (
     <aside
       className={`h-full min-h-0 shrink-0 flex-col border-r border-gray-200 bg-gradient-to-b from-gray-50 to-white ${
-        isMobileChatOpen ? "hidden sm:flex" : "flex w-full sm:w-[22rem]"
+        isMobileChatOpen ? "hidden sm:flex sm:w-[18rem]" : "flex w-full sm:w-[18rem]"
       }`}
     >
-      <div className="border-b border-gray-200 px-6 py-5">
+      <div className="border-b border-gray-200 px-5 py-5">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <h2 className="text-3xl font-semibold tracking-tight text-gray-950">Chat</h2>
@@ -57,7 +57,7 @@ export function ChatSidebar({
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.15)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-200 hover:[&::-webkit-scrollbar-thumb]:bg-gray-300">
-        <div className="px-6 py-5">
+        <div className="px-5 py-5">
           <div className="mb-3 flex items-center justify-between gap-3">
             <h3 className="text-xs font-bold uppercase tracking-[0.22em] text-gray-500">
               {isNewChatMode ? "Search results" : "Recent"}
@@ -122,7 +122,7 @@ export function ChatSidebar({
                       ? onSelectSearchUser(normalizedContact)
                       : onOpenConversation(normalizedContact)
                   }
-                  className={`w-full rounded-2xl border px-4 py-3 text-left transition ${
+                className={`w-full rounded-2xl border px-3.5 py-3 text-left transition ${
                     isActive
                       ? "border-brand-primary/20 bg-white shadow-sm"
                       : "border-transparent bg-transparent hover:border-gray-200 hover:bg-white"
@@ -161,7 +161,7 @@ export function ChatSidebar({
           </div>
         </div>
 
-        <div className="p-6 pt-0">
+        <div className="p-5 pt-0">
           <button
             type="button"
             className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition hover:border-brand-primary/20 hover:bg-brand-soft"

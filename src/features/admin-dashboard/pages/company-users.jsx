@@ -20,7 +20,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { COMPANY_USERS } from "@/config/api";
+import { COMPANY_USERS, DM_USERS_SEARCH } from "@/config/api";
 import {
   Dialog,
   DialogContent,
@@ -84,12 +84,48 @@ export function CompanyUsers() {
     },
   });
 
-  const handleMessage = (user) => {
-    navigate("/admin/dashboard/chat", {
+  const handleMessage = async (user) => {
+    let chatUser = user;
+
+    if (user.email && session?.accessToken) {
+      try {
+        const response = await apiClient.get(DM_USERS_SEARCH, {
+          headers: {
+            Authorization: `Bearer ${session.accessToken}`,
+          },
+          params: {
+            query: user.email,
+          },
+        });
+        const results = normalizeUsers(response.data);
+        const exactMatch = results.find((result) => result.email === user.email);
+
+        if (exactMatch) {
+          chatUser = {
+            ...user,
+            id: exactMatch.id || exactMatch.user_id || user.id,
+            userId: exactMatch.user_id || exactMatch.id || user.userId,
+            name: exactMatch.full_name || exactMatch.name || user.name,
+            email: exactMatch.email || user.email,
+          };
+        }
+      } catch {
+        // Fall back to the company user row data.
+      }
+    }
+
+    const params = new URLSearchParams({
+      userId: String(chatUser.userId || chatUser.id || ""),
+      name: chatUser.name || "",
+      email: chatUser.email || "",
+    });
+
+    navigate(`/admin/dashboard/chat?${params.toString()}`, {
       state: {
-        selectedUserId: user.id,
-        selectedUserName: user.name,
-        selectedUserEmail: user.email,
+        selectedUserId: chatUser.id,
+        selectedUserUserId: chatUser.userId,
+        selectedUserName: chatUser.name,
+        selectedUserEmail: chatUser.email,
       },
     });
     toast.info(`Opening chat with ${user.name || user.email}...`, {
@@ -133,6 +169,7 @@ export function CompanyUsers() {
   const displayUsers = useMemo(() => {
     return (usersQuery.data || []).map((user, index) => ({
       id: user.id || user.user_id || `company-user-${index}`,
+      userId: user.user_id || user.auth_user_id || user.user?.id || user.user?.user_id || user.id || null,
       name: user.name || user.full_name || "Unnamed user",
       email: user.email || "Not available",
       role: (user.role || user.user_role || "USER").toUpperCase(),

@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { COMPANY_CHANGE_PASSWORD, USER_PROFILE, USER_UPDATE_PROFILE } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { getImageUrl } from "@/lib/image-utils";
+import { getProfileImageSource, getVersionedImageUrl } from "@/lib/image-utils";
 import {
   User,
   ShieldCheck,
@@ -35,7 +35,41 @@ export function SettingsPage() {
   const [imagePreview, setImagePreview] = useState("");
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const hasSyncedRef = useRef(false);
+
+  const getProfileImagePreview = (profile) => {
+    const image = getProfileImageSource(profile);
+    if (!image) return "";
+
+    const version = profile?.profileImageVersion || profile?.updated_at || profile?.profile_updated_at;
+    return getVersionedImageUrl(image, version);
+  };
+
+  const syncSessionProfile = (profile) => {
+    if (!profile || typeof profile !== "object") return;
+
+    const nextImage = getProfileImageSource(profile);
+    setSession({
+      ...session,
+      ...profile,
+      full_name: profile.full_name || profile.name || session?.full_name || session?.name,
+      name: profile.name || profile.full_name || session?.name,
+      mobile_number:
+        profile.mobile_number ||
+        profile.phone_number ||
+        profile.phone ||
+        session?.mobile_number ||
+        session?.phone_number,
+      phone_number:
+        profile.phone_number ||
+        profile.mobile_number ||
+        profile.phone ||
+        session?.phone_number ||
+        session?.mobile_number,
+      profile_image: nextImage || session?.profile_image || session?.image,
+      image: nextImage || session?.image || session?.profile_image,
+      profileImageVersion: profile.profileImageVersion || session?.profileImageVersion,
+    });
+  };
 
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ["userProfile"],
@@ -51,6 +85,9 @@ export function SettingsPage() {
     },
     enabled: !!session?.accessToken,
   });
+  useEffect(() => {
+    setImgError(false);
+  }, [imagePreview]);
 
   const [profileForm, setProfileForm] = useState({
     full_name: "",
@@ -60,20 +97,6 @@ export function SettingsPage() {
   });
 
   useEffect(() => {
-    if (userProfile && !hasSyncedRef.current) {
-      // Sync the fetched profile data with the session store to update the UI globally
-      const currentName = session?.full_name || session?.name;
-      const currentImage = session?.profile_image || session?.image;
-
-      const newName = userProfile.full_name || userProfile.name;
-      const newImage = userProfile.profile_image || userProfile.image;
-
-      if (newName !== currentName || newImage !== currentImage) {
-        setSession({ ...session, ...userProfile });
-      }
-      hasSyncedRef.current = true;
-    }
-
     const data = userProfile || session;
     if (data) {
       setProfileForm({
@@ -82,11 +105,29 @@ export function SettingsPage() {
         address: data.address || "",
         image: null,
       });
-      if (data.image || data.profile_image) {
-        setImagePreview(getImageUrl(data.image || data.profile_image));
-      }
+      setImagePreview(getProfileImagePreview(data));
+      setImgError(false);
     }
-  }, [userProfile, session, setSession]);
+  }, [userProfile, session]);
+
+  useEffect(() => {
+    if (!userProfile) return;
+
+    const profileImage = getProfileImageSource(userProfile);
+    const sessionImage = getProfileImageSource(session);
+    const profileName = userProfile.full_name || userProfile.name || "";
+    const sessionName = session?.full_name || session?.name || "";
+
+    if (
+      profileImage !== sessionImage ||
+      profileName !== sessionName ||
+      userProfile.mobile_number !== session?.mobile_number ||
+      userProfile.phone_number !== session?.phone_number ||
+      userProfile.address !== session?.address
+    ) {
+      syncSessionProfile(userProfile);
+    }
+  }, [userProfile]);
 
   const [passwordForm, setPasswordForm] = useState({
     current_password: "",
@@ -124,13 +165,18 @@ export function SettingsPage() {
     onSuccess: (data) => {
       toast.success(data.message || "Profile updated successfully.");
       setIsEditingProfile(false);
-      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
 
-      // Update session with the new user data if available
       const updatedUser = data.user || data.data || data.profile || data;
       if (updatedUser && typeof updatedUser === 'object') {
-        setSession({ ...session, ...updatedUser });
+        const nextProfile = {
+          ...updatedUser,
+          profileImageVersion: Date.now(),
+        };
+        syncSessionProfile(nextProfile);
+        setImagePreview(getProfileImagePreview(nextProfile) || imagePreview);
+        setImgError(false);
       }
+      queryClient.invalidateQueries({ queryKey: ["userProfile"] });
     },
     onError: (error) => {
       const message =
@@ -201,7 +247,8 @@ export function SettingsPage() {
   const removeImage = () => {
     setProfileForm(prev => ({ ...prev, image: null }));
     const data = userProfile || session;
-    setImagePreview(getImageUrl(data?.image || data?.profile_image || ""));
+    setImagePreview(getProfileImagePreview(data));
+    setImgError(false);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -402,7 +449,8 @@ export function SettingsPage() {
                                 address: data?.address || "",
                                 image: null,
                               });
-                              setImagePreview(getImageUrl(data?.image || data?.profile_image || ""));
+                              setImagePreview(getProfileImagePreview(data));
+                              setImgError(false);
                             }}
                             className="rounded-2xl h-11 px-6 text-brand-secondary hover:text-brand-ink"
                           >

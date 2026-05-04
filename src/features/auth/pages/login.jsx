@@ -8,11 +8,11 @@ import { useAuthStore } from "@/store/auth-store";
 const modeContent = {
   workspace: {
     pill: "User Portal",
-    note: "Company users and admins continue through direct login, MFA setup, or OTP verification based on the backend response.",
+    // note: "Company users and admins continue through direct login, MFA setup, or OTP verification based on the backend response.",
   },
   "super-admin": {
     pill: "Super Admin Portal",
-    note: "Platform owners can use the same login experience, while staying separated by role-aware routing after authentication.",
+    // note: "Platform owners can use the same login experience, while staying separated by role-aware routing after authentication.",
   },
 };
 

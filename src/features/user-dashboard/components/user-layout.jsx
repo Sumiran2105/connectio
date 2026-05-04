@@ -15,17 +15,17 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { FloatingActionMenu } from "@/components/floating-action-menu";
 import { Button } from "@/components/ui/button";
-import { PRESENCE_ME } from "@/config/api";
+import { PRESENCE_ME, USER_PROFILE } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { customStatusLabel, formatStatusLabel, normalizePresence } from "./presence-panel";
 import { UserProfileCard } from "./user-profile-card";
-import { getImageUrl } from "@/lib/image-utils";
+import { getProfileImageSource, getVersionedImageUrl } from "@/lib/image-utils";
 
 export function UserLayout({
   children,
@@ -36,10 +36,58 @@ export function UserLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
+  const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isProfileCardOpen, setIsProfileCardOpen] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  const profileImage = useMemo(
+    () => getProfileImageSource(session) || null,
+    [session]
+  );
+
+  const profileQuery = useQuery({
+    queryKey: ["userProfile", session?.userId || session?.email],
+    queryFn: async () => {
+      const response = await apiClient.get(USER_PROFILE, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.data?.data) return response.data.data;
+      if (response.data?.user) return response.data.user;
+      return response.data;
+    },
+    enabled: Boolean(session?.accessToken && !profileImage),
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  useEffect(() => {
+    const profile = profileQuery.data;
+    if (!profile || typeof profile !== "object") return;
+
+    const nextImage = getProfileImageSource(profile);
+    const sessionImage = getProfileImageSource(session);
+    const nextName = profile.full_name || profile.name || "";
+    const sessionName = session?.full_name || session?.name || "";
+
+    if (nextImage !== sessionImage || (nextName && nextName !== sessionName)) {
+      setSession({
+        ...session,
+        ...profile,
+        full_name: profile.full_name || profile.name || session?.full_name || session?.name,
+        name: profile.name || profile.full_name || session?.name,
+        profile_image: nextImage || session?.profile_image || session?.image,
+        image: nextImage || session?.image || session?.profile_image,
+      });
+    }
+  }, [profileQuery.data, session, setSession]);
 
   const presenceQuery = useQuery({
     queryKey: ["presence-me"],
@@ -70,19 +118,30 @@ export function UserLayout({
   const identity = useMemo(() => {
     const email = session?.email || "user@demo.com";
     const [namePart] = email.split("@");
-    const displayName = namePart
+    const fallbackName = namePart
       .split(/[.\-_]/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
+    const displayName = session?.full_name || session?.name || fallbackName || "User";
 
     return {
       email,
-      displayName: displayName || "User",
+      displayName,
       role: session?.role || "USER",
-      image: session?.image || session?.profile_image || null,
+      image: profileImage,
+      imageVersion: session?.profileImageVersion || session?.updated_at || session?.profile_updated_at || "",
     };
-  }, [session]);
+  }, [profileImage, session]);
+
+  const profileImageUrl = useMemo(() => {
+    if (!identity.image) return "";
+    return getVersionedImageUrl(identity.image, identity.imageVersion);
+  }, [identity.image, identity.imageVersion]);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [profileImageUrl]);
 
   const activeItem =
     sidebarItems.find((item) => item.path === location.pathname) ||
@@ -244,7 +303,7 @@ export function UserLayout({
                   <div className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-brand-soft font-semibold text-brand-primary shadow-md">
                     {identity.image && !imgError ? (
                       <img 
-                        src={getImageUrl(identity.image)} 
+                        src={profileImageUrl}
                         alt={identity.displayName} 
                         className="size-full object-cover" 
                         onError={() => setImgError(true)}
@@ -256,6 +315,7 @@ export function UserLayout({
                 </div>
                 <UserProfileCard
                   identity={identity}
+                  profileImageUrl={profileImageUrl}
                   session={session}
                   currentPresence={currentPresence}
                   isOpen={isProfileCardOpen}

@@ -1,10 +1,10 @@
 import { useRef, useEffect, useState } from "react";
 import { MfaResetDialog } from "@/features/auth/components/mfa-reset-dialog";
 import { PresencePanel, customStatusLabel, formatStatusLabel } from "./presence-panel";
-import { getImageUrl } from "@/lib/image-utils";
 
 export function UserProfileCard({
   identity,
+  profileImageUrl = "",
   isOpen,
   onClose,
   onSignOut,
@@ -13,6 +13,10 @@ export function UserProfileCard({
 }) {
   const [imgError, setImgError] = useState(false);
   const cardRef = useRef(null);
+
+  useEffect(() => {
+    setImgError(false);
+  }, [profileImageUrl]);
 
   // Close card when clicking outside
   useEffect(() => {
@@ -48,9 +52,9 @@ export function UserProfileCard({
       <div className="border-b border-gray-100 px-6 py-4">
         <div className="flex items-start gap-3">
           <div className="flex size-12 items-center justify-center rounded-full bg-gray-100 font-semibold text-gray-700 flex-shrink-0 overflow-hidden">
-            {identity.image && !imgError ? (
+            {profileImageUrl && !imgError ? (
               <img 
-                src={getImageUrl(identity.image)} 
+                src={profileImageUrl}
                 alt={identity.displayName} 
                 className="size-full object-cover" 
                 onError={() => setImgError(true)}

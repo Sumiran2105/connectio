@@ -47,11 +47,63 @@ function normalizeContactId(contact) {
   };
 }
 
-export function useChatWorkspace() {
+export function useChatWorkspace(initialTargetUser = null) {
   const session = useAuthStore((state) => state.session);
   const queryClient = useQueryClient();
   const chatStorageKey = getChatStorageKey(session);
-  const initialChatState = () => getInitialChatState(chatStorageKey);
+  const getTargetContact = (state) => {
+    if (!initialTargetUser) return null;
+
+    const targetId = initialTargetUser.user_id || initialTargetUser.id || initialTargetUser.email;
+    if (!targetId) return null;
+
+    const targetIdentifiers = [targetId, initialTargetUser.user_id, initialTargetUser.id, initialTargetUser.email]
+      .filter(Boolean)
+      .map(String);
+    const existingContact = state.contacts.find((contact) => {
+      const contactIdentifiers = [contact.id, contact.user_id, contact.email, contact.role]
+        .filter(Boolean)
+        .map(String);
+
+      return targetIdentifiers.some((identifier) => contactIdentifiers.includes(identifier));
+    });
+
+    return normalizeContactId({
+      ...existingContact,
+      id: targetId,
+      user_id: initialTargetUser.user_id || initialTargetUser.id,
+      email: initialTargetUser.email,
+      name:
+        initialTargetUser.full_name ||
+        initialTargetUser.name ||
+        initialTargetUser.display_name ||
+        existingContact?.name ||
+        initialTargetUser.email ||
+        "Unknown user",
+      role: initialTargetUser.email || existingContact?.role || "New conversation",
+      online: Boolean(existingContact?.online),
+      channelId: existingContact?.channelId || null,
+      unread: 0,
+      messages: state.conversations[targetId] || existingContact?.messages || [],
+    });
+  };
+  const initialChatState = () => {
+    const state = getInitialChatState(chatStorageKey);
+    const targetContact = getTargetContact(state);
+
+    if (!targetContact) return state;
+
+    return {
+      contacts: state.contacts.some((contact) => String(contact.id) === String(targetContact.id))
+        ? state.contacts
+        : [targetContact, ...state.contacts],
+      activeContact: targetContact,
+      conversations: {
+        ...state.conversations,
+        [targetContact.id]: state.conversations[targetContact.id] || targetContact.messages || [],
+      },
+    };
+  };
   const [contacts, setContacts] = useState(() => initialChatState().contacts);
   const [activeContact, setActiveContact] = useState(() => initialChatState().activeContact);
   const [messageInput, setMessageInput] = useState("");
@@ -438,11 +490,26 @@ export function useChatWorkspace() {
 
   useEffect(() => {
     const nextState = getInitialChatState(chatStorageKey);
+    const targetContact = getTargetContact(nextState);
+
+    if (targetContact) {
+      setContacts(
+        nextState.contacts.some((contact) => String(contact.id) === String(targetContact.id))
+          ? nextState.contacts
+          : [targetContact, ...nextState.contacts]
+      );
+      setActiveContact(targetContact);
+      setConversations({
+        ...nextState.conversations,
+        [targetContact.id]: nextState.conversations[targetContact.id] || targetContact.messages || [],
+      });
+      return;
+    }
 
     setContacts(nextState.contacts);
     setActiveContact(nextState.activeContact);
     setConversations(nextState.conversations);
-  }, [chatStorageKey]);
+  }, [chatStorageKey, initialTargetUser]);
 
   useEffect(() => {
     if (!dmChannelsQuery.data?.length) return;
@@ -742,6 +809,73 @@ export function useChatWorkspace() {
     openConversation(normalizedContact);
   }
 
+  function openTargetUser(user) {
+    const targetId = user.user_id || user.id || user.email;
+    const targetIdentifiers = [targetId, user.user_id, user.id, user.email]
+      .filter(Boolean)
+      .map(String);
+    const existingContact = contacts.find((item) => {
+      const existingIdentifiers = [item.id, item.user_id, item.email, item.role]
+        .filter(Boolean)
+        .map(String);
+
+      return targetIdentifiers.some((identifier) => existingIdentifiers.includes(identifier));
+    });
+    const normalizedContact = normalizeContactId({
+      ...existingContact,
+      id: targetId,
+      user_id: user.user_id || user.id,
+      email: user.email,
+      name: user.full_name || user.name || user.display_name || existingContact?.name || user.email || "Unknown user",
+      role: user.email || existingContact?.role || user.user_role || "New conversation",
+      online: Boolean(user.online || user.is_online || user.is_active || existingContact?.online),
+      channelId: user.channel_id || user.dm_channel_id || user.direct_channel_id || existingContact?.channelId || null,
+      unread: 0,
+      messages: conversations[targetId] || existingContact?.messages || [],
+    });
+
+    if (!normalizedContact) return;
+
+    setContacts((current) => {
+      const existing = current.find((item) => {
+        const existingIdentifiers = [item.id, item.user_id, item.email, item.role]
+          .filter(Boolean)
+          .map(String);
+        const targetIdentifiers = [normalizedContact.id, normalizedContact.user_id, normalizedContact.email, normalizedContact.role]
+          .filter(Boolean)
+          .map(String);
+
+        return targetIdentifiers.some((identifier) => existingIdentifiers.includes(identifier));
+      });
+
+      if (existing) {
+        return current.map((item) =>
+          item === existing
+            ? {
+                ...item,
+                ...normalizedContact,
+                id: normalizedContact.id,
+                channelId: item.channelId || normalizedContact.channelId,
+                messages: item.messages || normalizedContact.messages,
+              }
+            : item
+        );
+      }
+
+      return [normalizedContact, ...current];
+    });
+
+    setConversations((current) => ({
+      ...current,
+      [normalizedContact.id]: current[normalizedContact.id] || normalizedContact.messages || [],
+    }));
+
+    setActiveContact(normalizedContact);
+    setIsMobileChatOpen(true);
+    setIsNewChatMode(false);
+    setSearchQuery("");
+  }
+
   function handleNewChatClick() {
     setIsNewChatMode(true);
     setSearchQuery("");
@@ -793,6 +927,7 @@ export function useChatWorkspace() {
     handleMessageClick,
     handleNewChatClick,
     handleSelectSearchUser,
+    openTargetUser,
     openConversation,
     removeReaction: (messageId, emoji) => removeReactionMutation.mutate({ messageId, emoji }),
     sendMessage,

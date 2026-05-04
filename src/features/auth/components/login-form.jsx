@@ -15,6 +15,19 @@ const defaultValues = {
   password: "",
 };
 
+const workspaceDemoLogins = [
+  {
+    label: "Admin demo",
+    email: "admin@demo.com",
+    password: "Admin@1234",
+  },
+  {
+    label: "User demo",
+    email: "user@demo.com",
+    password: "User@1234",
+  },
+];
+
 export function LoginForm({ audience = "workspace" }) {
   const navigate = useNavigate();
   const setSession = useAuthStore((state) => state.setSession);
@@ -24,6 +37,7 @@ export function LoginForm({ audience = "workspace" }) {
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm({
     defaultValues,
@@ -127,6 +141,11 @@ export function LoginForm({ audience = "workspace" }) {
 
   const isSuperAdmin = audience === "super-admin";
 
+  const applyDemoLogin = (demoLogin) => {
+    setValue("email", demoLogin.email, { shouldDirty: true, shouldValidate: true });
+    setValue("password", demoLogin.password, { shouldDirty: true, shouldValidate: true });
+  };
+
   return (
     <div className="w-full max-w-md rounded-[30px] border border-white/80 bg-white/[0.92] p-5 shadow-[0_30px_80px_rgba(92,122,145,0.16)] backdrop-blur sm:p-6 xl:p-8">
       <div className="mb-8 flex items-start justify-between gap-4">
@@ -198,6 +217,27 @@ export function LoginForm({ audience = "workspace" }) {
             <p className="text-sm text-rose-600">{errors.password.message}</p>
           ) : null}
         </div>
+
+        {!isSuperAdmin ? (
+          <div className="grid gap-2 rounded-2xl border border-brand-line bg-white/70 p-3 sm:grid-cols-2">
+            {workspaceDemoLogins.map((demoLogin) => (
+              <Button
+                key={demoLogin.email}
+                type="button"
+                variant="ghost"
+                className="h-auto justify-start rounded-xl px-3 py-2 text-left text-brand-ink hover:bg-brand-soft"
+                onClick={() => applyDemoLogin(demoLogin)}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{demoLogin.label}</span>
+                  <span className="block truncate text-xs font-normal text-brand-secondary">
+                    {demoLogin.email}
+                  </span>
+                </span>
+              </Button>
+            ))}
+          </div>
+        ) : null}
 
         <Button
           type="submit"

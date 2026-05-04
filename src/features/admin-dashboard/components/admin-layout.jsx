@@ -18,13 +18,16 @@ import {
   ShieldCheck,
   MessageCircle,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { FloatingActionMenu } from "@/components/floating-action-menu";
+import { USER_PROFILE } from "@/config/api";
+import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { getImageUrl } from "@/lib/image-utils";
+import { getProfileImageSource, getVersionedImageUrlCandidates } from "@/lib/image-utils";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -42,10 +45,81 @@ export function AdminLayout({
   const navigate = useNavigate();
   const location = useLocation();
   const session = useAuthStore((state) => state.session);
+  const setSession = useAuthStore((state) => state.setSession);
   const clearSession = useAuthStore((state) => state.clearSession);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [sidebarImgError, setSidebarImgError] = useState(false);
   const [headerImgError, setHeaderImgError] = useState(false);
+  const [sidebarImgIndex, setSidebarImgIndex] = useState(0);
+  const [headerImgIndex, setHeaderImgIndex] = useState(0);
+
+  const profileImage = useMemo(
+    () => getProfileImageSource(session) || null,
+    [session]
+  );
+
+  const profileQuery = useQuery({
+    queryKey: ["userProfile", session?.userId || session?.email],
+    queryFn: async () => {
+      const response = await apiClient.get(USER_PROFILE, {
+        headers: {
+          Authorization: `Bearer ${session?.accessToken}`,
+        },
+      });
+
+      if (response.data?.data) return response.data.data;
+      if (response.data?.user) return response.data.user;
+      return response.data;
+    },
+    enabled: Boolean(
+      session?.accessToken &&
+      session?.role !== "SUPER_ADMIN" &&
+      !profileImage
+    ),
+    staleTime: Infinity,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  useEffect(() => {
+    const profile = profileQuery.data;
+    if (!profile || typeof profile !== "object") return;
+
+    const nextImage = getProfileImageSource(profile);
+    const sessionImage = getProfileImageSource(session);
+    const nextName = profile.full_name || profile.name || "";
+    const sessionName = session?.full_name || session?.name || "";
+    const nextMobileNumber =
+      profile.mobile_number || profile.phone_number || profile.phone || session?.mobile_number || session?.phone_number || "";
+    const nextPhoneNumber =
+      profile.phone_number || profile.mobile_number || profile.phone || session?.phone_number || session?.mobile_number || "";
+    const nextAddress = profile.address || session?.address || "";
+    const sessionMobileNumber = session?.mobile_number || session?.phone_number || "";
+    const sessionPhoneNumber = session?.phone_number || session?.mobile_number || "";
+    const sessionAddress = session?.address || "";
+
+    if (
+      nextImage !== sessionImage ||
+      (nextName && nextName !== sessionName) ||
+      nextMobileNumber !== sessionMobileNumber ||
+      nextPhoneNumber !== sessionPhoneNumber ||
+      nextAddress !== sessionAddress
+    ) {
+      setSession({
+        ...session,
+        ...profile,
+        full_name: profile.full_name || profile.name || session?.full_name || session?.name,
+        name: profile.name || profile.full_name || session?.name,
+        mobile_number: nextMobileNumber,
+        phone_number: nextPhoneNumber,
+        address: nextAddress,
+        profile_image: nextImage || session?.profile_image || session?.image,
+        image: nextImage || session?.image || session?.profile_image,
+      });
+    }
+  }, [profileQuery.data, session, setSession]);
 
   const sidebarGroups = [
     {
@@ -82,19 +156,53 @@ export function AdminLayout({
   const identity = useMemo(() => {
     const email = session?.email || "admin@company.com";
     const [namePart] = email.split("@");
-    const displayName = namePart
+    const fallbackName = namePart
       .split(/[.\-_]/)
       .filter(Boolean)
       .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
       .join(" ");
+    const displayName = session?.full_name || session?.name || fallbackName || "Admin";
 
     return {
       email,
-      displayName: displayName || "Admin",
+      displayName,
       role: session?.role || "ADMIN",
-      image: session?.image || session?.profile_image || null,
+      image: profileImage,
+      imageVersion: session?.profileImageVersion || session?.updated_at || session?.profile_updated_at || "",
     };
-  }, [session]);
+  }, [profileImage, session]);
+
+  const profileImageUrls = useMemo(
+    () => getVersionedImageUrlCandidates(identity.image, identity.imageVersion),
+    [identity.image, identity.imageVersion]
+  );
+  const sidebarProfileImageUrl = profileImageUrls[sidebarImgIndex] || "";
+  const headerProfileImageUrl = profileImageUrls[headerImgIndex] || "";
+
+  useEffect(() => {
+    setSidebarImgError(false);
+    setHeaderImgError(false);
+    setSidebarImgIndex(0);
+    setHeaderImgIndex(0);
+  }, [profileImageUrls]);
+
+  function handleSidebarImageError() {
+    if (sidebarImgIndex < profileImageUrls.length - 1) {
+      setSidebarImgIndex((index) => index + 1);
+      return;
+    }
+
+    setSidebarImgError(true);
+  }
+
+  function handleHeaderImageError() {
+    if (headerImgIndex < profileImageUrls.length - 1) {
+      setHeaderImgIndex((index) => index + 1);
+      return;
+    }
+
+    setHeaderImgError(true);
+  }
 
   const quickActions = [
     {
@@ -181,12 +289,12 @@ export function AdminLayout({
             {/* Profile Section */}
             <div className="mt-8 flex items-center gap-3 rounded-[24px] border border-white/[0.12] bg-white/[0.08] p-4 transition-colors hover:bg-white/10">
               <div className="flex size-10 items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-tr from-brand-secondary/40 to-brand-soft/20 font-bold text-white shadow-sm ring-1 ring-white/20">
-                {identity.image && !sidebarImgError ? (
+                {sidebarProfileImageUrl && !sidebarImgError ? (
                   <img 
-                    src={getImageUrl(identity.image)} 
+                    src={sidebarProfileImageUrl}
                     alt={identity.displayName} 
                     className="size-full object-cover" 
-                    onError={() => setSidebarImgError(true)}
+                    onError={handleSidebarImageError}
                   />
                 ) : (
                   identity.displayName.charAt(0)
@@ -324,12 +432,12 @@ export function AdminLayout({
                       <p className="text-[10px] text-brand-ink/40 font-bold mt-1 uppercase tracking-tight">Admin</p>
                     </div>
                     <div className="size-10 rounded-full border-2 border-brand-line shadow-md overflow-hidden bg-brand-soft cursor-pointer hover:ring-2 hover:ring-brand-primary/30 transition-all flex items-center justify-center">
-                      {identity.image && !headerImgError ? (
+                      {headerProfileImageUrl && !headerImgError ? (
                         <img
-                          src={getImageUrl(identity.image)}
+                          src={headerProfileImageUrl}
                           alt="Profile"
                           className="size-full object-cover"
-                          onError={() => setHeaderImgError(true)}
+                          onError={handleHeaderImageError}
                         />
                       ) : (
                         <span className="text-xs font-bold text-brand-primary">{identity.displayName.charAt(0)}</span>
