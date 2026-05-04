@@ -18,13 +18,17 @@ const defaultValues = {
 const workspaceDemoLogins = [
   {
     label: "Admin demo",
+    role: "ADMIN",
     email: "admin@demo.com",
-    password: "Admin@1234",
+    userId: "demo-admin",
+    route: "/admin/dashboard",
   },
   {
     label: "User demo",
+    role: "USER",
     email: "user@demo.com",
-    password: "User@1234",
+    userId: "demo-user",
+    route: "/user/dashboard",
   },
 ];
 
@@ -37,7 +41,6 @@ export function LoginForm({ audience = "workspace" }) {
   const {
     register,
     handleSubmit,
-    setValue,
     formState: { errors },
   } = useForm({
     defaultValues,
@@ -141,9 +144,21 @@ export function LoginForm({ audience = "workspace" }) {
 
   const isSuperAdmin = audience === "super-admin";
 
-  const applyDemoLogin = (demoLogin) => {
-    setValue("email", demoLogin.email, { shouldDirty: true, shouldValidate: true });
-    setValue("password", demoLogin.password, { shouldDirty: true, shouldValidate: true });
+  const signInWithDemoLogin = (demoLogin) => {
+    clearSession();
+    setSession({
+      accessToken: `${demoLogin.role.toLowerCase()}-demo-token`,
+      refreshToken: null,
+      expiresIn: 60 * 60 * 24,
+      role: demoLogin.role,
+      email: demoLogin.email,
+      userId: demoLogin.userId,
+      mfaVerified: true,
+      isDemo: true,
+    });
+
+    toast.success(`${demoLogin.label} signed in.`);
+    navigate(demoLogin.route, { replace: true });
   };
 
   return (
@@ -226,7 +241,7 @@ export function LoginForm({ audience = "workspace" }) {
                 type="button"
                 variant="ghost"
                 className="h-auto justify-start rounded-xl px-3 py-2 text-left text-brand-ink hover:bg-brand-soft"
-                onClick={() => applyDemoLogin(demoLogin)}
+                onClick={() => signInWithDemoLogin(demoLogin)}
               >
                 <span className="min-w-0">
                   <span className="block text-sm font-semibold">{demoLogin.label}</span>
