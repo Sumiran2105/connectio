@@ -101,15 +101,34 @@ export function sortMessagesChronologically(messages = []) {
   });
 }
 
+export function isDeletedMessage(message) {
+  return Boolean(message?.isDeleted || message?.is_deleted || message?.deleted_at);
+}
+
 export function mergeMessages(existing = [], incoming = []) {
   const byId = new Map();
 
-  [...existing, ...incoming].forEach((message) => {
+  existing.forEach((message) => {
     if (!message?.id) {
       return;
     }
 
     byId.set(String(message.id), message);
+  });
+
+  incoming.forEach((message) => {
+    if (!message?.id) {
+      return;
+    }
+
+    const messageId = String(message.id);
+
+    if (isDeletedMessage(message)) {
+      byId.delete(messageId);
+      return;
+    }
+
+    byId.set(messageId, message);
   });
 
   return sortMessagesChronologically(Array.from(byId.values()));
@@ -175,6 +194,7 @@ export function normalizeServerMessage(message, currentUserId, peerUserId = null
     timestamp: getMessageTimestamp(message),
     read: Boolean(message.is_read || message.read_at || message.delivered_at),
     pinned: Boolean(message.is_pinned),
+    isDeleted: isDeletedMessage(message),
     reactions: normalizeCollection(message.reactions),
     raw: message,
   };

@@ -125,7 +125,7 @@ export function useChannelMessages({ channelId, accessToken, currentUserId, enab
     if (hydratedChannelIdRef.current !== channelId) {
       hydratedChannelIdRef.current = channelId;
       fetchedMessageIdsRef.current = new Set(messagesQuery.data.map((message) => String(message.id)));
-      setMessages(messagesQuery.data);
+      setMessages(mergeMessages([], messagesQuery.data));
       return;
     }
 

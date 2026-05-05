@@ -585,7 +585,7 @@ export function useChatWorkspace(initialTargetUser = null) {
   }, [dmChannelsQuery.data]);
 
   useEffect(() => {
-    if (!activeContact || !channelMessagesQuery.data?.length) return;
+    if (!activeContact || !channelMessagesQuery.data) return;
 
     setConversations((current) => ({
       ...current,
