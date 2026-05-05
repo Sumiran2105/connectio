@@ -74,14 +74,50 @@ export const getChannelId = (channel) =>
   channel?.uuid ||
   null;
 
+export const isChannelArchived = (channel) =>
+  Boolean(
+    channel?.is_archived ||
+      channel?.isArchived ||
+      channel?.archived ||
+      channel?.archived_at ||
+      String(channel?.status || "").toLowerCase() === "archived"
+  );
+
+export const isDirectChannel = (channel) => {
+  const channelKind = String(
+    channel?.channel_type ||
+      channel?.channelType ||
+      channel?.type ||
+      channel?.kind ||
+      channel?.category ||
+      ""
+  ).toLowerCase();
+  const channelName = String(channel?.name || channel?.channel_name || "").trim().toLowerCase();
+
+  return Boolean(
+    channel?.is_direct ||
+      channel?.isDirect ||
+      channel?.is_dm ||
+      channel?.isDm ||
+      channel?.dm_channel_id ||
+      channel?.direct_channel_id ||
+      ["direct", "dm", "direct_message", "direct-message", "private_message"].includes(channelKind) ||
+      channelName === "direct"
+  );
+};
+
 export const normalizeChannel = (channel) => {
   const id = getChannelId(channel);
+  const isArchived = isChannelArchived(channel);
 
   return {
     ...channel,
     id,
     channel_id: channel?.channel_id || id,
     name: channel?.name || channel?.channel_name || "Untitled channel",
+    is_archived: isArchived,
+    isArchived,
+    is_direct: isDirectChannel(channel),
   };
 };
 

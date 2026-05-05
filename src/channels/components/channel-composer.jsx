@@ -1,6 +1,8 @@
-import { memo } from "react";
+import { memo, useLayoutEffect, useRef } from "react";
 import { LoaderCircle, Paperclip, Plus as PlusIcon, Send, Smile, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+const COMPOSER_MAX_HEIGHT = 220;
 
 export const ChannelComposer = memo(function ChannelComposer({
   isSending,
@@ -13,7 +15,18 @@ export const ChannelComposer = memo(function ChannelComposer({
   placeholder = "Type a message",
   disabled = false,
 }) {
+  const textareaRef = useRef(null);
   const isEditing = Boolean(editingMessageId);
+  const hasMessageText = Boolean(messageInput.trim());
+
+  useLayoutEffect(() => {
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
+    textarea.style.overflowY = textarea.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
+  }, [messageInput]);
 
   return (
     <div className="shrink-0 border-t border-gray-200 bg-white">
@@ -43,13 +56,14 @@ export const ChannelComposer = memo(function ChannelComposer({
             <Paperclip className="size-5" />
           </button>
           <textarea
+            ref={textareaRef}
             rows={1}
             value={messageInput}
             onChange={onChange}
             onKeyDown={onKeyDown}
             placeholder={placeholder}
             disabled={disabled}
-            className="max-h-[120px] flex-1 resize-none border-none bg-transparent py-1 text-sm leading-relaxed text-gray-900 placeholder:text-gray-500 focus:outline-none disabled:cursor-not-allowed [scrollbar-width:thin]"
+            className="max-h-[220px] min-h-8 flex-1 resize-none border-none bg-transparent py-1 text-sm leading-relaxed text-gray-900 placeholder:text-gray-500 focus:outline-none disabled:cursor-not-allowed [scrollbar-width:thin]"
           />
           <button
             type="button"
@@ -68,10 +82,10 @@ export const ChannelComposer = memo(function ChannelComposer({
           <button
             type="button"
             onClick={onSend}
-            disabled={disabled || !messageInput.trim() || isSending}
+            disabled={disabled || !hasMessageText}
             className="flex size-10 shrink-0 items-center justify-center rounded-2xl bg-brand-primary text-white transition hover:bg-brand-primary/90 disabled:cursor-not-allowed disabled:opacity-40"
           >
-            {isSending ? <LoaderCircle className="size-5 animate-spin" /> : <Send className="size-5" />}
+            {isSending && hasMessageText ? <LoaderCircle className="size-5 animate-spin" /> : <Send className="size-5" />}
           </button>
         </div>
       </div>

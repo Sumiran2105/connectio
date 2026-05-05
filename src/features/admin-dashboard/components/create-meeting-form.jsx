@@ -12,6 +12,7 @@ import { apiClient } from "@/lib/client";
 import { CHANNELS_LIST, MEETINGS_CREATE } from "@/config/api";
 import { useAuthStore } from "@/store/auth-store";
 import { toast } from "sonner";
+import { isDirectChannel } from "@/channels/utils/channel-utils";
 
 export function CreateMeetingForm({ onClose, selectedDate }) {
   const [channels, setChannels] = useState([]);
@@ -34,7 +35,8 @@ export function CreateMeetingForm({ onClose, selectedDate }) {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const channelData = Array.isArray(response.data) ? response.data : (response.data?.items || []);
-        setChannels(channelData);
+        const workspaceChannels = channelData.filter((channel) => !isDirectChannel(channel));
+        setChannels(workspaceChannels);
       } catch (error) {
         console.error("Error fetching channels:", error);
       } finally {

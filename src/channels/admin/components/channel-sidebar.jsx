@@ -3,6 +3,7 @@ import { PlusCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
 import { CreateChannelDialog } from "./create-channel-dialog";
+import { isChannelArchived } from "@/channels/utils/channel-utils";
 
 export function ChannelSidebar({
   channels,
@@ -19,6 +20,7 @@ export function ChannelSidebar({
       selectedChannelId={selectedChannel?.id}
       onSelectChannel={onSelectChannel}
       isOpen={isOpen}
+      getChannelMeta={(channel) => (isChannelArchived(channel) ? "Archived" : "")}
       renderHeaderAction={() => <CreateChannelDialog {...createDialog} />}
       renderBottomAction={() => (
         <Button className="h-11 w-full rounded-[20px] bg-emerald-500 font-bold text-white shadow-lg shadow-emerald-500/20 hover:bg-emerald-600">

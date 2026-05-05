@@ -47,6 +47,10 @@ function normalizeContactId(contact) {
   };
 }
 
+function removeMessageById(messages = [], messageId) {
+  return messages.filter((message) => String(message.id) !== String(messageId));
+}
+
 export function useChatWorkspace(initialTargetUser = null) {
   const session = useAuthStore((state) => state.session);
   const queryClient = useQueryClient();
@@ -120,6 +124,10 @@ export function useChatWorkspace(initialTargetUser = null) {
   const deferredNewChatQuery = useDeferredValue(searchQuery.trim());
 
   const currentMessages = activeContact ? conversations[activeContact.id] || [] : [];
+  const reactionMessages = useMemo(
+    () => currentMessages.slice(-120).filter((message) => message.id),
+    [currentMessages]
+  );
 
   const dmChannelsQuery = useQuery({
     queryKey: ["dm-channels", session?.accessToken, session?.userId],
@@ -205,8 +213,7 @@ export function useChatWorkspace(initialTargetUser = null) {
   }, {});
 
   const messageReactionQueries = useQueries({
-    queries: currentMessages
-      .filter((message) => message.id)
+    queries: reactionMessages
       .map((message) => ({
         queryKey: ["message-reactions", message.id],
         queryFn: async () => {
@@ -221,10 +228,14 @@ export function useChatWorkspace(initialTargetUser = null) {
       })),
   });
 
-  const reactionsByMessageId = currentMessages.reduce((acc, message, index) => {
-    acc[message.id] = messageReactionQueries[index]?.data || [];
+  const reactionsByMessageId = currentMessages.reduce((acc, message) => {
+    acc[message.id] = [];
     return acc;
   }, {});
+
+  reactionMessages.forEach((message, index) => {
+    reactionsByMessageId[message.id] = messageReactionQueries[index]?.data || [];
+  });
 
   const getMessageMutation = useMutation({
     mutationFn: async ({ channelId, messageId, targetUserId }) => {
@@ -277,7 +288,50 @@ export function useChatWorkspace(initialTargetUser = null) {
 
       return response.data;
     },
-    onSuccess: (data, variables) => {
+    onMutate: ({ targetUserId, text }) => {
+      const optimisticMessage = {
+        id: `pending-${Date.now()}`,
+        from: "me",
+        text,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: Date.now(),
+        read: false,
+        isPending: true,
+        reactions: [],
+      };
+
+      setConversations((current) => ({
+        ...current,
+        [targetUserId]: mergeMessages(current[targetUserId] || [], [optimisticMessage]),
+      }));
+
+      setContacts((current) =>
+        current.map((contact) =>
+          contact.id === targetUserId
+            ? {
+                ...contact,
+                role: `You: ${text}`,
+                messages: mergeMessages(contact.messages || [], [optimisticMessage]),
+              }
+            : contact
+        )
+      );
+
+      setActiveContact((current) =>
+        current?.id === targetUserId
+          ? {
+              ...current,
+              role: `You: ${text}`,
+              messages: mergeMessages(current.messages || [], [optimisticMessage]),
+            }
+          : current
+      );
+
+      setMessageInput("");
+
+      return { optimisticMessage };
+    },
+    onSuccess: (data, variables, context) => {
       const sentAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
       const channelId =
         data?.channel_id ||
@@ -297,10 +351,17 @@ export function useChatWorkspace(initialTargetUser = null) {
             }),
             read: false,
           };
+      const replaceOptimisticMessage = (messages = []) =>
+        mergeMessages(
+          context?.optimisticMessage
+            ? removeMessageById(messages, context.optimisticMessage.id)
+            : messages,
+          [newMessage]
+        );
 
       setConversations((current) => ({
         ...current,
-        [variables.targetUserId]: mergeMessages(current[variables.targetUserId] || [], [newMessage]),
+        [variables.targetUserId]: replaceOptimisticMessage(current[variables.targetUserId] || []),
       }));
 
       setContacts((current) =>
@@ -310,7 +371,7 @@ export function useChatWorkspace(initialTargetUser = null) {
                 ...contact,
                 channelId: channelId || contact.channelId,
                 role: `You: ${variables.text}`,
-                messages: mergeMessages(contact.messages || [], [newMessage]),
+                messages: replaceOptimisticMessage(contact.messages || []),
               }
             : contact
         )
@@ -322,12 +383,10 @@ export function useChatWorkspace(initialTargetUser = null) {
               ...current,
               channelId: channelId || current.channelId,
               role: `You: ${variables.text}`,
-              messages: mergeMessages(current.messages || [], [newMessage]),
+              messages: replaceOptimisticMessage(current.messages || []),
             }
           : current
       );
-
-      setMessageInput("");
 
       if (channelId) {
         queryClient.invalidateQueries({
@@ -335,7 +394,37 @@ export function useChatWorkspace(initialTargetUser = null) {
         });
       }
     },
-    onError: () => toast.error("Unable to send the message right now."),
+    onError: (_error, variables, context) => {
+      if (context?.optimisticMessage) {
+        const markMessageFailed = (messages = []) =>
+          messages.map((message) =>
+            String(message.id) === String(context.optimisticMessage.id)
+              ? { ...message, isPending: false, failed: true }
+              : message
+          );
+
+        setConversations((current) => ({
+          ...current,
+          [variables.targetUserId]: markMessageFailed(current[variables.targetUserId] || []),
+        }));
+
+        setContacts((current) =>
+          current.map((contact) =>
+            contact.id === variables.targetUserId
+              ? { ...contact, messages: markMessageFailed(contact.messages || []) }
+              : contact
+          )
+        );
+
+        setActiveContact((current) =>
+          current?.id === variables.targetUserId
+            ? { ...current, messages: markMessageFailed(current.messages || []) }
+            : current
+        );
+      }
+
+      toast.error("Unable to send the message right now.");
+    },
   });
 
   const addReactionMutation = useMutation({
@@ -752,7 +841,8 @@ export function useChatWorkspace(initialTargetUser = null) {
   function handleInputChange(event) {
     setMessageInput(event.target.value);
     event.target.style.height = "auto";
-    event.target.style.height = `${Math.min(event.target.scrollHeight, 120)}px`;
+    event.target.style.height = `${Math.min(event.target.scrollHeight, 220)}px`;
+    event.target.style.overflowY = event.target.scrollHeight > 220 ? "auto" : "hidden";
   }
 
   function openConversation(contact) {

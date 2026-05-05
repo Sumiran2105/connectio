@@ -78,6 +78,10 @@ function updateMessageById(messages, messageId, patch) {
   );
 }
 
+function removeMessageById(messages, messageId) {
+  return messages.filter((message) => String(message.id) !== String(messageId));
+}
+
 export function useChannelMessages({ channelId, accessToken, currentUserId, enabled = true }) {
   const queryClient = useQueryClient();
   const bottomRef = useRef(null);
@@ -159,16 +163,54 @@ export function useChannelMessages({ channelId, accessToken, currentUserId, enab
 
       return response.data?.message || response.data;
     },
-    onSuccess: (message) => {
+    onMutate: async (text) => {
+      const optimisticMessage = {
+        id: `pending-${Date.now()}`,
+        from: "me",
+        text,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        timestamp: Date.now(),
+        read: false,
+        pinned: false,
+        reactions: [],
+        isPending: true,
+      };
+
+      setMessages((current) => mergeMessages(current, [optimisticMessage]));
+      syncQueryCache((current) => mergeMessages(current, [optimisticMessage]));
+
+      return { optimisticMessage };
+    },
+    onSuccess: (message, _text, context) => {
       const normalizedMessage = {
         ...normalizeServerMessage(message, currentUserId),
         from: "me",
       };
+      const replaceOptimisticMessage = (current) =>
+        mergeMessages(
+          context?.optimisticMessage
+            ? removeMessageById(current, context.optimisticMessage.id)
+            : current,
+          [normalizedMessage]
+        );
+
       fetchedMessageIdsRef.current.add(String(normalizedMessage.id));
-      setMessages((current) => mergeMessages(current, [normalizedMessage]));
-      syncQueryCache((current) => mergeMessages(current, [normalizedMessage]));
+      setMessages(replaceOptimisticMessage);
+      syncQueryCache(replaceOptimisticMessage);
     },
-    onError: (error) => {
+    onError: (error, _text, context) => {
+      if (context?.optimisticMessage) {
+        const markMessageFailed = (current) =>
+          current.map((message) =>
+            String(message.id) === String(context.optimisticMessage.id)
+              ? { ...message, isPending: false, failed: true }
+              : message
+          );
+
+        setMessages(markMessageFailed);
+        syncQueryCache(markMessageFailed);
+      }
+
       toast.error(
         error.response?.data?.detail || error.response?.data?.message || "Unable to send the message right now."
       );
@@ -256,15 +298,24 @@ export function useChannelMessages({ channelId, accessToken, currentUserId, enab
 
       return messageId;
     },
-    onSuccess: (messageId) => {
-      const removeMessage = (current) =>
-        current.filter((message) => String(message.id) !== String(messageId));
+    onMutate: (messageId) => {
+      const previousMessages = messages;
+      const removeMessage = (current) => removeMessageById(current, messageId);
 
       setMessages(removeMessage);
       syncQueryCache(removeMessage);
+
+      return { previousMessages };
+    },
+    onSuccess: () => {
       toast.success("Message deleted.");
     },
-    onError: (error) => {
+    onError: (error, _messageId, context) => {
+      if (context?.previousMessages) {
+        setMessages(context.previousMessages);
+        syncQueryCache(context.previousMessages);
+      }
+
       toast.error(error.response?.data?.detail || error.response?.data?.message || "Unable to delete message.");
     },
   });

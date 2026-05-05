@@ -26,6 +26,7 @@ import {
   getTeamCompanyId,
   getUserId,
   getUserRecord,
+  isDirectChannel,
   normalizeChannel,
 } from "@/channels/utils/channel-utils";
 
@@ -117,7 +118,7 @@ export function useAdminChannels({ session }) {
         const response = await apiClient.get(CHANNELS_LIST, { headers });
         const channelData = getArrayPayload(response.data, ["items", "channels"])
           .map(normalizeChannel)
-          .filter((channel) => channel.id);
+          .filter((channel) => channel.id && !isDirectChannel(channel));
 
         setChannels(channelData);
         setSelectedChannel((current) => {
@@ -473,10 +474,13 @@ export function useAdminChannels({ session }) {
     try {
       const endpoint = shouldArchive ? CHANNELS_ARCHIVE(channelId) : CHANNELS_UNARCHIVE(channelId);
       const response = await apiClient.post(endpoint, null, { headers });
+      const responseChannel = response.data?.channel || response.data?.data || response.data || {};
       const updatedChannel = normalizeChannel({
         ...selectedChannel,
-        ...(response.data || {}),
+        ...responseChannel,
         is_archived: shouldArchive,
+        isArchived: shouldArchive,
+        status: shouldArchive ? "archived" : "active",
       });
 
       setChannels((current) =>

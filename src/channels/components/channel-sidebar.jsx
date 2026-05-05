@@ -4,6 +4,73 @@ import { Hash, Lock, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
+const ChannelSidebarItem = memo(function ChannelSidebarItem({
+  channel,
+  channelName,
+  channelDescription,
+  isSelected,
+  isPrivate,
+  meta,
+  onSelectChannel,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelectChannel?.(channel)}
+      className={cn(
+        "group flex w-full items-start justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200",
+        isSelected
+          ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20"
+          : "bg-white/80 text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary"
+      )}
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        {isPrivate ? (
+          <Lock
+            className={cn(
+              "mt-0.5 size-4 shrink-0",
+              isSelected ? "text-white/70" : "text-brand-secondary/40 group-hover:text-brand-primary/60"
+            )}
+          />
+        ) : (
+          <Hash
+            className={cn(
+              "mt-0.5 size-4 shrink-0",
+              isSelected ? "text-white/70" : "text-brand-secondary/40 group-hover:text-brand-primary/60"
+            )}
+          />
+        )}
+        <div className="min-w-0">
+          <div className="truncate font-semibold">{channelName}</div>
+          {channelDescription ? (
+            <p
+              className={cn(
+                "mt-0.5 line-clamp-1 text-xs",
+                isSelected ? "text-white/75" : "text-brand-secondary"
+              )}
+            >
+              {channelDescription}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      {meta ? (
+        <div
+          className={cn(
+            "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
+            isSelected ? "bg-white/15 text-white" : "bg-brand-soft text-brand-secondary"
+          )}
+        >
+          {meta}
+        </div>
+      ) : isSelected ? (
+        <div className="mt-1 size-1.5 shrink-0 rounded-full bg-white" />
+      ) : null}
+    </button>
+  );
+});
+
 export const SharedChannelSidebar = memo(function SharedChannelSidebar({
   title = "Channels",
   subtitle,
@@ -86,65 +153,16 @@ export const SharedChannelSidebar = memo(function SharedChannelSidebar({
               const isPrivate = isPrivateChannel(channel);
 
               return (
-                <button
+                <ChannelSidebarItem
                   key={channelId || channelName}
-                  type="button"
-                  onClick={() => onSelectChannel?.(channel)}
-                  className={cn(
-                    "group flex w-full items-start justify-between rounded-2xl px-4 py-3 text-left text-sm font-medium transition-all duration-200",
-                    isSelected
-                      ? "bg-brand-primary text-white shadow-lg shadow-brand-primary/20"
-                      : "bg-white/80 text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary"
-                  )}
-                >
-                  <div className="flex min-w-0 items-start gap-3">
-                    {isPrivate ? (
-                      <Lock
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0",
-                          isSelected
-                            ? "text-white/70"
-                            : "text-brand-secondary/40 group-hover:text-brand-primary/60"
-                        )}
-                      />
-                    ) : (
-                      <Hash
-                        className={cn(
-                          "mt-0.5 size-4 shrink-0",
-                          isSelected
-                            ? "text-white/70"
-                            : "text-brand-secondary/40 group-hover:text-brand-primary/60"
-                        )}
-                      />
-                    )}
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{channelName}</div>
-                      {channelDescription ? (
-                        <p
-                          className={cn(
-                            "mt-0.5 line-clamp-1 text-xs",
-                            isSelected ? "text-white/75" : "text-brand-secondary"
-                          )}
-                        >
-                          {channelDescription}
-                        </p>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  {meta ? (
-                    <div
-                      className={cn(
-                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em]",
-                        isSelected ? "bg-white/15 text-white" : "bg-brand-soft text-brand-secondary"
-                      )}
-                    >
-                      {meta}
-                    </div>
-                  ) : isSelected ? (
-                    <div className="mt-1 size-1.5 shrink-0 rounded-full bg-white" />
-                  ) : null}
-                </button>
+                  channel={channel}
+                  channelName={channelName}
+                  channelDescription={channelDescription}
+                  isSelected={isSelected}
+                  isPrivate={isPrivate}
+                  meta={meta}
+                  onSelectChannel={onSelectChannel}
+                />
               );
             })}
         </div>

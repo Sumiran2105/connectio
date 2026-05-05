@@ -1,4 +1,4 @@
-import { memo, useMemo } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   CheckCheck,
   ChevronLeft,
@@ -25,6 +25,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChatAvatar } from "@/chat/components/chat-avatar";
 import { getUserName } from "@/channels/utils/channel-utils";
+
+const MESSAGE_RENDER_BATCH_SIZE = 120;
+const QUICK_REACTIONS = ["👍", "❤️", "😂"];
 
 const MessageBubble = memo(function MessageBubble({
   message,
@@ -125,8 +128,16 @@ const MessageBubble = memo(function MessageBubble({
         </div>
 
         <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
-          <span className="text-[11px] text-gray-400">{message.time}</span>
-          {isMe ? <CheckCheck className="size-3.5 text-brand-primary" /> : null}
+          <span className={`text-[11px] ${message.failed ? "text-red-500" : "text-gray-400"}`}>
+            {message.failed ? "Failed" : message.time}
+          </span>
+          {isMe ? (
+            message.isPending ? (
+              <span className="size-1.5 rounded-full bg-gray-300" />
+            ) : message.failed ? null : (
+              <CheckCheck className="size-3.5 text-brand-primary" />
+            )
+          ) : null}
         </div>
 
         {message.reactions?.length ? (
@@ -150,7 +161,7 @@ const MessageBubble = memo(function MessageBubble({
             isMe ? "justify-end" : "justify-start"
           }`}
         >
-          {["👍", "❤️", "😂"].map((emoji) => (
+          {QUICK_REACTIONS.map((emoji) => (
             <button
               key={`${message.id}-${emoji}-add`}
               type="button"
@@ -197,11 +208,17 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
   shellClassName = "bg-white",
   bodyClassName = "bg-gradient-to-b from-white to-gray-50/60 px-4 py-6 sm:px-6",
 }) {
+  const [visibleMessageCount, setVisibleMessageCount] = useState(MESSAGE_RENDER_BATCH_SIZE);
+  const hasOlderMessages = messages.length > visibleMessageCount;
+  const visibleMessages = useMemo(
+    () => (hasOlderMessages ? messages.slice(-visibleMessageCount) : messages),
+    [hasOlderMessages, messages, visibleMessageCount]
+  );
   const renderedMessages = useMemo(
     () =>
-      messages.map((message, index) => {
+      visibleMessages.map((message, index) => {
         const isMe = message.from === "me";
-        const previousMessage = messages[index - 1];
+        const previousMessage = visibleMessages[index - 1];
         const showAvatar = !isMe && previousMessage?.from !== "them";
 
         return {
@@ -210,13 +227,16 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
           showAvatar,
         };
       }),
-    [messages]
+    [visibleMessages]
   );
 
   const pinnedMessage = useMemo(
     () => messages.find((msg) => msg.pinned),
     [messages]
   );
+  const showOlderMessages = () => {
+    setVisibleMessageCount((count) => Math.min(messages.length, count + MESSAGE_RENDER_BATCH_SIZE));
+  };
 
   return (
     <section className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${shellClassName}`}>
@@ -324,6 +344,18 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
             <div className={`mx-auto flex min-h-full w-full max-w-5xl flex-col justify-end ${bodyClassName}`}>
               {messages.length ? (
                 <div className="space-y-4">
+                  {hasOlderMessages ? (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={showOlderMessages}
+                        className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm transition hover:border-brand-primary/30 hover:text-brand-primary"
+                      >
+                        Show older messages
+                      </button>
+                    </div>
+                  ) : null}
+
                   {renderedMessages.map(({ message, isMe, showAvatar }) => (
                     <MessageBubble
                       key={message.id}

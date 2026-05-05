@@ -34,6 +34,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import {
   getRoleLabel,
+  isChannelArchived,
   getUserAvatar,
   getUserEmail,
   getUserId,
@@ -380,6 +381,7 @@ export function ChannelSettingsDialog({
   onUnarchive,
 }) {
   const updateSettings = (patch) => setSettingsForm((current) => ({ ...current, ...patch }));
+  const isArchived = isChannelArchived(selectedChannel);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -514,14 +516,14 @@ export function ChannelSettingsDialog({
             type="button"
             variant="outline"
             className="rounded-2xl h-11 border-brand-line bg-white px-5 font-bold text-brand-ink hover:bg-brand-soft"
-            onClick={selectedChannel?.is_archived ? onUnarchive : onArchive}
+            onClick={isArchived ? onUnarchive : onArchive}
             disabled={isSavingSettings || isArchivingChannel}
           >
             {isArchivingChannel ? (
               <>
                 <Loader2 className="mr-2 size-4 animate-spin" /> Updating...
               </>
-            ) : selectedChannel?.is_archived ? (
+            ) : isArchived ? (
               <>
                 <ArchiveRestore className="mr-2 size-4" /> Unarchive
               </>

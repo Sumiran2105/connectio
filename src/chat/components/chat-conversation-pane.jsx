@@ -6,8 +6,11 @@ import {
   Search,
   Video,
 } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ChatAvatar } from "./chat-avatar";
 import { ChatComposer } from "./chat-composer";
+
+const MESSAGE_RENDER_BATCH_SIZE = 120;
 const tabs = ["chat", "files", "photos"];
 
 export function ChatConversationPane({
@@ -30,6 +33,16 @@ export function ChatConversationPane({
   reactionsByMessageId,
   sendMessageMutation,
 }) {
+  const [visibleMessageCount, setVisibleMessageCount] = useState(MESSAGE_RENDER_BATCH_SIZE);
+  const hasOlderMessages = currentMessages.length > visibleMessageCount;
+  const visibleMessages = useMemo(
+    () => (hasOlderMessages ? currentMessages.slice(-visibleMessageCount) : currentMessages),
+    [currentMessages, hasOlderMessages, visibleMessageCount]
+  );
+  const showOlderMessages = () => {
+    setVisibleMessageCount((count) => Math.min(currentMessages.length, count + MESSAGE_RENDER_BATCH_SIZE));
+  };
+
   return (
     <div className={`h-full min-h-0 min-w-0 flex-1 flex-col bg-white ${isMobileChatOpen ? "flex" : "hidden sm:flex"}`}>
       {activeContact ? (
@@ -105,9 +118,21 @@ export function ChatConversationPane({
         ) : null}
 
         <div className="space-y-4">
-          {currentMessages.map((message, index) => {
+          {hasOlderMessages ? (
+            <div className="flex justify-center">
+              <button
+                type="button"
+                onClick={showOlderMessages}
+                className="rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-semibold text-gray-600 shadow-sm transition hover:border-brand-primary/30 hover:text-brand-primary"
+              >
+                Show older messages
+              </button>
+            </div>
+          ) : null}
+
+          {visibleMessages.map((message, index) => {
             const isMe = message.from === "me";
-            const nextMessage = currentMessages[index + 1];
+            const nextMessage = visibleMessages[index + 1];
             const showAvatar = !isMe && nextMessage?.from !== "them";
 
             return (
@@ -136,8 +161,16 @@ export function ChatConversationPane({
                   </button>
 
                   <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
-                    <span className="text-[11px] text-gray-400">{message.time}</span>
-                    {isMe ? <CheckCheck className="size-3.5 text-brand-primary" /> : null}
+                    <span className={`text-[11px] ${message.failed ? "text-red-500" : "text-gray-400"}`}>
+                      {message.failed ? "Failed" : message.time}
+                    </span>
+                    {isMe ? (
+                      message.isPending ? (
+                        <span className="size-1.5 rounded-full bg-gray-300" />
+                      ) : message.failed ? null : (
+                        <CheckCheck className="size-3.5 text-brand-primary" />
+                      )
+                    ) : null}
                   </div>
 
                   {(reactionsByMessageId[message.id] || []).length ? (

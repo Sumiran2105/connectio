@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 
 import { CHANNELS_MY_CHANNELS } from "@/config/api";
 import { apiClient } from "@/lib/client";
+import { isDirectChannel } from "@/channels/utils/channel-utils";
 
 function normalizeChannels(data) {
   if (Array.isArray(data)) {
@@ -62,7 +63,7 @@ export function useUserChannels({ accessToken }) {
         },
       });
 
-      return normalizeChannels(response.data).map(buildChannelView);
+      return normalizeChannels(response.data).filter((channel) => !isDirectChannel(channel)).map(buildChannelView);
     },
     enabled: Boolean(accessToken),
     staleTime: 30 * 1000,
