@@ -74,11 +74,10 @@ export function ChatConversationPane({
                   key={tab}
                   type="button"
                   onClick={() => onTabChange(tab)}
-                  className={`border-b-2 pb-2 text-sm font-medium capitalize transition ${
-                    activeTab === tab
+                  className={`border-b-2 pb-2 text-sm font-medium capitalize transition ${activeTab === tab
                       ? "border-brand-primary text-brand-primary"
                       : "border-transparent text-gray-600 hover:text-gray-900"
-                  }`}
+                    }`}
                 >
                   {tab}
                 </button>
@@ -108,16 +107,16 @@ export function ChatConversationPane({
         <div className="space-y-4">
           {currentMessages.map((message, index) => {
             const isMe = message.from === "me";
-            const previousMessage = currentMessages[index - 1];
-            const showAvatar = !isMe && previousMessage?.from !== "them";
+            const nextMessage = currentMessages[index + 1];
+            const showAvatar = !isMe && nextMessage?.from !== "them";
 
             return (
               <div
                 key={message.id}
-                className={`group flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}
+                className={`group flex w-full items-start gap-3 ${isMe ? "justify-end" : "justify-start"}`}
               >
                 {!isMe ? (
-                  <div className="h-8 w-8 shrink-0">
+                  <div className="h-8 w-8 shrink-0 mt-2">
                     {showAvatar ? (
                       <ChatAvatar name={activeContact.name} online={false} size="size-8" />
                     ) : null}
@@ -128,11 +127,10 @@ export function ChatConversationPane({
                   <button
                     type="button"
                     onClick={() => onMessageClick(message)}
-                    className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${
-                      isMe
+                    className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${isMe
                         ? "rounded-br-md bg-brand-primary text-white"
                         : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
-                    }`}
+                      }`}
                   >
                     {message.text}
                   </button>
@@ -159,9 +157,8 @@ export function ChatConversationPane({
                   ) : null}
 
                   <div
-                    className={`mt-2 flex flex-wrap gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
-                      isMe ? "justify-end" : "justify-start"
-                    }`}
+                    className={`mt-2 flex flex-wrap gap-1.5 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${isMe ? "justify-end" : "justify-start"
+                      }`}
                   >
                     {["👍", "❤️", "😂"].map((emoji) => (
                       <button
