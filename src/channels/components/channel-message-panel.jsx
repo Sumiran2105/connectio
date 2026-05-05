@@ -11,6 +11,7 @@ import {
   Pin,
   PinOff,
   Trash2,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -23,6 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatAvatar } from "@/chat/components/chat-avatar";
+import { getUserName } from "@/channels/utils/channel-utils";
 
 const MessageBubble = memo(function MessageBubble({
   message,
@@ -41,9 +43,7 @@ const MessageBubble = memo(function MessageBubble({
   onForwardMessage,
 }) {
   const handleEdit = () => {
-    const nextText = window.prompt("Edit message", message.text);
-    if (!nextText || nextText.trim() === message.text) return;
-    onEditMessage?.(message.id, nextText.trim());
+    onEditMessage?.(message.id);
   };
 
   const handleForward = () => {
@@ -213,6 +213,11 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
     [messages]
   );
 
+  const pinnedMessage = useMemo(
+    () => messages.find((msg) => msg.pinned),
+    [messages]
+  );
+
   return (
     <section className={`flex h-full min-h-0 min-w-0 flex-1 flex-col ${shellClassName}`}>
       {selectedChannel ? (
@@ -270,6 +275,33 @@ export const ChannelMessagePanel = memo(function ChannelMessagePanel({
                     {tab.label}
                   </button>
                 ))}
+              </div>
+            </div>
+          ) : null}
+
+          {pinnedMessage ? (
+            <div className="shrink-0 border-b border-gray-200 bg-blue-50 px-4 py-3 sm:px-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <Pin className="size-4 shrink-0 text-blue-600" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-gray-900">
+                        {getUserName(pinnedMessage.raw)}
+                      </span>
+                      <span className="text-xs text-gray-500">{pinnedMessage.time}</span>
+                    </div>
+                    <p className="truncate text-sm text-gray-700">{pinnedMessage.text}</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => onUnpinMessage?.(pinnedMessage.id)}
+                  className="shrink-0 rounded-lg p-1.5 text-gray-600 transition hover:bg-white hover:text-gray-900"
+                  title="Unpin message"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
             </div>
           ) : null}

@@ -13,11 +13,16 @@ import {
 import { useAdminChannels } from "@/channels/hooks/use-admin-channels";
 import { getChannelId } from "@/channels/utils/channel-utils";
 import { getSessionUserIdentifiers } from "@/chat/utils/chat-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);
   const [activeTab, setActiveTab] = useState("chat");
   const [messageInput, setMessageInput] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [replacePinDialogOpen, setReplacePinDialogOpen] = useState(false);
+  const [pendingPinMessageId, setPendingPinMessageId] = useState(null);
   const token = session?.accessToken;
   const currentUserIdentifiers = useMemo(() => getSessionUserIdentifiers(session), [session]);
   const {
@@ -54,10 +59,29 @@ export function ChannelsPage() {
     enabled: Boolean(getChannelId(selectedChannel)),
   });
 
+  const handleEditChannelMessage = (messageId) => {
+    const message = messages.find((msg) => String(msg.id) === String(messageId));
+    if (message) {
+      setMessageInput(message.text);
+      setEditingMessageId(messageId);
+    }
+  };
+
+  const handleCancelEditMessage = () => {
+    setMessageInput("");
+    setEditingMessageId(null);
+  };
+
   const handleSendChannelMessage = () => {
     const text = messageInput.trim();
     if (!text || !selectedChannel) return;
-    sendMessage(text);
+    
+    if (editingMessageId) {
+      editMessage(editingMessageId, text);
+      setEditingMessageId(null);
+    } else {
+      sendMessage(text);
+    }
     setMessageInput("");
   };
 
@@ -66,6 +90,36 @@ export function ChannelsPage() {
       event.preventDefault();
       handleSendChannelMessage();
     }
+  };
+
+  const handlePinMessage = (messageId) => {
+    // Check if there's already a pinned message
+    const pinnedMessage = messages.find((msg) => msg.pinned);
+    
+    if (pinnedMessage && String(pinnedMessage.id) !== String(messageId)) {
+      // Show confirmation dialog
+      setPendingPinMessageId(messageId);
+      setReplacePinDialogOpen(true);
+    } else {
+      // No pinned message or clicking on the same message, just pin it
+      pinMessage(messageId);
+    }
+  };
+
+  const handleConfirmReplacePinned = async () => {
+    if (!pendingPinMessageId) return;
+    
+    // First unpin the currently pinned message
+    const pinnedMessage = messages.find((msg) => msg.pinned);
+    if (pinnedMessage) {
+      await unpinMessage(pinnedMessage.id);
+    }
+    
+    // Then pin the new message
+    pinMessage(pendingPinMessageId);
+    
+    setReplacePinDialogOpen(false);
+    setPendingPinMessageId(null);
   };
 
   return (
@@ -101,15 +155,17 @@ export function ChannelsPage() {
           messages={messages}
           bottomRef={bottomRef}
           messageInput={messageInput}
+          editingMessageId={editingMessageId}
           onMessageInputChange={(event) => setMessageInput(event.target.value)}
           onMessageInputKeyDown={handleChannelMessageKeyDown}
           onSendMessage={handleSendChannelMessage}
+          onCancelEdit={handleCancelEditMessage}
           isSending={isSending}
           onAddReaction={addReaction}
           onRemoveReaction={removeReaction}
-          onEditMessage={editMessage}
+          onEditMessage={handleEditChannelMessage}
           onDeleteMessage={deleteMessage}
-          onPinMessage={pinMessage}
+          onPinMessage={handlePinMessage}
           onUnpinMessage={unpinMessage}
           onMarkMessageRead={markMessageRead}
           onShowDeliveryStatus={showDeliveryStatus}
@@ -171,6 +227,20 @@ export function ChannelsPage() {
           onArchive={settingsDialog.onArchive}
           onUnarchive={settingsDialog.onUnarchive}
         />
+
+        <Dialog open={replacePinDialogOpen} onOpenChange={setReplacePinDialogOpen}>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Replace the current pinned message?</DialogTitle>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setReplacePinDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmReplacePinned}>Replace</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AdminLayout>
   );

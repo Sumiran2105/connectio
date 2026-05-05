@@ -174,7 +174,7 @@ export function normalizeServerMessage(message, currentUserId, peerUserId = null
     time: formatMessageTime(message.created_at || message.updated_at),
     timestamp: getMessageTimestamp(message),
     read: Boolean(message.is_read || message.read_at || message.delivered_at),
-    pinned: Boolean(message.is_pinned || message.pinned_at),
+    pinned: Boolean(message.is_pinned),
     reactions: normalizeCollection(message.reactions),
     raw: message,
   };

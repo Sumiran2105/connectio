@@ -16,9 +16,11 @@ export function ChannelChat({
   messages,
   bottomRef,
   messageInput,
+  editingMessageId,
   onMessageInputChange,
   onMessageInputKeyDown,
   onSendMessage,
+  onCancelEdit,
   isSending,
   onAddReaction,
   onRemoveReaction,
@@ -94,9 +96,11 @@ export function ChannelChat({
         <ChannelComposer
           isSending={isSending}
           messageInput={messageInput}
+          editingMessageId={editingMessageId}
           onChange={onMessageInputChange}
           onKeyDown={onMessageInputKeyDown}
           onSend={onSendMessage}
+          onCancelEdit={onCancelEdit}
           disabled={!selectedChannel}
           placeholder={selectedChannel ? `Message #${selectedChannel.name}` : "Select a channel"}
         />
