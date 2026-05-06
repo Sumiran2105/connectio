@@ -229,7 +229,7 @@ export function ChannelsPage() {
         />
 
         <Dialog open={replacePinDialogOpen} onOpenChange={setReplacePinDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[425px] bg-brand-neutral">
             <DialogHeader>
               <DialogTitle>Replace the current pinned message?</DialogTitle>
             </DialogHeader>

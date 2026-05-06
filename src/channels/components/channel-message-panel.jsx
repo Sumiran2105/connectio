@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChatAvatar } from "@/chat/components/chat-avatar";
 import { getUserName } from "@/channels/utils/channel-utils";
+import { EmojiPicker } from "./emoji-picker";
 
 const MESSAGE_RENDER_BATCH_SIZE = 120;
 const QUICK_REACTIONS = ["👍", "❤️", "😂"];
@@ -45,6 +46,8 @@ const MessageBubble = memo(function MessageBubble({
   onLoadThreadMessages,
   onForwardMessage,
 }) {
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+
   const handleEdit = () => {
     onEditMessage?.(message.id);
   };
@@ -55,8 +58,13 @@ const MessageBubble = memo(function MessageBubble({
     onForwardMessage?.(message.id, targetChannelId.trim());
   };
 
+  const handleEmojiSelect = (emoji) => {
+    onAddReaction?.(message.id, emoji);
+    setShowEmojiPicker(false);
+  };
+
   return (
-    <div className={`group flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
+    <div className={`group relative flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
       {!isMe ? (
         <div className="h-8 w-8 shrink-0">
           {showAvatar ? <ChatAvatar name={avatarName} size="size-8" /> : null}
@@ -171,7 +179,22 @@ const MessageBubble = memo(function MessageBubble({
               {emoji}
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker(true)}
+            className="inline-flex items-center justify-center rounded-full border border-dashed border-gray-200 bg-white px-2 py-1 text-xs text-gray-500 shadow-sm transition hover:border-brand-primary hover:text-brand-primary"
+            title="More reactions"
+          >
+            +
+          </button>
         </div>
+
+        {showEmojiPicker && (
+          <EmojiPicker
+            onEmojiSelect={handleEmojiSelect}
+            onClose={() => setShowEmojiPicker(false)}
+          />
+        )}
       </div>
     </div>
   );
