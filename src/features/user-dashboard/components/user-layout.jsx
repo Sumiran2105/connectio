@@ -6,7 +6,6 @@ import {
   ChevronRight,
   FileText,
   Hash,
-  Home,
   Menu,
   MessageCircle,
   Search,
@@ -104,7 +103,6 @@ export function UserLayout({
   });
 
   const sidebarItems = [
-    { label: "Home", icon: Home, path: "/user/dashboard" },
     { label: "Chat", icon: MessageCircle, path: "/user/dashboard/chat" },
     { label: "Meet", icon: Video, path: "/user/dashboard/meet" },
     { label: "Channels", icon: Hash, path: "/user/dashboard/channels" },
@@ -302,10 +300,10 @@ export function UserLayout({
                   </div>
                   <div className="flex size-10 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-brand-soft font-semibold text-brand-primary shadow-md">
                     {identity.image && !imgError ? (
-                      <img 
+                      <img
                         src={profileImageUrl}
-                        alt={identity.displayName} 
-                        className="size-full object-cover" 
+                        alt={identity.displayName}
+                        className="size-full object-cover"
                         onError={() => setImgError(true)}
                       />
                     ) : (

@@ -277,8 +277,8 @@ export function SettingsPage() {
   ];
 
   return (
-    <UserLayout>
-      <div className="max-w-5xl mx-auto space-y-8">
+    <UserLayout contentInnerClassName="max-w-none">
+      <div className="w-full space-y-8">
         <div className="text-left space-y-2">
           <h1 className="text-3xl font-extrabold tracking-tight text-brand-ink">Account Settings</h1>
           <p className="text-brand-secondary">Manage your profile and security preferences.</p>
@@ -388,7 +388,7 @@ export function SettingsPage() {
                   </div>
 
                   <form onSubmit={handleUpdateProfile} className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-2.5 md:col-span-1">
+                    <div className="space-y-2.5 md:col-span-1 max-w-sm">
                       <Label className="text-brand-ink font-semibold">Full Name</Label>
                       <Input
                         disabled={!isEditingProfile}
@@ -399,12 +399,12 @@ export function SettingsPage() {
                       />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-1">
+                    <div className="space-y-2.5 md:col-span-1 max-w-sm">
                       <Label className="text-brand-ink font-semibold">Email Address</Label>
                       <Input defaultValue={session?.email} disabled className="h-12 rounded-xl bg-brand-neutral/50 opacity-70 border-brand-line/50" />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-1">
+                    <div className="space-y-2.5 md:col-span-1 max-w-sm">
                       <Label className="text-brand-ink font-semibold">Phone Number</Label>
                       <Input
                         disabled={!isEditingProfile}
@@ -415,7 +415,7 @@ export function SettingsPage() {
                       />
                     </div>
 
-                    <div className="space-y-2.5 md:col-span-1">
+                    <div className="space-y-2.5 md:col-span-1 max-w-sm">
                       <Label className="text-brand-ink font-semibold">Address</Label>
                       <Input
                         disabled={!isEditingProfile}
@@ -479,7 +479,7 @@ export function SettingsPage() {
                 <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <form onSubmit={handleChangePassword} className="space-y-6 pt-2">
                     <div className="grid gap-6 md:grid-cols-2">
-                      <div className="space-y-2.5">
+                      <div className="space-y-2.5 max-w-sm">
                         <Label className="text-brand-ink font-semibold">Current Password</Label>
                         <div className="relative">
                           <Input
@@ -498,7 +498,7 @@ export function SettingsPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="space-y-2.5">
+                      <div className="space-y-2.5 max-w-sm">
                         <Label className="text-brand-ink font-semibold">New Password</Label>
                         <div className="relative">
                           <Input
@@ -517,7 +517,7 @@ export function SettingsPage() {
                           </button>
                         </div>
                       </div>
-                      <div className="space-y-2.5">
+                      <div className="space-y-2.5 max-w-sm">
                         <Label className="text-brand-ink font-semibold">Confirm New Password</Label>
                         <div className="relative">
                           <Input
