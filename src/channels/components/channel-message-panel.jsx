@@ -24,11 +24,33 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ChatAvatar } from "@/chat/components/chat-avatar";
-import { getUserName } from "@/channels/utils/channel-utils";
+import { getUserName, parseMentions } from "@/channels/utils/channel-utils";
 import { EmojiPicker } from "./emoji-picker";
 
 const MESSAGE_RENDER_BATCH_SIZE = 120;
 const QUICK_REACTIONS = ["👍", "❤️", "😂"];
+
+/**
+ * Component to render message text with formatted mentions
+ */
+const FormattedMessageText = memo(function FormattedMessageText({ text }) {
+  const parts = useMemo(() => parseMentions(text), [text]);
+
+  return (
+    <>
+      {parts.map((part, index) => {
+        if (part.type === "mention") {
+          return (
+            <strong key={`mention-${index}`} className="font-bold">
+              {part.content}
+            </strong>
+          );
+        }
+        return <span key={`text-${index}`}>{part.content}</span>;
+      })}
+    </>
+  );
+});
 
 const MessageBubble = memo(function MessageBubble({
   message,
@@ -81,7 +103,7 @@ const MessageBubble = memo(function MessageBubble({
             }`}
           >
             {message.pinned ? <Pin className="mr-1 inline size-3.5" /> : null}
-            {message.text}
+            <FormattedMessageText text={message.text} />
           </div>
 
           <DropdownMenu>

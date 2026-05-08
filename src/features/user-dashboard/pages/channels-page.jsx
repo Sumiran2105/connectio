@@ -5,6 +5,7 @@ import { ChannelComposer } from "@/channels/components/channel-composer";
 import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
 import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
 import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
+import { useChannelMembers } from "@/channels/hooks/use-channel-members";
 import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
 import { useUserChannels } from "@/channels/hooks/use-user-channels";
@@ -20,6 +21,15 @@ export function ChannelsPage() {
   });
   const { filteredChannels, activeChannel, isLoading, isError } = channelState;
   const { search, setSearch, isMobilePanelOpen, setIsMobilePanelOpen, openChannel } = sidebarState;
+  
+  // Fetch channel members for mentions
+  const { members: channelMembers, isLoading: isFetchingMembers } = useChannelMembers(
+    activeChannel?.id,
+    {
+      accessToken: session?.accessToken,
+    }
+  );
+
   const {
     messages: currentMessages,
     bottomRef,
@@ -131,6 +141,12 @@ export function ChannelsPage() {
                 onSend={handleSendMessage}
                 disabled={!activeChannel}
                 placeholder={activeChannel ? `Message #${activeChannel.name}` : "Select a channel"}
+                channelMembers={channelMembers}
+                isFetchingMembers={isFetchingMembers}
+                onMentionInsert={(member, newMessage) => {
+                  // Handle mention insertion (can be extended for logging, analytics, etc.)
+                  console.log(`Mentioned ${member.name} in message:`, newMessage);
+                }}
               />
             }
           />

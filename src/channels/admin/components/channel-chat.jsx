@@ -1,8 +1,10 @@
 import { Settings, Trash2, Users } from "lucide-react";
+import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import { ChannelComposer } from "@/channels/components/channel-composer";
 import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
+import { useChannelMembers } from "@/channels/hooks/use-channel-members";
 
 export function ChannelChat({
   selectedChannel,
@@ -32,7 +34,15 @@ export function ChannelChat({
   onShowDeliveryStatus,
   onLoadThreadMessages,
   onForwardMessage,
+  session,
 }) {
+  // Fetch channel members for mentions
+  const { members: channelMembers, isLoading: isFetchingMembers } = useChannelMembers(
+    selectedChannel?.id,
+    {
+      accessToken: session?.accessToken,
+    }
+  );
   return (
     <ChannelMessagePanel
       selectedChannel={selectedChannel}
@@ -103,6 +113,12 @@ export function ChannelChat({
           onCancelEdit={onCancelEdit}
           disabled={!selectedChannel}
           placeholder={selectedChannel ? `Message #${selectedChannel.name}` : "Select a channel"}
+          channelMembers={channelMembers}
+          isFetchingMembers={isFetchingMembers}
+          onMentionInsert={(member, newMessage) => {
+            // Handle mention insertion (can be extended for logging, analytics, etc.)
+            console.log(`Mentioned ${member.name} in message:`, newMessage);
+          }}
         />
       }
       emptySelectionTitle="No channels found"

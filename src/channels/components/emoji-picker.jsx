@@ -56,7 +56,7 @@ const saveRecentEmoji = (emoji) => {
     const updated = [emoji, ...filtered].slice(0, 8);
     localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
   } catch {
-    // Silently fail
+    
   }
 };
 

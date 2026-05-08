@@ -171,6 +171,7 @@ export function ChannelsPage() {
           onShowDeliveryStatus={showDeliveryStatus}
           onLoadThreadMessages={loadThreadMessages}
           onForwardMessage={forwardMessage}
+          session={session}
         />
 
         <AddMemberDialog

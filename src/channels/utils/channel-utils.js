@@ -178,3 +178,45 @@ export const getRoleLabel = (role) => {
   if (normalized === "member" || normalized === "user") return "User";
   return normalized.replace(/_/g, " ");
 };
+
+/**
+ * Parse mentions in message text
+ * Returns array of objects with type ('text' or 'mention') and content
+ */
+export const parseMentions = (text) => {
+  if (!text || typeof text !== "string") return [{ type: "text", content: text }];
+
+  const mentionRegex = /@([\w\s]+?)(?=\s|$|[.,!?;:])/g;
+  
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = mentionRegex.exec(text)) !== null) {
+    // Add text before mention
+    if (match.index > lastIndex) {
+      parts.push({
+        type: "text",
+        content: text.substring(lastIndex, match.index),
+      });
+    }
+
+    // Add mention
+    parts.push({
+      type: "mention",
+      content: match[1].trim(),
+    });
+
+    lastIndex = match.index + match[0].length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    parts.push({
+      type: "text",
+      content: text.substring(lastIndex),
+    });
+  }
+
+  return parts.length > 0 ? parts : [{ type: "text", content: text }];
+};
