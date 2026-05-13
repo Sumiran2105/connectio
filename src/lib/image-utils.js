@@ -113,6 +113,14 @@ export const getProfileImageSource = (profile) => {
   );
 };
 
+export const isTransientImageSource = (path) =>
+  typeof path === "string" && (path.startsWith("data:") || path.startsWith("blob:"));
+
+export const getPersistableProfileImageSource = (profile) => {
+  const image = getProfileImageSource(profile);
+  return isTransientImageSource(image) ? "" : image;
+};
+
 export const getVersionedImageUrl = (path, version) => {
   const url = getImageUrl(path);
   if (!url || !version || url.startsWith("data:") || url.startsWith("blob:")) return url;

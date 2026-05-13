@@ -9,7 +9,10 @@ import { Label } from "@/components/ui/label";
 import { COMPANY_CHANGE_PASSWORD, USER_PROFILE, USER_UPDATE_PROFILE } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { getProfileImageSource, getVersionedImageUrl } from "@/lib/image-utils";
+import {
+  getPersistableProfileImageSource,
+  getVersionedImageUrl,
+} from "@/lib/image-utils";
 import {
   User,
   ShieldCheck,
@@ -37,7 +40,7 @@ export function SettingsPage() {
   const [imgError, setImgError] = useState(false);
 
   const getProfileImagePreview = (profile) => {
-    const image = getProfileImageSource(profile);
+    const image = getPersistableProfileImageSource(profile);
     if (!image) return "";
 
     const version = profile?.profileImageVersion || profile?.updated_at || profile?.profile_updated_at;
@@ -47,7 +50,8 @@ export function SettingsPage() {
   const syncSessionProfile = (profile) => {
     if (!profile || typeof profile !== "object") return;
 
-    const nextImage = getProfileImageSource(profile);
+    const nextImage = getPersistableProfileImageSource(profile);
+    const sessionImage = getPersistableProfileImageSource(session);
     setSession({
       ...session,
       ...profile,
@@ -65,8 +69,8 @@ export function SettingsPage() {
         profile.phone ||
         session?.phone_number ||
         session?.mobile_number,
-      profile_image: nextImage || session?.profile_image || session?.image,
-      image: nextImage || session?.image || session?.profile_image,
+      profile_image: nextImage || sessionImage || "",
+      image: nextImage || sessionImage || "",
       profileImageVersion: profile.profileImageVersion || session?.profileImageVersion,
     });
   };
@@ -113,8 +117,8 @@ export function SettingsPage() {
   useEffect(() => {
     if (!userProfile) return;
 
-    const profileImage = getProfileImageSource(userProfile);
-    const sessionImage = getProfileImageSource(session);
+    const profileImage = getPersistableProfileImageSource(userProfile);
+    const sessionImage = getPersistableProfileImageSource(session);
     const profileName = userProfile.full_name || userProfile.name || "";
     const sessionName = session?.full_name || session?.name || "";
 
@@ -162,7 +166,7 @@ export function SettingsPage() {
       );
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(data.message || "Profile updated successfully.");
       setIsEditingProfile(false);
 
@@ -176,6 +180,31 @@ export function SettingsPage() {
         setImagePreview(getProfileImagePreview(nextProfile) || imagePreview);
         setImgError(false);
       }
+
+      const freshProfile = await queryClient.fetchQuery({
+        queryKey: ["userProfile"],
+        queryFn: async () => {
+          const response = await apiClient.get(USER_PROFILE, {
+            headers: {
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+          });
+          if (response.data?.data) return response.data.data;
+          if (response.data?.user) return response.data.user;
+          return response.data;
+        },
+      });
+
+      if (freshProfile && typeof freshProfile === "object") {
+        const nextProfile = {
+          ...freshProfile,
+          profileImageVersion: Date.now(),
+        };
+        syncSessionProfile(nextProfile);
+        setImagePreview(getProfileImagePreview(nextProfile));
+        setImgError(false);
+      }
+
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
     },
     onError: (error) => {

@@ -24,7 +24,10 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { customStatusLabel, formatStatusLabel, normalizePresence } from "./presence-panel";
 import { UserProfileCard } from "./user-profile-card";
-import { getProfileImageSource, getVersionedImageUrl } from "@/lib/image-utils";
+import {
+  getPersistableProfileImageSource,
+  getVersionedImageUrl,
+} from "@/lib/image-utils";
 
 export function UserLayout({
   children,
@@ -42,7 +45,7 @@ export function UserLayout({
   const [imgError, setImgError] = useState(false);
 
   const profileImage = useMemo(
-    () => getProfileImageSource(session) || null,
+    () => getPersistableProfileImageSource(session) || null,
     [session]
   );
 
@@ -59,20 +62,20 @@ export function UserLayout({
       if (response.data?.user) return response.data.user;
       return response.data;
     },
-    enabled: Boolean(session?.accessToken && !profileImage),
-    staleTime: Infinity,
+    enabled: Boolean(session?.accessToken),
+    staleTime: 30 * 1000,
     gcTime: 30 * 60 * 1000,
-    refetchOnMount: false,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
+    refetchOnReconnect: true,
   });
 
   useEffect(() => {
     const profile = profileQuery.data;
     if (!profile || typeof profile !== "object") return;
 
-    const nextImage = getProfileImageSource(profile);
-    const sessionImage = getProfileImageSource(session);
+    const nextImage = getPersistableProfileImageSource(profile);
+    const sessionImage = getPersistableProfileImageSource(session);
     const nextName = profile.full_name || profile.name || "";
     const sessionName = session?.full_name || session?.name || "";
 
@@ -82,8 +85,8 @@ export function UserLayout({
         ...profile,
         full_name: profile.full_name || profile.name || session?.full_name || session?.name,
         name: profile.name || profile.full_name || session?.name,
-        profile_image: nextImage || session?.profile_image || session?.image,
-        image: nextImage || session?.image || session?.profile_image,
+        profile_image: nextImage || sessionImage || "",
+        image: nextImage || sessionImage || "",
       });
     }
   }, [profileQuery.data, session, setSession]);

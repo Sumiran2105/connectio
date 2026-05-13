@@ -11,7 +11,10 @@ import { COMPANY_UPDATE_PROFILE, COMPANY_CHANGE_PASSWORD, USER_PROFILE } from "@
 import { MfaResetDialog } from "@/features/auth/components/mfa-reset-dialog";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
-import { getProfileImageSource, getVersionedImageUrlCandidates } from "@/lib/image-utils";
+import {
+  getPersistableProfileImageSource,
+  getVersionedImageUrlCandidates,
+} from "@/lib/image-utils";
 import {
   Bell,
   Lock,
@@ -43,14 +46,15 @@ export function SettingsPage() {
   const [isEditingProfile, setIsEditingProfile] = useState(false);
 
   const getProfileImagePreview = (profile) => {
-    const image = getProfileImageSource(profile);
+    const image = getPersistableProfileImageSource(profile);
     return image || "";
   };
 
   const syncSessionProfile = (profile) => {
     if (!profile || typeof profile !== "object") return;
 
-    const nextImage = getProfileImageSource(profile);
+    const nextImage = getPersistableProfileImageSource(profile);
+    const sessionImage = getPersistableProfileImageSource(session);
     const nextSession = {
       ...session,
       ...profile,
@@ -68,8 +72,8 @@ export function SettingsPage() {
         profile.phone ||
         session?.phone_number ||
         session?.mobile_number,
-      profile_image: nextImage || session?.profile_image || session?.image,
-      image: nextImage || session?.image || session?.profile_image,
+      profile_image: nextImage || sessionImage || "",
+      image: nextImage || sessionImage || "",
       profileImageVersion: profile.profileImageVersion || session?.profileImageVersion,
     };
 
@@ -142,8 +146,8 @@ export function SettingsPage() {
   useEffect(() => {
     if (!userProfile) return;
 
-    const profileImage = getProfileImageSource(userProfile);
-    const sessionImage = getProfileImageSource(session);
+    const profileImage = getPersistableProfileImageSource(userProfile);
+    const sessionImage = getPersistableProfileImageSource(session);
     const profileName = userProfile.full_name || userProfile.name || "";
     const sessionName = session?.full_name || session?.name || "";
 
@@ -190,7 +194,7 @@ export function SettingsPage() {
       );
       return response.data;
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       toast.success(data.message || "Profile updated successfully.");
       setIsEditingProfile(false);
 
@@ -203,6 +207,30 @@ export function SettingsPage() {
         syncSessionProfile(nextProfile);
         setImagePreview(getProfileImagePreview(nextProfile) || imagePreview);
       }
+
+      const freshProfile = await queryClient.fetchQuery({
+        queryKey: ["userProfile"],
+        queryFn: async () => {
+          const response = await apiClient.get(USER_PROFILE, {
+            headers: {
+              Authorization: `Bearer ${session?.accessToken}`,
+            },
+          });
+          if (response.data?.data) return response.data.data;
+          if (response.data?.user) return response.data.user;
+          return response.data;
+        },
+      });
+
+      if (freshProfile && typeof freshProfile === "object") {
+        const nextProfile = {
+          ...freshProfile,
+          profileImageVersion: Date.now(),
+        };
+        syncSessionProfile(nextProfile);
+        setImagePreview(getProfileImagePreview(nextProfile));
+      }
+
       queryClient.invalidateQueries({ queryKey: ["userProfile"] });
     },
     onError: (error) => {
