@@ -86,7 +86,7 @@ const MessageBubble = memo(function MessageBubble({
   };
 
   return (
-    <div className={`group relative flex w-full items-end gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
+    <div className={`group relative flex w-full items-start gap-3 ${isMe ? "justify-end" : "justify-start"}`}>
       {!isMe ? (
         <div className="h-8 w-8 shrink-0">
           {showAvatar ? <ChatAvatar name={avatarName} size="size-8" /> : null}

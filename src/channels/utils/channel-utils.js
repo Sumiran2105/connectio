@@ -147,6 +147,7 @@ export const getUserId = (record) => {
 export const getUserName = (record, fallbackId, role) => {
   const user = getUserRecord(record);
   return (
+    record?.pinned_by_name ||
     user?.full_name ||
     user?.name ||
     user?.display_name ||
