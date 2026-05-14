@@ -147,16 +147,16 @@ export const getUserId = (record) => {
 export const getUserName = (record, fallbackId, role) => {
   const user = getUserRecord(record);
   return (
+    record?.username ||
+    user?.username ||
     record?.pinned_by_name ||
     user?.full_name ||
     user?.name ||
     user?.display_name ||
-    user?.username ||
     user?.email ||
     record?.full_name ||
     record?.name ||
     record?.display_name ||
-    record?.username ||
     record?.email ||
     (role?.toLowerCase?.() === "owner" ? "Channel admin" : null) ||
     (fallbackId ? `User ...${fallbackId.slice(-6)}` : "Unknown user")

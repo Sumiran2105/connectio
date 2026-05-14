@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { SquarePen } from "lucide-react";
-
 import { ChannelComposer } from "@/channels/components/channel-composer";
 import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
 import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
@@ -21,7 +20,7 @@ export function ChannelsPage() {
   });
   const { filteredChannels, activeChannel, isLoading, isError } = channelState;
   const { search, setSearch, isMobilePanelOpen, setIsMobilePanelOpen, openChannel } = sidebarState;
-  
+
   // Fetch channel members for mentions
   const { members: channelMembers, isLoading: isFetchingMembers } = useChannelMembers(
     activeChannel?.id,
@@ -110,6 +109,11 @@ export function ChannelsPage() {
         >
           <ChannelMessagePanel
             selectedChannel={activeChannel}
+            currentUser={{
+              name: session?.full_name || session?.name,
+              avatar_url: session?.profile_image || session?.image,
+            }}
+            headerAvatar={activeChannel?.avatar_url || activeChannel?.image}
             headerMeta={(channel) => channel?.visibilityLabel || "Channel"}
             tabs={[
               { value: "chat", label: "Chat" },
@@ -119,6 +123,8 @@ export function ChannelsPage() {
             activeTab={activeTab}
             onTabChange={setActiveTab}
             messages={currentMessages}
+            members={channelMembers}
+            isFetchingMembers={isFetchingMembers}
             isLoading={isMessagesLoading}
             bottomRef={bottomRef}
             onAddReaction={addReaction}
