@@ -79,6 +79,7 @@ export function TeamsPage() {
   const [isAssigningLead, setIsAssigningLead] = useState(false);
   const [assignLeadError, setAssignLeadError] = useState(null);
   const [isDeletingMember, setIsDeletingMember] = useState(null); // stores userId being deleted
+  const [memberToDelete, setMemberToDelete] = useState(null);
   const [teamAdmins, setTeamAdmins] = useState([]);
   const session = useAuthStore((state) => state.session);
 
@@ -187,6 +188,12 @@ export function TeamsPage() {
       }
 
       setTeamMembers(membersData);
+
+      // Update the member count in the selected team and the teams list to keep everything in sync
+      if (selectedTeam?.id === teamId) {
+        setSelectedTeam(prev => prev ? { ...prev, memberCount: membersData.length } : null);
+        setTeams(prev => prev.map(t => t.id === teamId ? { ...t, memberCount: membersData.length } : t));
+      }
     } catch (err) {
       console.error("Error fetching members:", err);
       setMembersError("Failed to load members");
@@ -196,10 +203,10 @@ export function TeamsPage() {
   };
 
   useEffect(() => {
-    if (selectedTeam) {
+    if (selectedTeam?.id) {
       fetchTeamMembers(selectedTeam.id);
     }
-  }, [selectedTeam, session?.accessToken]);
+  }, [selectedTeam?.id, session?.accessToken]);
 
   const onHandleCreateTeam = async (data) => {
     setIsCreating(true);
@@ -513,29 +520,29 @@ export function TeamsPage() {
               <div className="p-6 md:p-10 space-y-10">
                 {/* Stats / Overview */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-                  <div className="p-4 md:p-6 rounded-2xl md:rounded-[28px] border border-brand-line bg-brand-neutral/30">
+                  <div className="p-5 md:p-8 rounded-3xl border border-brand-line bg-white shadow-sm transition-all hover:shadow-md">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Team Members</p>
-                    <div className="mt-3 flex items-end justify-between">
-                      <h4 className="text-2xl md:text-3xl font-extrabold text-brand-ink">{selectedTeam.memberCount}</h4>
-                      <Users className="size-5 md:size-6 text-brand-primary/20 mb-1" />
+                    <div className="mt-4 flex items-center justify-between">
+                      <h4 className="text-3xl md:text-4xl font-extrabold text-brand-ink">{selectedTeam.memberCount}</h4>
+                      <Users className="size-6 md:size-8 text-brand-secondary/10" />
                     </div>
                   </div>
-                  <div className="p-4 md:p-6 rounded-2xl md:rounded-[28px] border border-brand-line bg-brand-neutral/30">
+                  <div className="p-5 md:p-8 rounded-3xl border border-brand-line bg-white shadow-sm transition-all hover:shadow-md">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Team Admins</p>
-                    <div className="mt-3 flex items-end justify-between">
-                      <h4 className="text-base md:text-lg font-bold text-brand-ink truncate pr-2">
+                    <div className="mt-4 flex items-center justify-between">
+                      <h4 className="text-lg md:text-xl font-bold text-brand-ink truncate pr-2">
                         {teamAdmins.length > 0
                           ? teamAdmins.map(a => a.name || a.username || a.email).join(", ")
                           : selectedTeam.lead || "Unassigned"}
                       </h4>
-                      <Shield className="size-5 md:size-6 text-brand-primary/20 mb-1" />
+                      <Shield className="size-6 md:size-8 text-brand-secondary/10" />
                     </div>
                   </div>
-                  <div className="p-4 md:p-6 rounded-2xl md:rounded-[28px] border border-brand-line bg-brand-neutral/30">
+                  <div className="p-5 md:p-8 rounded-3xl border border-brand-line bg-white shadow-sm transition-all hover:shadow-md">
                     <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-secondary/40">Status</p>
-                    <div className="mt-3 flex items-center gap-2">
-                      <div className="size-2 rounded-full bg-emerald-500" />
-                      <h4 className="text-base md:text-lg font-bold text-brand-ink uppercase tracking-wider">Active</h4>
+                    <div className="mt-4 flex items-center gap-3">
+                      <div className="size-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]" />
+                      <h4 className="text-lg md:text-xl font-bold text-brand-ink uppercase tracking-wider">Active</h4>
                     </div>
                   </div>
                 </div>
@@ -636,7 +643,7 @@ export function TeamsPage() {
                                 variant="ghost"
                                 size="icon"
                                 className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
-                                onClick={() => onHandleRemoveMember(member.id || member.user_id || member.email)}
+                                onClick={() => setMemberToDelete(member)}
                                 disabled={isDeletingMember === (member.id || member.user_id || member.email)}
                               >
                                 {isDeletingMember === (member.id || member.user_id || member.email) ? (
@@ -890,6 +897,45 @@ export function TeamsPage() {
               {isAssigningLead ? "Assigning..." : "Set as Team Lead"}
             </Button>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog 
+        open={!!memberToDelete} 
+        onOpenChange={(open) => {
+          if (!open) setMemberToDelete(null);
+        }}
+      >
+        <DialogContent className="rounded-3xl md:rounded-[32px] border-none bg-white p-0 shadow-2xl w-[95vw] max-w-md overflow-hidden">
+          <div className="h-2 bg-red-500 w-full" />
+          <DialogHeader className="px-8 pt-8 pb-4">
+            <div className="size-14 bg-red-50 rounded-2xl flex items-center justify-center mb-4 mx-auto">
+              <Trash2 className="size-7 text-red-500" />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-brand-ink text-center">Remove Member?</DialogTitle>
+            <DialogDescription className="text-brand-secondary font-medium text-center">
+              Are you sure you want to remove <span className="text-brand-ink font-bold">{memberToDelete?.name || memberToDelete?.username || memberToDelete?.email}</span> from this team? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-8 pb-8 flex gap-3">
+            <Button
+              variant="outline"
+              className="flex-1 h-12 rounded-2xl border-brand-line font-bold text-brand-ink hover:bg-brand-soft"
+              onClick={() => setMemberToDelete(null)}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="flex-1 h-12 rounded-2xl bg-red-500 hover:bg-red-600 text-white font-bold shadow-lg shadow-red-500/20 border-none"
+              onClick={() => {
+                onHandleRemoveMember(memberToDelete.id || memberToDelete.user_id || memberToDelete.email);
+                setMemberToDelete(null);
+              }}
+            >
+              Remove
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
 

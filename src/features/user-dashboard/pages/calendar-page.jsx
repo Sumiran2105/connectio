@@ -261,8 +261,8 @@ export function CalendarPage() {
       )}
 
       {/* ── Page Layout Breakout ── */}
-      <div className="fixed top-20 bottom-0 left-0 lg:left-[72px] right-0 bg-[#f8fafc] z-[20] flex justify-center p-4 sm:p-6 overflow-hidden">
-        <div className="flex flex-col lg:flex-row gap-6 w-full max-w-[1400px] h-full">
+      <div className="fixed top-20 bottom-0 left-0 lg:left-[72px] right-0 bg-[#f8fafc] z-[20] flex justify-center p-4 sm:p-6 overflow-y-auto">
+        <div className="flex flex-col lg:flex-row gap-6 w-full max-w-[1400px] h-fit lg:h-full pb-10 lg:pb-0">
 
         {/* Calendar Grid */}
         <div className="flex-1 flex flex-col gap-3 bg-white rounded-[24px] border border-brand-line shadow-sm p-5">
@@ -309,7 +309,7 @@ export function CalendarPage() {
                 <button
                   key={day}
                   onClick={()=>setSelectedDay(day)}
-                  className={`relative flex flex-col items-center gap-1 px-1 py-1.5 rounded-xl transition-all duration-150 min-h-[56px] group ${
+                  className={`relative flex flex-col items-center gap-1 px-1 py-1.5 rounded-xl transition-all duration-150 min-h-[44px] sm:min-h-[56px] group ${
                     isSel?"bg-brand-primary shadow-md shadow-brand-primary/20 ring-2 ring-brand-primary/20"
                          :isTod?"bg-brand-soft ring-2 ring-brand-primary/30"
                                :"hover:bg-brand-neutral"
@@ -344,11 +344,11 @@ export function CalendarPage() {
           {/* Selected Day */}
           <div className="bg-white border border-brand-line rounded-[20px] p-4 shadow-sm flex-1 flex flex-col">
             <div className="flex items-center gap-3 mb-3 pb-3 border-b border-brand-line/60">
-              <div className="size-10 rounded-xl bg-brand-primary/10 flex flex-col items-center justify-center">
+              <div className="size-10 rounded-xl bg-brand-primary/10 flex flex-col items-center justify-center shrink-0">
                 <CalIcon className="size-4 text-brand-primary" />
               </div>
-              <div>
-                <p className="text-[10px] text-brand-secondary font-bold uppercase tracking-widest">{MONTHS[month]}</p>
+              <div className="min-w-0">
+                <p className="text-[10px] text-brand-secondary font-bold uppercase tracking-widest truncate">{MONTHS[month]}</p>
                 <p className="text-xl font-black text-brand-ink leading-none">{selectedDay}</p>
               </div>
             </div>

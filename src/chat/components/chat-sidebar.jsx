@@ -160,16 +160,18 @@ export function ChatSidebar({
             ) : null}
           </div>
         </div>
+      </div>
 
-        <div className="p-5 pt-0">
-          <button
-            type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition hover:border-brand-primary/20 hover:bg-brand-soft"
-          >
-            <PlusIcon className="size-4" />
-            Invite to Connectio
-          </button>
-        </div>
+      <div className="mt-auto border-t border-gray-200/50 bg-white/80 p-5 backdrop-blur-xl">
+        <button
+          type="button"
+          className="group flex w-full items-center justify-center gap-2.5 rounded-2xl border border-gray-200 bg-white px-4 py-3.5 text-sm font-bold text-gray-700 shadow-sm transition-all duration-300 hover:border-brand-primary/30 hover:bg-brand-primary hover:text-white hover:shadow-lg hover:shadow-brand-primary/20 active:scale-[0.98]"
+        >
+          <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-soft transition-colors duration-300 group-hover:bg-white/20">
+            <PlusIcon className="size-4 transition-transform duration-300 group-hover:rotate-90" />
+          </div>
+          Invite to Connectio
+        </button>
       </div>
     </aside>
   );

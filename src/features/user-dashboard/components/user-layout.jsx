@@ -210,7 +210,7 @@ export function UserLayout({
               <div className="relative flex size-10 items-center justify-center rounded-lg bg-brand-primary shadow-lg">
                 <Users2 className="size-6 text-white" />
                 <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-sm bg-white p-0.5 animate-pulse">
-                  <span className="text-[8px] font-bold text-brand-primary">T</span>
+                  <span className="text-[8px] font-bold text-brand-primary">C</span>
                 </div>
               </div>
             </div>
