@@ -118,6 +118,12 @@ function buildWebSocketBasePath() {
   return `${apiBase.replace(/^http/, "ws")}/ws`;
 }
 
+export const MENTIONS_UNREAD = "/api/v1/mentions/unread";
+export const MENTIONS_ALL = "/api/v1/mentions";
+export const MENTION_DETAIL = (mentionId) => `/api/v1/mentions/${mentionId}`;
+export const MENTION_MARK_READ = (mentionId) => `/api/v1/mentions/${mentionId}/mark-read`;
+export const MENTIONS_MARK_ALL_READ = "/api/v1/mentions/mark-all-read";
+
 export function CHAT_WEBSOCKET(channelId) {
   if (!channelId) {
     return null;

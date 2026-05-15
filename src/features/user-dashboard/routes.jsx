@@ -14,6 +14,7 @@ import { ChannelsPage } from "./pages/channels-page";
 import { SettingsPage } from "./pages/settings-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
+import { ActivityPage} from "./pages/activity-page";
 
 function ProtectedUserRoute({ children }) {
   const session = useAuthStore((state) => state.session);
@@ -125,6 +126,15 @@ export const UserRoutes = (
         </ProtectedUserRoute>
       }
     />
+      <Route 
+      path="/user/dashboard/activity"
+      element={
+        <ProtectedUserRoute>
+          <ActivityPage />
+        </ProtectedUserRoute>
+      }
+      />
+
     <Route
       path="/user/dashboard/settings"
       element={
