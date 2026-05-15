@@ -89,25 +89,47 @@ export const CHANNEL_UNREAD_COUNT = (channelId) =>
   `/api/v1/messages/channels/${channelId}/unread-count`;
 
 export const MEETINGS_CREATE = "/api/v1/meetings";
+export const MEETING_DETAILS = (meetingId) => `/api/v1/meetings/${meetingId}`;
+export const MEETING_CALL = (targetUserId) => `/api/v1/meetings/call/${targetUserId}`;
+export const MEETING_JOIN = (meetingId) => `/api/v1/meetings/${meetingId}/join`;
+export const MEETING_JOIN_BY_LINK = (meetingLink) =>
+  `/api/v1/meetings/join/${encodeURIComponent(meetingLink)}`;
+export const MEETING_LIVEKIT_TOKEN = (meetingId) => `/api/v1/meetings/${meetingId}/livekit-token`;
+export const MEETING_LEAVE = (meetingId) => `/api/v1/meetings/${meetingId}/leave`;
+export const MEETING_CHAT = (meetingId) => `/api/v1/meetings/${meetingId}/chat`;
+export const MEETING_ACCEPT = (meetingId) => `/api/v1/meetings/${meetingId}/accept`;
+export const MEETING_DECLINE = (meetingId) => `/api/v1/meetings/${meetingId}/decline`;
+
+function buildWebSocketBasePath() {
+  const explicitWsBase = import.meta.env.VITE_WS_BASE_URL?.replace(/\/$/, "");
+
+  if (explicitWsBase) {
+    return /\/ws$/i.test(explicitWsBase) ? explicitWsBase : `${explicitWsBase}/ws`;
+  }
+
+  if (import.meta.env.DEV && typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    return `${protocol}://${window.location.host}/backend-ws`;
+  }
+
+  const apiBase =
+    (import.meta.env.VITE_API_BASE_URL || "https://collabration-teams.onrender.com").replace(/\/$/, "");
+
+  return `${apiBase.replace(/^http/, "ws")}/ws`;
+}
 
 export function CHAT_WEBSOCKET(channelId) {
   if (!channelId) {
     return null;
   }
 
-  const explicitWsBase = import.meta.env.VITE_WS_BASE_URL?.replace(/\/$/, "");
+  return `${buildWebSocketBasePath()}/chat/${channelId}`;
+}
 
-  if (explicitWsBase) {
-    return `${explicitWsBase}/ws/chat/${channelId}`;
+export function USER_EVENTS_WEBSOCKET(userId) {
+  if (!userId) {
+    return null;
   }
 
-  if (import.meta.env.DEV && typeof window !== "undefined") {
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    return `${protocol}://${window.location.host}/backend-ws/chat/${channelId}`;
-  }
-
-  const apiBase =
-    (import.meta.env.VITE_API_BASE_URL || "https://collabration-teams.onrender.com").replace(/\/$/, "");
-
-  return `${apiBase.replace(/^http/, "ws")}/ws/chat/${channelId}`;
+  return `${buildWebSocketBasePath()}/presence/${userId}`;
 }

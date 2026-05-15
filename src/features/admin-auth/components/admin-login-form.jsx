@@ -48,6 +48,7 @@ export function AdminLoginForm() {
           expiresIn: data.expires_in,
           role: data.user_role,
           email: variables.email,
+          userId: data.user_id || data.id || null,
         });
 
         toast.success("Super admin detected. Redirecting to the super admin portal.");
@@ -62,6 +63,7 @@ export function AdminLoginForm() {
           expiresIn: data.expires_in,
           role: data.user_role,
           email: variables.email,
+          userId: data.user_id || data.id || null,
           mfaVerified: true,
         });
 

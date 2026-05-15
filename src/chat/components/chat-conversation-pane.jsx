@@ -29,6 +29,8 @@ export function ChatConversationPane({
   onMessageClick,
   onRemoveReaction,
   onSendMessage,
+  onStartAudioCall,
+  onStartVideoCall,
   onTabChange,
   reactionsByMessageId,
   sendMessageMutation,
@@ -67,15 +69,32 @@ export function ChatConversationPane({
               </div>
 
               <div className="flex items-center gap-1 sm:gap-2">
-                {[Video, Phone, Search, MoreVertical].map((Icon, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    className="rounded-xl p-2 text-gray-700 transition hover:bg-brand-soft hover:text-brand-primary"
-                  >
-                    <Icon className="size-5" />
-                  </button>
-                ))}
+                <button
+                  type="button"
+                  onClick={onStartVideoCall}
+                  className="rounded-xl p-2 text-gray-700 transition hover:bg-brand-soft hover:text-brand-primary"
+                >
+                  <Video className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={onStartAudioCall}
+                  className="rounded-xl p-2 text-gray-700 transition hover:bg-brand-soft hover:text-brand-primary"
+                >
+                  <Phone className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl p-2 text-gray-700 transition hover:bg-brand-soft hover:text-brand-primary"
+                >
+                  <Search className="size-5" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl p-2 text-gray-700 transition hover:bg-brand-soft hover:text-brand-primary"
+                >
+                  <MoreVertical className="size-5" />
+                </button>
               </div>
             </div>
           </header>

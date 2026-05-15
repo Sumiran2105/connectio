@@ -1,7 +1,6 @@
 import { Route, Navigate } from "react-router-dom";
 import { AdminDashboardPage } from "./pages/admin-dashboard-page";
 import { ChannelsPage } from "./pages/channels-page";
-import { MeetingsPage } from "./pages/meetings-page";
 import { TeamsPage } from "./pages/teams-page";
 import { CompanyApprovals } from "./pages/company-approvals";
 import { CompanyUsers } from "./pages/company-users";
@@ -10,6 +9,8 @@ import { SettingsPage } from "./pages/settings-page";
 import { ChatPage } from "@/chat/pages/chat-page";
 import { AdminMfaSetupPage } from "@/features/admin-auth/pages/admin-mfa-setup-page";
 import { AdminMfaVerifyPage } from "@/features/admin-auth/pages/admin-mfa-verify-page";
+import { SharedMeetPage } from "@/features/meetings/pages/meet-page";
+import { SharedMeetingRoomPage } from "@/features/meetings/pages/meeting-room-page";
 import { useAuthStore } from "@/store/auth-store";
 
 function ProtectedAdminRoute({ children }) {
@@ -115,7 +116,15 @@ export const AdminRoutes = (
       path="/admin/dashboard/meetings"
       element={
         <ProtectedAdminRoute>
-          <MeetingsPage />
+          <SharedMeetPage layout="admin" />
+        </ProtectedAdminRoute>
+      }
+    />
+    <Route
+      path="/admin/dashboard/meetings/:meetingId/room"
+      element={
+        <ProtectedAdminRoute>
+          <SharedMeetingRoomPage layout="admin" />
         </ProtectedAdminRoute>
       }
     />

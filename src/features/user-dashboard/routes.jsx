@@ -1,11 +1,12 @@
 import { Navigate, Route } from "react-router-dom";
 
+import { SharedMeetPage } from "@/features/meetings/pages/meet-page";
+import { SharedMeetingRoomPage } from "@/features/meetings/pages/meeting-room-page";
 import { useAuthStore } from "@/store/auth-store";
 import { UserDashboardPage } from "./pages/user-dashboard-page";
 import { UserPlaceholderPage } from "./pages/user-placeholder-page";
 import { FilesPage } from "./pages/files-page";
 import { ChatPage } from "@/chat/pages/chat-page";
-import { MeetPage } from "./pages/meet-page";
 import { CalendarPage } from "./pages/calendar-page";
 import { AiPage } from "./pages/ai-page";
 import { TeamsPage } from "./pages/teams-page";
@@ -72,7 +73,15 @@ export const UserRoutes = (
       path="/user/dashboard/meet"
       element={
         <ProtectedUserRoute>
-          <MeetPage />
+          <SharedMeetPage layout="user" />
+        </ProtectedUserRoute>
+      }
+    />
+    <Route
+      path="/user/dashboard/meet/:meetingId/room"
+      element={
+        <ProtectedUserRoute>
+          <SharedMeetingRoomPage layout="user" />
         </ProtectedUserRoute>
       }
     />

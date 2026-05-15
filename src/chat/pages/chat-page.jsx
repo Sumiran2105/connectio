@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { useLocation } from "react-router-dom";
 
 import { AdminLayout } from "@/features/admin-dashboard/components/admin-layout";
+import { useMeetingLauncher } from "@/features/meetings/hooks/use-meeting-launcher";
 import { UserLayout } from "@/features/user-dashboard/components/user-layout";
 import { ChatConversationPane } from "../components/chat-conversation-pane";
 import { ChatSidebar } from "../components/chat-sidebar";
@@ -30,6 +31,7 @@ export function ChatPage({ layout = "user" }) {
   const chat = useChatWorkspace(routeTargetUser);
   const handledSelectionKeyRef = useRef(null);
   const Layout = layout === "admin" ? AdminLayout : UserLayout;
+  const meetings = useMeetingLauncher(layout);
   const layoutProps = {
     showFloatingActions: false,
     contentClassName: "!p-0 h-full !overflow-hidden",
@@ -87,6 +89,16 @@ export function ChatPage({ layout = "user" }) {
             onMessageClick={chat.handleMessageClick}
             onRemoveReaction={chat.removeReaction}
             onSendMessage={chat.sendMessage}
+            onStartAudioCall={() =>
+              chat.activeContact
+                ? meetings.startDirectCall(chat.activeContact, { mode: "audio" })
+                : null
+            }
+            onStartVideoCall={() =>
+              chat.activeContact
+                ? meetings.startDirectCall(chat.activeContact, { mode: "video" })
+                : null
+            }
             onTabChange={chat.setActiveTab}
             reactionsByMessageId={chat.reactionsByMessageId}
             sendMessageMutation={chat.sendMessageMutation}

@@ -161,7 +161,7 @@ export function LandingPage() {
         </div>
       </header>
 
-      <section id="home" className="relative flex flex-col items-center justify-center min-h-[calc(100vh-80px)] pt-16 pb-24 px-6 overflow-hidden">
+      <section id="home" className="relative overflow-hidden px-6 pb-24 pt-14 lg:px-10 lg:pt-20">
 
         {/* Glowing Background concentric circles */}
         <div className="absolute inset-0 pointer-events-none flex items-center justify-center overflow-hidden z-0 opacity-60">
@@ -171,29 +171,81 @@ export function LandingPage() {
           <div className="absolute size-[1300px] rounded-full border border-brand-primary/5 animate-pulse [animation-duration:6s] [animation-delay:3s]" />
         </div>
 
-        {/* Massive Title Text (Above the phone) */}
-        <div className="relative z-10 w-full max-w-5xl mx-auto flex flex-col pointer-events-none mb-12 sm:mb-16">
+        <div className="relative z-10 mx-auto grid min-h-[calc(100vh-150px)] max-w-7xl items-center gap-14 lg:grid-cols-[0.9fr_1.1fr]">
+        {/* Hero copy */}
+        <div className="relative max-w-2xl">
           <style>{`
             @keyframes slideUpFade {
               from { opacity: 0; transform: translateY(40px); }
               to { opacity: 1; transform: translateY(0); }
             }
           `}</style>
-          <h1 className="text-[60px] sm:text-[90px] lg:text-[120px] font-bold leading-[0.9] tracking-tight text-brand-ink/90">
-            <span className="block text-center lg:text-left" style={{ animation: "slideUpFade 1s ease-out forwards" }}>
-              Welcome
+          <div
+            className="mb-6 inline-flex items-center gap-2 rounded-full border border-brand-primary/15 bg-white/70 px-4 py-2 shadow-sm backdrop-blur"
+            style={{ animation: "slideUpFade 0.8s ease-out forwards" }}
+          >
+            <Sparkles className="size-4 text-brand-primary" />
+            <span className="text-xs font-semibold uppercase tracking-[0.22em] text-brand-primary">
+              Enterprise collaboration
             </span>
-            <span className="block text-center lg:text-right text-brand-primary opacity-0" style={{ animation: "slideUpFade 1s ease-out 0.4s forwards" }}>
-              To Connectio
+          </div>
+
+          <h1 className="text-4xl font-bold leading-[0.98] tracking-tight text-brand-ink sm:text-6xl lg:text-7xl">
+            <span className="block" style={{ animation: "slideUpFade 1s ease-out forwards" }}>
+              Build secure workspaces
+            </span>
+            <span
+              className="mt-3 block text-brand-primary opacity-0"
+              style={{ animation: "slideUpFade 1s ease-out 0.2s forwards" }}
+            >
+              before the first teammate joins.
             </span>
           </h1>
+
+          <p
+            className="mt-7 max-w-xl text-base leading-7 text-brand-secondary opacity-0 sm:text-lg"
+            style={{ animation: "slideUpFade 1s ease-out 0.35s forwards" }}
+          >
+            Connectio gives organizations a cleaner way to register, verify domains, and launch collaboration
+            with structure already in place.
+          </p>
+
+          <div
+            className="mt-8 flex flex-col gap-3 opacity-0 sm:flex-row"
+            style={{ animation: "slideUpFade 1s ease-out 0.45s forwards" }}
+          >
+            <Button className="h-12 rounded-2xl px-7 shadow-lg shadow-brand-primary/20" asChild>
+              <Link to="/register">Create workspace</Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 rounded-2xl border-brand-line bg-white/80 px-7 text-brand-ink hover:bg-white"
+              asChild
+            >
+              <Link to="/login">Open portal</Link>
+            </Button>
+          </div>
+
+          <div className="mt-10 grid gap-3 sm:grid-cols-3">
+            {highlights.map(({ title, description, icon: Icon }, index) => (
+              <div
+                key={title}
+                className="rounded-[24px] border border-white/80 bg-white/70 p-4 shadow-sm backdrop-blur opacity-0"
+                style={{ animation: `slideUpFade 0.8s ease-out ${0.55 + index * 0.1}s forwards` }}
+              >
+                <Icon className="mb-3 size-5 text-brand-primary" />
+                <p className="text-sm font-semibold text-brand-ink">{title}</p>
+                <p className="mt-1 text-xs leading-5 text-brand-secondary">{description}</p>
+              </div>
+            ))}
+          </div>
         </div>
 
         {/* Center Mockup with Floating Elements */}
         <div className="relative z-30 flex justify-center opacity-0" style={{ animation: "slideUpFade 1s ease-out 0.6s forwards" }}>
 
           {/* Floating Element 1 - Top Left */}
-          <div className="hidden lg:flex absolute top-[15%] -left-[170px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:5s]">
+          <div className="hidden 2xl:flex absolute top-[15%] -left-[170px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:5s]">
             <div className="size-14 rounded-2xl bg-gradient-to-br from-brand-primary/10 to-brand-primary/5 text-brand-primary flex items-center justify-center">
               <ShieldCheck className="size-7" />
             </div>
@@ -203,7 +255,7 @@ export function LandingPage() {
           </div>
 
           {/* Floating Element 2 - Bottom Left */}
-          <div className="hidden lg:flex absolute bottom-[25%] -left-[140px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:5.5s] [animation-delay:0.8s]">
+          <div className="hidden 2xl:flex absolute bottom-[25%] -left-[140px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:5.5s] [animation-delay:0.8s]">
             <div className="size-14 rounded-2xl bg-gradient-to-br from-emerald-500/10 to-emerald-500/5 text-emerald-600 flex items-center justify-center">
               <Globe className="size-7" />
             </div>
@@ -213,7 +265,7 @@ export function LandingPage() {
           </div>
 
           {/* Floating Element 3 - Top Right */}
-          <div className="hidden lg:flex absolute top-[20%] -right-[150px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:4.5s] [animation-delay:0.4s]">
+          <div className="hidden 2xl:flex absolute top-[20%] -right-[150px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:4.5s] [animation-delay:0.4s]">
             <div className="size-14 rounded-2xl bg-gradient-to-br from-amber-500/10 to-amber-500/5 text-amber-500 flex items-center justify-center">
               <CheckCircle2 className="size-7" />
             </div>
@@ -223,7 +275,7 @@ export function LandingPage() {
           </div>
 
           {/* Floating Element 4 - Bottom Right */}
-          <div className="hidden lg:flex absolute bottom-[15%] -right-[180px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:6s] [animation-delay:1.5s]">
+          <div className="hidden 2xl:flex absolute bottom-[15%] -right-[180px] flex-col items-center gap-3 bg-white/90 backdrop-blur p-4 rounded-[28px] shadow-[0_20px_40px_rgba(68,83,74,0.08)] border border-white animate-bounce [animation-duration:6s] [animation-delay:1.5s]">
             <div className="size-14 rounded-2xl bg-gradient-to-br from-indigo-500/10 to-indigo-500/5 text-indigo-600 flex items-center justify-center">
               <Building2 className="size-7" />
             </div>
@@ -313,27 +365,6 @@ export function LandingPage() {
             <div className="absolute bottom-2 left-1/2 -translate-x-1/2 w-32 h-1 bg-brand-line rounded-full" />
           </div>
         </div>
-
-        {/* Bottom Call to Actions overlaid to match layout */}
-        <div className="w-full max-w-7xl mx-auto flex flex-col md:flex-row items-center md:items-end justify-between mt-12 md:mt-[-40px] z-40 relative px-6 lg:px-10">
-
-          <div className="text-center md:text-left max-w-sm mb-10 md:mb-0">
-            <h2 className="text-2xl sm:text-3xl font-bold leading-[1.2] text-brand-ink">
-              The ultimate enterprise <br /> platform is here.
-            </h2>
-            <div className="flex gap-3 mt-6 justify-center md:justify-start">
-              <Button className="rounded-2xl h-12 px-6 shadow-md shadow-brand-primary/20" asChild>
-                <Link to="/register">Get Started Now</Link>
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex flex-col items-center md:items-end gap-3 max-w-xs text-center md:text-right">
-            <p className="text-brand-secondary font-medium text-sm leading-relaxed">
-              Secure onboarding. Seamless collaboration. <br className="hidden md:block" /> Goodbye tracking nightmares.
-            </p>
-          </div>
-
         </div>
       </section>
 
@@ -543,43 +574,32 @@ export function LandingPage() {
         </div>
       </section>
 
-      <section id="contact" className="relative pb-32 pt-24 overflow-hidden">
+      <section id="contact" className="relative overflow-hidden pb-32 pt-24">
         {/* Glow effect blending from previous sections */}
         <div className="absolute top-0 left-[20%] w-[500px] h-[500px] bg-brand-primary/10 blur-[130px] rounded-full pointer-events-none z-10" />
-
-        {/* Ambient Video Background */}
-        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-          <video
-            autoPlay
-            loop
-            muted
-            playsInline
-            className="w-full h-full object-cover"
-          >
-            <source src="/video.mp4" type="video/mp4" />
-          </video>
-        </div>
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,_rgba(0,105,71,0.16),_transparent_35%),linear-gradient(135deg,_rgba(255,255,255,0.9),_rgba(237,241,238,0.85))]" />
+        <div className="absolute inset-x-6 top-10 z-0 h-px bg-gradient-to-r from-transparent via-brand-primary/20 to-transparent lg:inset-x-10" />
 
         <div className="relative z-10 mx-auto max-w-7xl px-6 lg:px-10">
           <div className="grid gap-12 lg:grid-cols-3 items-center">
 
             <div className="space-y-6 lg:col-span-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand-line/60 bg-transparent shadow-sm">
-                <Mail className="size-3.5 text-black" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-black">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-brand-line/60 bg-white/70 shadow-sm backdrop-blur">
+                <Mail className="size-3.5 text-brand-primary" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand-primary">
                   Get in touch
                 </p>
               </div>
-              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-black leading-[1.1]">
+              <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold tracking-tight text-brand-ink leading-[1.1]">
                 Talk to the onboarding team
               </h2>
-              <p className="text-sm sm:text-base text-black font-medium leading-relaxed max-w-md">
+              <p className="text-sm sm:text-base text-brand-secondary font-medium leading-relaxed max-w-md">
                 Need enterprise pricing or have security questions? We are here to guide you through the process quickly.
               </p>
             </div>
 
             <div className="lg:col-span-2 grid gap-6 sm:grid-cols-2">
-              <a href="mailto:onboarding@levitica.com" className="group relative overflow-hidden rounded-[32px] border border-brand-line/60 bg-transparent p-8 transition-all duration-500 hover:bg-white/10 hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-2 cursor-pointer">
+              <a href="mailto:onboarding@levitica.com" className="group relative overflow-hidden rounded-[32px] border border-brand-line/60 bg-white/70 p-8 transition-all duration-500 hover:bg-white hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-2 cursor-pointer backdrop-blur">
                 <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
                 {/* Decorative border glow top */}
@@ -591,15 +611,15 @@ export function LandingPage() {
                   </div>
                   <div className="mt-auto w-full">
                     <div className="flex items-center justify-between">
-                      <p className="text-lg font-bold text-black mb-1 transition-colors">Email Us</p>
-                      <ArrowRight className="size-4 text-black opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" />
+                      <p className="text-lg font-bold text-brand-ink mb-1 transition-colors">Email Us</p>
+                      <ArrowRight className="size-4 text-brand-primary opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" />
                     </div>
-                    <p className="text-black text-sm font-medium">onboarding@levitica.com</p>
+                    <p className="text-brand-secondary text-sm font-medium">onboarding@levitica.com</p>
                   </div>
                 </div>
               </a>
 
-              <a href="tel:+919876543210" className="group relative overflow-hidden rounded-[32px] border border-brand-line/60 bg-transparent p-8 transition-all duration-500 hover:bg-white/10 hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-2 cursor-pointer delay-75">
+              <a href="tel:+919876543210" className="group relative overflow-hidden rounded-[32px] border border-brand-line/60 bg-white/70 p-8 transition-all duration-500 hover:bg-white hover:shadow-2xl hover:shadow-brand-primary/10 hover:-translate-y-2 cursor-pointer delay-75 backdrop-blur">
                 <div className="absolute inset-0 bg-gradient-to-bl from-brand-primary/10 via-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
                 {/* Decorative border glow top */}
@@ -611,10 +631,10 @@ export function LandingPage() {
                   </div>
                   <div className="mt-auto w-full">
                     <div className="flex items-center justify-between">
-                      <p className="text-lg font-bold text-black mb-1 transition-colors">Call Support</p>
-                      <ArrowRight className="size-4 text-black opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" />
+                      <p className="text-lg font-bold text-brand-ink mb-1 transition-colors">Call Support</p>
+                      <ArrowRight className="size-4 text-brand-primary opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-500" />
                     </div>
-                    <p className="text-black text-sm font-medium">+91 98765 43210</p>
+                    <p className="text-brand-secondary text-sm font-medium">+91 98765 43210</p>
                   </div>
                 </div>
               </a>

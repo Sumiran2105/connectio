@@ -19,6 +19,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { apiClient } from "@/lib/client";
+import { useMeetingLauncher } from "@/features/meetings/hooks/use-meeting-launcher";
 import { useAuthStore } from "@/store/auth-store";
 import { COMPANY_USERS, DM_USERS_SEARCH } from "@/config/api";
 import {
@@ -67,6 +68,7 @@ function formatLastActive(value) {
 export function CompanyUsers() {
   const navigate = useNavigate();
   const session = useAuthStore((state) => state.session);
+  const meetings = useMeetingLauncher("admin");
   const [searchQuery, setSearchQuery] = useState("");
   const [userToDelete, setUserToDelete] = useState(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -135,10 +137,7 @@ export function CompanyUsers() {
   };
 
   const handleCall = (user) => {
-    toast.success(`Calling ${user.name || user.email}...`, {
-      description: "Connecting to secure voice line.",
-      icon: <Phone className="size-4 text-emerald-500" />,
-    });
+    void meetings.startDirectCall(user, { mode: "audio" });
   };
 
   const deleteUserMutation = useMutation({

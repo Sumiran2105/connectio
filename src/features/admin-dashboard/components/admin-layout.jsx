@@ -319,7 +319,9 @@ export function AdminLayout({
                   <div className="space-y-1.5">
                     {group.items.map((item) => {
                       const Icon = item.icon;
-                      const isActive = location.pathname === item.path;
+                      const isActive =
+                        location.pathname === item.path ||
+                        location.pathname.startsWith(`${item.path}/`);
 
                       return (
                         <button
@@ -380,9 +382,17 @@ export function AdminLayout({
 
               {(() => {
                 const activeGroup = sidebarGroups.find(group =>
-                  group.items.some(item => location.pathname === item.path)
+                  group.items.some(
+                    (item) =>
+                      location.pathname === item.path ||
+                      location.pathname.startsWith(`${item.path}/`)
+                  )
                 );
-                const activeItem = activeGroup?.items.find(item => location.pathname === item.path);
+                const activeItem = activeGroup?.items.find(
+                  (item) =>
+                    location.pathname === item.path ||
+                    location.pathname.startsWith(`${item.path}/`)
+                );
 
                 if (!activeGroup || !activeItem) return null;
 

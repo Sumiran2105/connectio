@@ -5,6 +5,7 @@ import { AdminRoutes } from "@/features/admin-dashboard/routes";
 import { LoginPage } from "@/features/auth/pages/login";
 import { RegisterPage } from "@/features/auth/pages/register";
 import { LandingPage } from "@/features/landing/pages/landing";
+import { IncomingCallLayer } from "@/features/meetings/components/incoming-call-layer";
 import { SuperAdminRoutes } from "@/features/super-admin-dashboard/routes";
 import { UserRoutes } from "@/features/user-dashboard/routes";
 import { useAuthStore } from "@/store/auth-store";
@@ -64,6 +65,7 @@ export function AppRouter() {
   return (
     <BrowserRouter>
       <SessionExpiryHandler />
+      <IncomingCallLayer />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
