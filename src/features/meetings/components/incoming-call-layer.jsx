@@ -85,6 +85,38 @@ function getActiveMeetingId(pathname) {
   return match?.[1] || null;
 }
 
+function createRingToneBurst(audioContext) {
+  const oscillatorFrequencies = [740, 622];
+  const burstStartTime = audioContext.currentTime + 0.02;
+  const toneDuration = 0.32;
+  const toneGap = 0.18;
+
+  oscillatorFrequencies.forEach((frequency, index) => {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    const toneStart = burstStartTime + index * (toneDuration + toneGap);
+    const toneEnd = toneStart + toneDuration;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(frequency, toneStart);
+
+    gainNode.gain.setValueAtTime(0.0001, toneStart);
+    gainNode.gain.exponentialRampToValueAtTime(0.07, toneStart + 0.04);
+    gainNode.gain.exponentialRampToValueAtTime(0.0001, toneEnd);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.start(toneStart);
+    oscillator.stop(toneEnd + 0.04);
+
+    oscillator.onended = () => {
+      oscillator.disconnect();
+      gainNode.disconnect();
+    };
+  });
+}
+
 export function IncomingCallLayer() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -93,6 +125,8 @@ export function IncomingCallLayer() {
   const heartbeatRef = useRef(null);
   const reconnectRef = useRef(null);
   const activeMeetingIdRef = useRef(null);
+  const ringtoneContextRef = useRef(null);
+  const ringtoneLoopRef = useRef(null);
   const [incomingCall, setIncomingCall] = useState(null);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
@@ -100,6 +134,51 @@ export function IncomingCallLayer() {
   const userId = getSessionUserId(session);
   const workspaceVariant = getWorkspaceVariant(session?.role);
   const activeMeetingId = getActiveMeetingId(location.pathname);
+
+  function stopRingtone() {
+    if (ringtoneLoopRef.current) {
+      window.clearInterval(ringtoneLoopRef.current);
+      ringtoneLoopRef.current = null;
+    }
+
+    if (ringtoneContextRef.current) {
+      const currentContext = ringtoneContextRef.current;
+      ringtoneContextRef.current = null;
+      void currentContext.close().catch(() => undefined);
+    }
+  }
+
+  async function startRingtone() {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return;
+    }
+
+    stopRingtone();
+
+    try {
+      const audioContext = new AudioContextClass();
+      ringtoneContextRef.current = audioContext;
+
+      if (audioContext.state === "suspended") {
+        await audioContext.resume();
+      }
+
+      createRingToneBurst(audioContext);
+      ringtoneLoopRef.current = window.setInterval(() => {
+        if (audioContext.state === "running") {
+          createRingToneBurst(audioContext);
+        }
+      }, 2800);
+    } catch {
+      stopRingtone();
+    }
+  }
 
   useEffect(() => {
     activeMeetingIdRef.current = activeMeetingId;
@@ -112,6 +191,7 @@ export function IncomingCallLayer() {
   useEffect(() => {
     if (!accessToken || !userId || session?.role === "SUPER_ADMIN") {
       setIncomingCall(null);
+      stopRingtone();
       return undefined;
     }
 
@@ -237,6 +317,7 @@ export function IncomingCallLayer() {
     return () => {
       disposed = true;
       clearTimers();
+      stopRingtone();
 
       if (
         socketRef.current &&
@@ -249,6 +330,18 @@ export function IncomingCallLayer() {
       socketRef.current = null;
     };
   }, [accessToken, session?.role, userId]);
+
+  useEffect(() => {
+    if (incomingCall?.meeting?.id) {
+      void startRingtone();
+      return () => {
+        stopRingtone();
+      };
+    }
+
+    stopRingtone();
+    return undefined;
+  }, [incomingCall?.meeting?.id]);
 
   async function dismissIncomingCall(shouldNotifyBackend = false) {
     if (shouldNotifyBackend && incomingCall?.meeting?.id && accessToken) {
@@ -270,6 +363,7 @@ export function IncomingCallLayer() {
       }
     }
 
+    stopRingtone();
     setIncomingCall(null);
   }
 
@@ -300,6 +394,7 @@ export function IncomingCallLayer() {
         },
       });
 
+      stopRingtone();
       setIncomingCall(null);
     } catch (error) {
       toast.error(
