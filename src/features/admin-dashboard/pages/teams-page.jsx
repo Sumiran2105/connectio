@@ -498,7 +498,7 @@ export function TeamsPage() {
             </div>
           </header>
 
-          <ScrollArea className="flex-1">
+          <div className="flex-1 overflow-y-auto [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-brand-ink/10 [&::-webkit-scrollbar-thumb]:rounded-full">
             {!selectedTeam ? (
               <div className="h-full flex flex-col items-center justify-center text-brand-secondary/40 p-10">
                 <div className="size-20 bg-brand-soft rounded-[40px] flex items-center justify-center mb-6">
@@ -587,84 +587,88 @@ export function TeamsPage() {
                       <p className="text-xs font-bold text-brand-secondary/40 uppercase tracking-widest">No members in this team</p>
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {teamMembers.map((member, i) => {
-                        const isLead =
-                          member.is_admin ||
-                          member.is_lead ||
-                          teamAdmins.some(admin =>
-                            (admin.id && admin.id === member.id) ||
-                            (admin.user_id && admin.user_id === member.user_id) ||
-                            (admin.email && admin.email === member.email) ||
-                            (admin.username && admin.username === member.username)
-                          ) ||
-                          (selectedTeam.lead && (
-                            member.id === selectedTeam.lead ||
-                            member.user_id === selectedTeam.lead ||
-                            member.email === selectedTeam.lead ||
-                            member.username === selectedTeam.lead ||
-                            member.name === selectedTeam.lead
-                          )) ||
-                          member.role === 'LEAD' ||
-                          member.role === 'TEAM_LEAD' ||
-                          member.role === 'ADMIN';
+                    <div className="bg-white rounded-[32px] border border-brand-line p-6 shadow-sm">
+                      <div className="max-h-[350px] overflow-y-auto pr-2 [scrollbar-width:thin] [scrollbar-color:rgba(0,0,0,0.1)_transparent] [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-brand-ink/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+                        <div className="space-y-3">
+                          {teamMembers.map((member, i) => {
+                            const isLead =
+                              member.is_admin ||
+                              member.is_lead ||
+                              teamAdmins.some(admin =>
+                                (admin.id && admin.id === member.id) ||
+                                (admin.user_id && admin.user_id === member.user_id) ||
+                                (admin.email && admin.email === member.email) ||
+                                (admin.username && admin.username === member.username)
+                              ) ||
+                              (selectedTeam.lead && (
+                                member.id === selectedTeam.lead ||
+                                member.user_id === selectedTeam.lead ||
+                                member.email === selectedTeam.lead ||
+                                member.username === selectedTeam.lead ||
+                                member.name === selectedTeam.lead
+                              )) ||
+                              member.role === 'LEAD' ||
+                              member.role === 'TEAM_LEAD' ||
+                              member.role === 'ADMIN';
 
-                        return (
-                          <div key={member.id || i} className="flex items-center justify-between p-4 rounded-2xl border border-brand-line bg-white hover:border-brand-primary/30 transition-all group">
-                            <div className="flex items-center gap-4">
-                              <div className="size-10 rounded-xl bg-brand-soft flex items-center justify-center font-bold text-brand-primary uppercase">
-                                {(member.name || member.username || member.full_name || member.email || "U")[0]}
-                              </div>
-                              <div>
-                                <div className="flex items-center gap-2">
-                                  <p className="text-sm font-bold text-brand-ink leading-none">
-                                    {member.name ||
-                                      member.full_name ||
-                                      (member.first_name ? `${member.first_name} ${member.last_name || ''}` : null) ||
-                                      member.username ||
-                                      member.user?.name ||
-                                      member.user?.full_name ||
-                                      (member.email ? member.email.split('@')[0] : "Team Member")}
-                                  </p>
-                                  {isLead && (
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 animate-in fade-in zoom-in duration-300">
-                                      Team Lead
-                                    </span>
-                                  )}
+                            return (
+                              <div key={member.id || i} className="flex items-center justify-between p-4 rounded-2xl border border-brand-line bg-white hover:border-brand-primary/30 transition-all group">
+                                <div className="flex items-center gap-4">
+                                  <div className="size-10 rounded-xl bg-brand-soft flex items-center justify-center font-bold text-brand-primary uppercase">
+                                    {(member.name || member.username || member.full_name || member.email || "U")[0]}
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <p className="text-sm font-bold text-brand-ink leading-none">
+                                        {member.name ||
+                                          member.full_name ||
+                                          (member.first_name ? `${member.first_name} ${member.last_name || ''}` : null) ||
+                                          member.username ||
+                                          member.user?.name ||
+                                          member.user?.full_name ||
+                                          (member.email ? member.email.split('@')[0] : "Team Member")}
+                                      </p>
+                                      {isLead && (
+                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-primary/10 text-brand-primary border border-brand-primary/20 animate-in fade-in zoom-in duration-300">
+                                          Team Lead
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-brand-secondary mt-1">{member.email}</p>
+                                  </div>
                                 </div>
-                                <p className="text-[11px] text-brand-secondary mt-1">{member.email}</p>
+                                <div className="flex items-center gap-3">
+                                  <span className="text-[10px] font-bold uppercase tracking-wider bg-brand-soft px-2 py-1 rounded-md text-brand-secondary/70 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    {isLead ? "Lead" : (member.role || "Member")}
+                                  </span>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
+                                    onClick={() => setMemberToDelete(member)}
+                                    disabled={isDeletingMember === (member.id || member.user_id || member.email)}
+                                  >
+                                    {isDeletingMember === (member.id || member.user_id || member.email) ? (
+                                      <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="size-4" />
+                                    )}
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <MoreHorizontal className="size-4" />
+                                  </Button>
+                                </div>
                               </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                              <span className="text-[10px] font-bold uppercase tracking-wider bg-brand-soft px-2 py-1 rounded-md text-brand-secondary/70 opacity-0 group-hover:opacity-100 transition-opacity">
-                                {isLead ? "Lead" : (member.role || "Member")}
-                              </span>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-red-500 hover:bg-red-50"
-                                onClick={() => setMemberToDelete(member)}
-                                disabled={isDeletingMember === (member.id || member.user_id || member.email)}
-                              >
-                                {isDeletingMember === (member.id || member.user_id || member.email) ? (
-                                  <Loader2 className="size-4 animate-spin" />
-                                ) : (
-                                  <Trash2 className="size-4" />
-                                )}
-                              </Button>
-                              <Button variant="ghost" size="icon" className="text-brand-secondary opacity-0 group-hover:opacity-100 transition-opacity">
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      </div>
                     </div>
                   )}
                 </div>
               </div>
             )}
-          </ScrollArea>
+          </div>
         </main>
       </div>
 
@@ -901,8 +905,8 @@ export function TeamsPage() {
       </Dialog>
 
       {/* Delete Confirmation Modal */}
-      <Dialog 
-        open={!!memberToDelete} 
+      <Dialog
+        open={!!memberToDelete}
         onOpenChange={(open) => {
           if (!open) setMemberToDelete(null);
         }}
