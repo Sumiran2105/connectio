@@ -183,8 +183,18 @@ export function getMeetingVariantConfig(variant = "user") {
   };
 }
 
-export function buildMeetingRoomPath(variant = "user", meetingId, mode = "video") {
+export function buildMeetingRoomPath(variant = "user", meetingId, mode = "video", isCall = false) {
   const { homePath } = getMeetingVariantConfig(variant);
-  const search = mode === "audio" ? "?mode=audio" : "";
-  return `${homePath}/${meetingId}/room${search}`;
+  const search = new URLSearchParams();
+  
+  if (mode === "audio") {
+    search.set("mode", "audio");
+  }
+  
+  if (isCall) {
+    search.set("isCall", "true");
+  }
+
+  const searchStr = search.toString() ? `?${search.toString()}` : "";
+  return `${homePath}/${meetingId}/room${searchStr}`;
 }

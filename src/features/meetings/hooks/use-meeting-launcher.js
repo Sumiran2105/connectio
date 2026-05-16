@@ -32,9 +32,12 @@ export function useMeetingLauncher(variant) {
       return null;
     }
 
-    navigate(buildMeetingRoomPath(variant, normalizedMeeting.id, options.mode), {
-      state: { meeting: normalizedMeeting },
-    });
+    const baseUrl = buildMeetingRoomPath(variant, normalizedMeeting.id, options.mode);
+    const nextPath = baseUrl.includes("?")
+      ? `${baseUrl}&standalone=true`
+      : `${baseUrl}?standalone=true`;
+
+    window.open(nextPath, "_blank", "width=1280,height=720,noopener,noreferrer");
 
     return normalizedMeeting;
   }
@@ -78,9 +81,12 @@ export function useMeetingLauncher(variant) {
         throw new Error("Call response did not include a meeting ID.");
       }
 
-      navigate(buildMeetingRoomPath(variant, meeting.id, options.mode), {
-        state: { meeting, connectionDetails },
-      });
+      const baseUrl = buildMeetingRoomPath(variant, meeting.id, options.mode, true);
+      const nextPath = baseUrl.includes("?")
+        ? `${baseUrl}&standalone=true`
+        : `${baseUrl}?standalone=true`;
+
+      window.open(nextPath, "_blank", "width=1280,height=720,noopener,noreferrer");
 
       return meeting;
     } catch (error) {

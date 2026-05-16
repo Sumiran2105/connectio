@@ -6,6 +6,7 @@ import { ChevronLeft, LoaderCircle, PhoneOff, Video } from "lucide-react";
 import {
   LiveKitRoom,
   RoomAudioRenderer,
+  useParticipants,
   VideoConference,
 } from "@livekit/components-react";
 import { toast } from "sonner";
@@ -30,6 +31,25 @@ const FALLBACK_LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || "";
 
 function buildAuthHeaders(accessToken) {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+}
+
+function CallMonitor({ isDirect, onLeave }) {
+  const participants = useParticipants();
+  const [hadOtherParticipants, setHadOtherParticipants] = useState(false);
+
+  useEffect(() => {
+    if (participants.length > 1) {
+      setHadOtherParticipants(true);
+    }
+  }, [participants.length]);
+
+  useEffect(() => {
+    if (isDirect && hadOtherParticipants && participants.length <= 1) {
+      onLeave();
+    }
+  }, [isDirect, hadOtherParticipants, participants.length, onLeave]);
+
+  return null;
 }
 
 export function SharedMeetingRoomPage({ layout = "user" }) {
@@ -185,7 +205,29 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
   }, [meetingId, session?.accessToken]);
 
   useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (meetingId && session?.accessToken && !leaveAttemptedRef.current && joinedMeetingRef.current) {
+        const headers = buildAuthHeaders(session.accessToken);
+        // Use sendBeacon for reliable leave notification on window close
+        const url = new URL(MEETING_LEAVE(meetingId), window.location.origin);
+        
+        // Note: fetch with keepalive: true is a modern alternative to sendBeacon
+        void fetch(url, {
+          method: "POST",
+          headers: {
+            ...headers,
+            "Content-Type": "application/json",
+          },
+          keepalive: true,
+        });
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
     return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+
       if (
         !meetingId ||
         !session?.accessToken ||
@@ -227,7 +269,11 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
     }
 
     if (shouldNavigate) {
-      navigate(homePath, { replace: true });
+      if (isStandalone) {
+        window.close();
+      } else {
+        navigate(homePath, { replace: true });
+      }
     }
   }
 
@@ -236,15 +282,19 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
     void leaveMeeting(true);
   }
 
-  return (
-    <Layout
-      showFloatingActions={false}
-      contentClassName="!px-0 !py-0 !overflow-hidden"
-      contentInnerClassName="!mx-0 !h-full !max-w-none !w-full"
-    >
-      <div className="flex h-full min-h-0 flex-col bg-[#eff4f4]">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-brand-line/20 bg-white px-5 py-4 sm:px-6">
-          <div className="min-w-0">
+  const isStandalone = searchParams.get("standalone") === "true";
+
+  const content = (
+    <div className={`flex h-full min-h-0 flex-col ${isStandalone ? "bg-[#0b0f19]" : "bg-[#eff4f4]"}`}>
+      <div
+        className={`flex flex-wrap items-center justify-between gap-4 px-5 py-4 sm:px-6 ${
+          isStandalone
+            ? "border-b border-white/5 bg-[#0b0f19]/80 backdrop-blur-md"
+            : "border-b border-brand-line/20 bg-white"
+        }`}
+      >
+        <div className="min-w-0">
+          {!isStandalone && (
             <button
               type="button"
               onClick={() => navigate(homePath)}
@@ -253,89 +303,130 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
               <ChevronLeft className="size-4" />
               {backLabel}
             </button>
-            <div className="flex items-center gap-3">
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-brand-primary/10 text-brand-primary">
-                <Video className="size-5" />
-              </div>
-              <div className="min-w-0">
-                <h1 className="truncate text-xl font-black tracking-tight text-brand-ink sm:text-2xl">
-                  {meeting.title || "Meeting Room"}
-                </h1>
-                <p className="truncate text-sm text-brand-secondary">
-                  {connectionDetails?.roomName || meeting.roomName || `Meeting ID: ${meetingId}`}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <Button
-            type="button"
-            onClick={() => void leaveMeeting(true)}
-            className="rounded-xl bg-red-500 px-5 py-2.5 text-sm font-bold text-white hover:bg-red-600"
-          >
-            <PhoneOff className="mr-2 size-4" />
-            Leave
-          </Button>
-        </div>
-
-        {isLoading ? (
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="flex max-w-md flex-col items-center gap-4 rounded-[28px] border border-brand-line bg-white px-8 py-10 text-center shadow-sm">
-              <LoaderCircle className="size-10 animate-spin text-brand-primary" />
-              <div>
-                <h2 className="text-lg font-bold text-brand-ink">Connecting to your room</h2>
-                <p className="mt-2 text-sm text-brand-secondary">
-                  We&apos;re fetching the meeting token and setting up audio, video, and screen sharing.
-                </p>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {!isLoading && errorMessage ? (
-          <div className="flex flex-1 items-center justify-center p-6">
-            <div className="max-w-lg rounded-[28px] border border-red-200 bg-white px-8 py-10 shadow-sm">
-              <h2 className="text-lg font-bold text-brand-ink">Unable to open this meeting</h2>
-              <p className="mt-3 text-sm leading-6 text-brand-secondary">{errorMessage}</p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  onClick={() => navigate(homePath, { replace: true })}
-                  className="rounded-xl bg-brand-primary px-5 py-2.5 font-bold text-white hover:bg-brand-primary/90"
-                >
-                  Return
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => window.location.reload()}
-                  className="rounded-xl px-5 py-2.5 font-bold"
-                >
-                  Retry
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : null}
-
-        {!isLoading && !errorMessage && connectionDetails ? (
-          <div className="min-h-0 flex-1">
-            <LiveKitRoom
-              audio
-              connect
-              data-lk-theme="default"
-              onDisconnected={handleDisconnected}
-              serverUrl={connectionDetails.serverUrl}
-              token={connectionDetails.token}
-              video={callMode !== "audio"}
-              className="h-full bg-[#111827]"
+          )}
+          <div className="flex items-center gap-3">
+            <div
+              className={`flex size-11 items-center justify-center rounded-2xl ${
+                isStandalone ? "bg-brand-primary/20 text-brand-primary" : "bg-brand-primary/10 text-brand-primary"
+              }`}
             >
-              <VideoConference />
-              <RoomAudioRenderer />
-            </LiveKitRoom>
+              <Video className="size-5" />
+            </div>
+            <div className="min-w-0">
+              <h1
+                className={`truncate text-xl font-black tracking-tight sm:text-2xl ${
+                  isStandalone ? "text-white" : "text-brand-ink"
+                }`}
+              >
+                {meeting.title || "Meeting Room"}
+              </h1>
+              <p className={`truncate text-sm ${isStandalone ? "text-white/60" : "text-brand-secondary"}`}>
+                {connectionDetails?.roomName || meeting.roomName || `Meeting ID: ${meetingId}`}
+              </p>
+            </div>
           </div>
-        ) : null}
+        </div>
       </div>
+
+      {isLoading ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div
+            className={`flex max-w-md flex-col items-center gap-4 rounded-[28px] border px-8 py-10 text-center shadow-sm ${
+              isStandalone ? "border-white/10 bg-white/5 text-white" : "border-brand-line bg-white"
+            }`}
+          >
+            <LoaderCircle className="size-10 animate-spin text-brand-primary" />
+            <div>
+              <h2 className={`text-lg font-bold ${isStandalone ? "text-white" : "text-brand-ink"}`}>
+                Connecting to your room
+              </h2>
+              <p className={`mt-2 text-sm ${isStandalone ? "text-white/60" : "text-brand-secondary"}`}>
+                We&apos;re fetching the meeting token and setting up audio, video, and screen sharing.
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!isLoading && errorMessage ? (
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div
+            className={`max-w-lg rounded-[28px] border px-8 py-10 shadow-sm ${
+              isStandalone ? "border-red-500/20 bg-white/5" : "border-red-200 bg-white"
+            }`}
+          >
+            <h2 className={`text-lg font-bold ${isStandalone ? "text-white" : "text-brand-ink"}`}>
+              Unable to open this meeting
+            </h2>
+            <p className={`mt-3 text-sm leading-6 ${isStandalone ? "text-white/60" : "text-brand-secondary"}`}>
+              {errorMessage}
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Button
+                type="button"
+                onClick={() => (isStandalone ? window.close() : navigate(homePath, { replace: true }))}
+                className="rounded-xl bg-brand-primary px-5 py-2.5 font-bold text-white hover:bg-brand-primary/90"
+              >
+                {isStandalone ? "Close Window" : "Return"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => window.location.reload()}
+                className={`rounded-xl px-5 py-2.5 font-bold ${
+                  isStandalone ? "border-white/10 text-white hover:bg-white/5" : ""
+                }`}
+              >
+                Retry
+              </Button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {!isLoading && !errorMessage && connectionDetails ? (
+        <div className="min-h-0 flex-1">
+          <LiveKitRoom
+            audio
+            connect
+            data-lk-theme="default"
+            onDisconnected={handleDisconnected}
+            serverUrl={connectionDetails.serverUrl}
+            token={connectionDetails.token}
+            video={callMode !== "audio"}
+            className="h-full bg-[#111827]"
+          >
+            <VideoConference />
+            <RoomAudioRenderer />
+            <CallMonitor 
+              isDirect={
+                searchParams.get("isCall") === "true" ||
+                meeting.meeting_type === "direct" || 
+                meeting.is_direct || 
+                meeting.type === "direct"
+              } 
+              onLeave={() => {
+                toast.info("The other participant has left the call.");
+                void leaveMeeting(true);
+              }} 
+            />
+          </LiveKitRoom>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  if (isStandalone) {
+    return <div className="h-screen w-screen overflow-hidden">{content}</div>;
+  }
+
+  return (
+    <Layout
+      showFloatingActions={false}
+      contentClassName="!px-0 !py-0 !overflow-hidden"
+      contentInnerClassName="!mx-0 !h-full !max-w-none !w-full"
+    >
+      {content}
     </Layout>
   );
 }

@@ -29,6 +29,7 @@ import {
   normalizeMeetingRecord,
   toLocalDateTimeValue,
 } from "../utils/meeting-utils";
+import { useMeetingLauncher } from "../hooks/use-meeting-launcher";
 
 const recentCalls = [
   {
@@ -95,6 +96,7 @@ function getInitialFormState(mode = "instant") {
 export function SharedMeetPage({ layout = "user" }) {
   const navigate = useNavigate();
   const session = useAuthStore((state) => state.session);
+  const { openMeetingRoom } = useMeetingLauncher(layout);
   const accessToken = session?.accessToken;
   const [joinValue, setJoinValue] = useState("");
   const [channels, setChannels] = useState([]);
@@ -218,9 +220,7 @@ export function SharedMeetPage({ layout = "user" }) {
       setIsJoining(true);
       const meeting = await resolveMeetingTarget(rawValue);
 
-      navigate(`${homePath}/${meeting.id}/room`, {
-        state: { meeting },
-      });
+      openMeetingRoom(meeting);
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
@@ -263,11 +263,12 @@ export function SharedMeetPage({ layout = "user" }) {
       setJoinValue(meeting.joinLink || meeting.id || "");
       setIsCreateOpen(false);
 
-      toast.success(
-        createMode === "instant"
-          ? "Meeting created. You can open the room now."
-          : "Meeting scheduled successfully."
-      );
+      if (createMode === "instant") {
+        toast.success("Meeting created. Opening room...");
+        openMeetingRoom(meeting);
+      } else {
+        toast.success("Meeting scheduled successfully.");
+      }
     } catch (error) {
       toast.error(
         error.response?.data?.message ||

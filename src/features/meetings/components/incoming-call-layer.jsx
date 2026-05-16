@@ -128,6 +128,7 @@ export function IncomingCallLayer() {
   const ringtoneContextRef = useRef(null);
   const ringtoneLoopRef = useRef(null);
   const [incomingCall, setIncomingCall] = useState(null);
+  const incomingCallIdRef = useRef(null);
   const [isHydrating, setIsHydrating] = useState(false);
   const [isSubmittingAction, setIsSubmittingAction] = useState(false);
   const accessToken = session?.accessToken || "";
@@ -245,6 +246,7 @@ export function IncomingCallLayer() {
           return current;
         }
 
+        incomingCallIdRef.current = nextMeetingId;
         return {
           callerLabel,
           meeting,
@@ -290,11 +292,23 @@ export function IncomingCallLayer() {
       socket.onmessage = (event) => {
         const payload = parseSocketPayload(event.data);
 
-        if (!payload || payload.event !== "incoming_call") {
+        if (!payload) {
           return;
         }
 
-        void hydrateIncomingCall(payload);
+        if (payload.event === "incoming_call") {
+          void hydrateIncomingCall(payload);
+          return;
+        }
+
+        if (payload.event === "call_cancelled" || payload.event === "call_ended") {
+          const cancelledId = payload.meeting_id || payload.meetingId;
+          if (cancelledId && cancelledId === incomingCallIdRef.current) {
+            setIncomingCall(null);
+            incomingCallIdRef.current = null;
+            stopRingtone();
+          }
+        }
       };
 
       socket.onerror = () => undefined;
@@ -355,8 +369,8 @@ export function IncomingCallLayer() {
       } catch (error) {
         toast.error(
           error.response?.data?.message ||
-            error.response?.data?.detail ||
-            "Unable to decline the call right now."
+          error.response?.data?.detail ||
+          "Unable to decline the call right now."
         );
       } finally {
         setIsSubmittingAction(false);
@@ -365,6 +379,7 @@ export function IncomingCallLayer() {
 
     stopRingtone();
     setIncomingCall(null);
+    incomingCallIdRef.current = null;
   }
 
   async function acceptIncomingCall() {
@@ -381,26 +396,26 @@ export function IncomingCallLayer() {
         { headers: buildAuthHeaders(accessToken) }
       );
 
-      const nextPath = buildMeetingRoomPath(
+      const baseUrl = buildMeetingRoomPath(
         workspaceVariant,
         incomingCall.meeting.id,
-        incomingCall.mode
+        incomingCall.mode,
+        true
       );
+      const nextPath = baseUrl.includes("?")
+        ? `${baseUrl}&standalone=true`
+        : `${baseUrl}?standalone=true`;
 
-      navigate(nextPath, {
-        state: {
-          meeting: incomingCall.meeting,
-          incomingCall: true,
-        },
-      });
+      window.open(nextPath, "_blank", "width=1280,height=720,noopener,noreferrer");
 
       stopRingtone();
       setIncomingCall(null);
+      incomingCallIdRef.current = null;
     } catch (error) {
       toast.error(
         error.response?.data?.message ||
-          error.response?.data?.detail ||
-          "Unable to accept the call right now."
+        error.response?.data?.detail ||
+        "Unable to accept the call right now."
       );
     } finally {
       setIsSubmittingAction(false);
