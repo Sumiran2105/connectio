@@ -279,7 +279,7 @@ export const ActivityPage = () => {
       )
       
       // Call API to mark as read (adjust endpoint as per your backend)
-      await apiClient.patch(`${MENTIONS_ALL}/${id}`, { read: true })
+      await apiClient.post(`${MENTIONS_ALL}/${id}/mark-read`, {})
     } catch (err) {
       console.error('Failed to mark as read:', err)
       // Revert on error
@@ -328,7 +328,7 @@ export const ActivityPage = () => {
       setActivities([])
       
       // Call API to clear all (adjust endpoint as per your backend)
-      await apiClient.post(`${MENTIONS_ALL}/clear-all`, {})
+      await apiClient.delete(`${MENTIONS_ALL}/clear-all`)
     } catch (err) {
       console.error('Failed to clear all mentions:', err)
       setError('Failed to clear all activities. Please try again.')
