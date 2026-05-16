@@ -359,7 +359,7 @@ export const ActivityPage = () => {
       setActivities((prev) => prev.map((activity) => ({ ...activity, read: true })))
       
       // Call API to mark all as read (adjust endpoint as per your backend)
-      await apiClient.patch(`${MENTIONS_ALL}/mark-all-read`, {})
+      await apiClient.post(`${MENTIONS_ALL}/mark-all-read`, {})
     } catch (err) {
       console.error('Failed to mark all as read:', err)
       setError('Failed to mark all as read. Please try again.')
