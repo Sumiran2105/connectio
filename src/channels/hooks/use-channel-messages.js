@@ -17,6 +17,7 @@ import {
 } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import {
+  formatMessageDateTime,
   mergeMessages,
   normalizeCollection,
   normalizeServerMessage,
@@ -164,12 +165,13 @@ export function useChannelMessages({ channelId, accessToken, currentUserId, enab
       return response.data?.message || response.data;
     },
     onMutate: async (text) => {
+      const sentAt = Date.now();
       const optimisticMessage = {
-        id: `pending-${Date.now()}`,
+        id: `pending-${sentAt}`,
         from: "me",
         text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        timestamp: Date.now(),
+        time: formatMessageDateTime(sentAt),
+        timestamp: sentAt,
         read: false,
         pinned: false,
         reactions: [],

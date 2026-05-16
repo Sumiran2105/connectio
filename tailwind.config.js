@@ -40,9 +40,9 @@ export default {
         },
 
         brand: {
-          primary: "#006947",
-          secondary: "#5F7E6C",
-          tertiary: "#914440",
+          primary: "#018ABE",
+          secondary: "#64748B",
+          tertiary: "#D6E8EE",
           neutral: "#F6F6FF",
           ink: "#44534A",
           soft: "#EDF1EE",

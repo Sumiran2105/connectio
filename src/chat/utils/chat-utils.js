@@ -1,3 +1,9 @@
+import {
+  formatPlatformDateTime,
+  formatPlatformTime,
+  getPlatformTimestamp,
+} from "@/lib/date-time";
+
 const chatStorageKeyPrefix = "conectio-user-chat-state-v5";
 
 export function normalizeSearchResults(data) {
@@ -75,17 +81,15 @@ export function normalizeReadStatus(data) {
 export function getMessageTimestamp(message) {
   const rawValue =
     message?.created_at ||
+    message?.sent_at ||
+    message?.created_on ||
     message?.updated_at ||
     message?.createdAt ||
+    message?.sentAt ||
     message?.timestamp ||
     null;
 
-  if (!rawValue) {
-    return 0;
-  }
-
-  const value = new Date(rawValue).getTime();
-  return Number.isNaN(value) ? 0 : value;
+  return getPlatformTimestamp(rawValue);
 }
 
 export function sortMessagesChronologically(messages = []) {
@@ -136,16 +140,14 @@ export function mergeMessages(existing = [], incoming = []) {
 
 export function formatMessageTime(value) {
   if (!value) {
-    return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    return formatPlatformTime();
   }
 
-  const date = new Date(value);
+  return formatPlatformTime(value);
+}
 
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-
-  return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+export function formatMessageDateTime(value) {
+  return formatPlatformDateTime(value || Date.now());
 }
 
 export function normalizeServerMessage(message, currentUserId, peerUserId = null) {
@@ -186,13 +188,32 @@ export function normalizeServerMessage(message, currentUserId, peerUserId = null
         ? !matchesPeer
         : false);
 
+  const isRead = Boolean(message.is_read || message.read_at || message.seen_at);
+  const isDelivered = Boolean(
+    isRead ||
+      message.is_delivered ||
+      message.delivered ||
+      message.delivered_at ||
+      message.delivery_status === "delivered" ||
+      message.delivery_status === "read"
+  );
+
   return {
     id: message.id || message.message_id || `${Date.now()}-${Math.random()}`,
     from: isFromCurrentUser ? "me" : "them",
     text: message.content || message.message || message.text || "",
-    time: formatMessageTime(message.created_at || message.updated_at),
+    time: formatMessageDateTime(
+      message.created_at ||
+        message.sent_at ||
+        message.created_on ||
+        message.updated_at ||
+        message.createdAt ||
+        message.sentAt ||
+        message.timestamp
+    ),
     timestamp: getMessageTimestamp(message),
-    read: Boolean(message.is_read || message.read_at || message.delivered_at),
+    delivered: isDelivered,
+    read: isRead,
     pinned: Boolean(message.is_pinned),
     isDeleted: isDeletedMessage(message),
     reactions: normalizeCollection(message.reactions),
@@ -265,11 +286,43 @@ export function loadStoredChatState(storageKey) {
   }
 }
 
+function hydrateStoredMessage(message) {
+  if (!message || typeof message !== "object") {
+    return message;
+  }
+
+  const timestamp =
+    message.timestamp ||
+    message.raw?.created_at ||
+    message.raw?.sent_at ||
+    message.raw?.created_on ||
+    message.raw?.updated_at ||
+    message.raw?.createdAt ||
+    message.raw?.sentAt;
+
+  if (!timestamp) {
+    return message;
+  }
+
+  return {
+    ...message,
+    time: formatMessageDateTime(timestamp),
+    timestamp: getPlatformTimestamp(timestamp) || message.timestamp,
+  };
+}
+
+function hydrateStoredMessages(messages = []) {
+  return Array.isArray(messages) ? messages.map(hydrateStoredMessage) : [];
+}
+
 export function mergeContacts(storedContacts = []) {
   const byId = new Map();
 
   storedContacts.forEach((contact) => {
-    byId.set(String(contact.id), contact);
+    byId.set(String(contact.id), {
+      ...contact,
+      messages: hydrateStoredMessages(contact.messages),
+    });
   });
 
   return Array.from(byId.values());
@@ -288,7 +341,7 @@ export function getInitialConversations(contacts, storageKey) {
     ...Object.fromEntries(
       contacts.map((contact) => [
         contact.id,
-        stored?.conversations?.[contact.id] || contact.messages || [],
+        hydrateStoredMessages(stored?.conversations?.[contact.id] || contact.messages || []),
       ])
     ),
   };

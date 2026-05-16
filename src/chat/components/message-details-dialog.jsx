@@ -5,7 +5,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { formatMessageTime } from "../utils/chat-utils";
+import { formatMessageDateTime } from "../utils/chat-utils";
 
 export function MessageDetailsDialog({
   addReaction,
@@ -47,7 +47,7 @@ export function MessageDetailsDialog({
               </div>
               <div className="rounded-2xl border border-brand-line bg-white p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
-                  Time
+                  Date & Time
                 </p>
                 <p className="mt-2 text-sm text-brand-ink">{selectedMessage.normalized.time}</p>
               </div>
@@ -106,7 +106,7 @@ export function MessageDetailsDialog({
                           {read.user_name || read.full_name || read.user_email || read.user_id || "User"}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {formatMessageTime(read.read_at || read.created_at || read.updated_at)}
+                          {formatMessageDateTime(read.read_at || read.created_at || read.updated_at)}
                         </p>
                       </div>
                     ))

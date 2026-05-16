@@ -76,6 +76,16 @@ function resolveCallerLabel(payload) {
   );
 }
 
+function getCallerInitials(name) {
+  return String(name || "Call")
+    .split(" ")
+    .map((part) => part[0])
+    .filter(Boolean)
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
 function getWorkspaceVariant(role) {
   return role === "USER" ? "user" : "admin";
 }
@@ -135,6 +145,9 @@ export function IncomingCallLayer() {
   const userId = getSessionUserId(session);
   const workspaceVariant = getWorkspaceVariant(session?.role);
   const activeMeetingId = getActiveMeetingId(location.pathname);
+  const callerInitials = getCallerInitials(incomingCall?.callerLabel);
+  const incomingCallLabel = incomingCall?.mode === "audio" ? "Audio call" : "Video call";
+  const incomingCallDescription = incomingCall?.mode === "audio" ? "an audio call" : "a video call";
 
   function stopRingtone() {
     if (ringtoneLoopRef.current) {
@@ -429,47 +442,62 @@ export function IncomingCallLayer() {
     >
       <DialogContent
         showCloseButton={false}
-        className="max-w-md rounded-[28px] border border-brand-line bg-white p-0 shadow-[0_28px_90px_rgba(66,85,74,0.18)]"
+        className="max-w-lg rounded-[30px] border border-brand-line/80 bg-white p-0 shadow-[0_32px_110px_rgba(66,85,74,0.18)]"
       >
-        <div className="p-6 sm:p-7">
-          <DialogHeader className="gap-4">
-            <div className="flex size-14 items-center justify-center rounded-3xl bg-brand-primary/10 text-brand-primary">
-              {incomingCall?.mode === "audio" ? (
-                <Phone className="size-7" />
-              ) : (
-                <Video className="size-7" />
-              )}
+        <div className="p-7 sm:p-8">
+          <DialogHeader className="gap-6">
+            <div className="flex items-start justify-between gap-4">
+              <div className="space-y-3">
+                <span className="inline-flex items-center gap-2 rounded-full border border-brand-line bg-brand-soft px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-secondary">
+                  {incomingCall?.mode === "audio" ? (
+                    <Phone className="size-3.5 text-brand-primary" />
+                  ) : (
+                    <Video className="size-3.5 text-brand-primary" />
+                  )}
+                  Incoming Call
+                </span>
+                <div className="space-y-2">
+                  <DialogTitle className="text-[2rem] font-semibold tracking-tight text-brand-ink">
+                    {incomingCall?.callerLabel || "Incoming call"}
+                  </DialogTitle>
+                  <DialogDescription className="max-w-md text-[15px] leading-7 text-brand-secondary">
+                    would like to start {incomingCallDescription} with you. Accept to
+                    join the call in your workspace.
+                  </DialogDescription>
+                </div>
+              </div>
+
+              <div className="flex size-16 shrink-0 items-center justify-center rounded-[26px] bg-brand-primary text-lg font-bold text-white shadow-[0_18px_40px_rgba(13,122,87,0.22)]">
+                {callerInitials}
+              </div>
             </div>
-            <div className="space-y-2">
-              <DialogTitle className="text-2xl font-semibold tracking-tight text-brand-ink">
-                Incoming {incomingCall?.mode === "audio" ? "audio" : "video"} call
-              </DialogTitle>
-              <DialogDescription className="text-sm leading-6 text-brand-secondary">
-                <span className="font-semibold text-brand-ink">{incomingCall?.callerLabel}</span>{" "}
-                is calling you.
-                {incomingCall?.meeting?.title ? ` Join ${incomingCall.meeting.title}.` : ""}
-              </DialogDescription>
+
+            <div className="flex items-center justify-between gap-4 border-y border-brand-line/70 py-4">
+              <div className="min-w-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-brand-secondary">
+                  Caller
+                </p>
+                <p className="mt-1 truncate text-base font-semibold text-brand-ink">
+                  {incomingCall?.callerLabel || "Workspace contact"}
+                </p>
+              </div>
+              <div className="inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-primary/8 px-3 py-1.5 text-sm font-medium text-brand-primary">
+                {incomingCall?.mode === "audio" ? (
+                  <Phone className="size-4" />
+                ) : (
+                  <Video className="size-4" />
+                )}
+                {incomingCallLabel}
+              </div>
             </div>
           </DialogHeader>
-
-          <div className="mt-6 rounded-[24px] border border-brand-line bg-brand-neutral px-4 py-3">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand-secondary">
-              Meeting
-            </p>
-            <p className="mt-2 truncate text-base font-semibold text-brand-ink">
-              {incomingCall?.meeting?.title || "Direct call"}
-            </p>
-            <p className="mt-1 truncate text-sm text-brand-secondary">
-              {incomingCall?.meeting?.id || "Waiting for meeting details"}
-            </p>
-          </div>
         </div>
 
-        <DialogFooter className="border-brand-line bg-white/90 sm:grid sm:grid-cols-2 sm:gap-3">
+        <DialogFooter className="border-brand-line bg-[#fbfcfb] sm:grid sm:grid-cols-2 sm:gap-3">
           <Button
             type="button"
             variant="outline"
-            className="h-12 rounded-2xl border-brand-line bg-white text-brand-ink hover:bg-brand-soft"
+            className="h-[52px] rounded-2xl border-rose-200 bg-rose-50 text-base font-semibold text-rose-600 hover:bg-rose-100 hover:text-rose-700"
             onClick={() => void dismissIncomingCall(true)}
             disabled={isSubmittingAction}
           >
@@ -478,7 +506,7 @@ export function IncomingCallLayer() {
           </Button>
           <Button
             type="button"
-            className="h-12 rounded-2xl bg-brand-primary text-white hover:bg-brand-primary/90"
+            className="h-[52px] rounded-2xl bg-brand-primary text-base font-semibold text-white hover:bg-brand-primary/90"
             onClick={() => void acceptIncomingCall()}
             disabled={isHydrating || isSubmittingAction}
           >
@@ -494,7 +522,7 @@ export function IncomingCallLayer() {
                 ) : (
                   <Video className="size-4" />
                 )}
-                Accept
+                Join Call
               </>
             )}
           </Button>

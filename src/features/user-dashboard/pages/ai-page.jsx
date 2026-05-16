@@ -18,6 +18,7 @@ import {
   ChevronDown,
 } from "lucide-react";
 import { UserLayout } from "../components/user-layout";
+import { formatPlatformDateTime } from "@/lib/date-time";
 
 const SUGGESTIONS = [
   { icon: FileText, label: "Summarize my meeting notes", prompt: "Summarize the key action items from my recent meeting notes." },
@@ -28,12 +29,12 @@ const SUGGESTIONS = [
   { icon: Zap, label: "Write a follow-up email", prompt: "Help me write a professional follow-up email after a client meeting." },
 ];
 
-const INITIAL_MESSAGES = [
+const createInitialMessages = () => [
   {
     id: 1,
     from: "ai",
     text: "Hello! I'm your AI assistant. I can help you summarize meetings, draft messages, analyze data, brainstorm ideas, and much more.\n\nWhat would you like to work on today?",
-    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    time: formatPlatformDateTime(),
   },
 ];
 
@@ -45,10 +46,11 @@ const AI_RESPONSES = [
 ];
 
 export function AiPage() {
-  const [messages, setMessages] = useState(INITIAL_MESSAGES);
+  const [messages, setMessages] = useState(() => createInitialMessages());
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [copiedId, setCopiedId] = useState(null);
+  const nextMessageIdRef = useRef(2);
   const bottomRef = useRef(null);
   const textareaRef = useRef(null);
 
@@ -60,11 +62,13 @@ export function AiPage() {
     const prompt = (text || input).trim();
     if (!prompt) return;
 
+    const userMessageId = nextMessageIdRef.current;
+    nextMessageIdRef.current += 1;
     const userMsg = {
-      id: Date.now(),
+      id: userMessageId,
       from: "me",
       text: prompt,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      time: formatPlatformDateTime(),
     };
 
     setMessages(prev => [...prev, userMsg]);
@@ -76,11 +80,13 @@ export function AiPage() {
 
     setTimeout(() => {
       const reply = AI_RESPONSES[Math.floor(Math.random() * AI_RESPONSES.length)];
+      const aiMessageId = nextMessageIdRef.current;
+      nextMessageIdRef.current += 1;
       const aiMsg = {
-        id: Date.now() + 1,
+        id: aiMessageId,
         from: "ai",
         text: reply,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        time: formatPlatformDateTime(),
       };
       setMessages(prev => [...prev, aiMsg]);
       setIsTyping(false);
@@ -101,7 +107,8 @@ export function AiPage() {
   }
 
   function clearChat() {
-    setMessages(INITIAL_MESSAGES);
+    nextMessageIdRef.current = 2;
+    setMessages(createInitialMessages());
   }
 
   const isEmpty = messages.length <= 1;

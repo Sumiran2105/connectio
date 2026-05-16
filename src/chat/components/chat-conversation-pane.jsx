@@ -1,4 +1,5 @@
 import {
+  Check,
   CheckCheck,
   ChevronLeft,
   MoreVertical,
@@ -12,6 +13,39 @@ import { ChatComposer } from "./chat-composer";
 
 const MESSAGE_RENDER_BATCH_SIZE = 120;
 const tabs = ["chat", "files", "photos"];
+
+function MessageStatusIcon({ message }) {
+  if (message.isPending) {
+    return <Check className="size-3.5 text-gray-300" />;
+  }
+
+  if (message.read) {
+    return <CheckCheck className="size-3.5 text-sky-500" />;
+  }
+
+  if (message.delivered) {
+    return <CheckCheck className="size-3.5 text-gray-400" />;
+  }
+
+  return <Check className="size-3.5 text-gray-400" />;
+}
+
+function MessageHoverMeta({ message, isMe }) {
+  if (message.failed) {
+    return <span className="text-[11px] font-medium text-red-500">Failed</span>;
+  }
+
+  return (
+    <span
+      className={`flex items-center gap-1.5 whitespace-nowrap text-[11px] text-gray-400 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
+        isMe ? "justify-end" : "justify-start"
+      }`}
+    >
+      {isMe ? <MessageStatusIcon message={message} /> : null}
+      <span>{message.time}</span>
+    </span>
+  );
+}
 
 export function ChatConversationPane({
   activeContact,
@@ -168,28 +202,19 @@ export function ChatConversationPane({
                 ) : null}
 
                 <div className={`flex max-w-[72%] flex-col ${isMe ? "items-end" : "items-start"}`}>
-                  <button
-                    type="button"
-                    onClick={() => onMessageClick(message)}
-                    className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${isMe
-                        ? "rounded-br-md bg-brand-primary text-white"
-                        : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
-                      }`}
-                  >
-                    {message.text}
-                  </button>
-
-                  <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
-                    <span className={`text-[11px] ${message.failed ? "text-red-500" : "text-gray-400"}`}>
-                      {message.failed ? "Failed" : message.time}
-                    </span>
-                    {isMe ? (
-                      message.isPending ? (
-                        <span className="size-1.5 rounded-full bg-gray-300" />
-                      ) : message.failed ? null : (
-                        <CheckCheck className="size-3.5 text-brand-primary" />
-                      )
-                    ) : null}
+                  <div className={`flex items-center gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+                    {isMe ? <MessageHoverMeta message={message} isMe={isMe} /> : null}
+                    <button
+                      type="button"
+                      onClick={() => onMessageClick(message)}
+                      className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${isMe
+                          ? "rounded-br-md bg-brand-primary text-white"
+                          : "rounded-bl-md border border-gray-200 bg-white text-gray-900"
+                        }`}
+                    >
+                      {message.text}
+                    </button>
+                    {!isMe ? <MessageHoverMeta message={message} isMe={isMe} /> : null}
                   </div>
 
                   {(reactionsByMessageId[message.id] || []).length ? (

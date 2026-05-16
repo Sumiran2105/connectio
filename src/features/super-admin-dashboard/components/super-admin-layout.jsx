@@ -129,7 +129,7 @@ export function SuperAdminLayout({ children }) {
 
       <div className="mx-auto flex h-full w-full max-w-[1600px] flex-col lg:flex-row">
         <aside
-          className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[292px] border-r border-[#1f4f3e] bg-[#0f5b41] text-white transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0`}
+          className={`${isMobileMenuOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-[292px] border-r border-white/10 bg-brand-primary text-white transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:translate-x-0`}
         >
           <div className="flex h-full flex-col overflow-hidden px-5 py-6">
             {/* <div
@@ -148,10 +148,10 @@ export function SuperAdminLayout({ children }) {
               </p>
             </div> */}
 
-            <div className="mt-6 rounded-[24px] border border-white/10 bg-[#124f3d] p-4">
+            <div className="mt-6 rounded-[24px] border border-white/10 bg-white/10 p-4">
               <p className="text-sm font-semibold text-white">{identity.displayName}</p>
               <p className="mt-1 text-sm text-white/[0.72]">{identity.email}</p>
-              <span className="mt-3 inline-flex rounded-full border border-white/10 bg-[#1a684d] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.82]">
+              <span className="mt-3 inline-flex rounded-full border border-white/10 bg-white/15 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white/[0.82]">
                 {identity.role.replaceAll("_", " ")}
               </span>
             </div>
@@ -198,7 +198,7 @@ export function SuperAdminLayout({ children }) {
             <Button
               type="button"
               variant="outline"
-              className="mt-6 h-11 rounded-2xl border-white/10 bg-[#124f3d] text-white hover:bg-[#155641] hover:text-white"
+              className="mt-6 h-11 rounded-2xl border-white/20 bg-white/10 text-white hover:bg-white/15 hover:text-white"
               onClick={handleSignOut}
             >
               <LogOut className="size-4" />

@@ -1,6 +1,7 @@
 import { memo, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
+  Check,
   CheckCheck,
   ChevronLeft,
   Eye,
@@ -33,6 +34,39 @@ import { EmojiPicker } from "./emoji-picker";
 
 const MESSAGE_RENDER_BATCH_SIZE = 120;
 const QUICK_REACTIONS = ["👍", "❤️", "😂"];
+
+function MessageStatusIcon({ message }) {
+  if (message.isPending) {
+    return <Check className="size-3.5 text-gray-300" />;
+  }
+
+  if (message.read) {
+    return <CheckCheck className="size-3.5 text-sky-500" />;
+  }
+
+  if (message.delivered) {
+    return <CheckCheck className="size-3.5 text-gray-400" />;
+  }
+
+  return <Check className="size-3.5 text-gray-400" />;
+}
+
+function MessageHoverMeta({ message, isMe }) {
+  if (message.failed) {
+    return <span className="text-[11px] font-medium text-red-500">Failed</span>;
+  }
+
+  return (
+    <span
+      className={`flex items-center gap-1.5 whitespace-nowrap text-[11px] text-gray-400 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100 ${
+        isMe ? "justify-end" : "justify-start"
+      }`}
+    >
+      {isMe ? <MessageStatusIcon message={message} /> : null}
+      <span>{message.time}</span>
+    </span>
+  );
+}
 
 /**
  * Component to render message text with formatted mentions
@@ -102,7 +136,8 @@ const MessageBubble = memo(function MessageBubble({
         <span className={`mb-1 text-xs font-semibold text-gray-500 ${isMe ? "mr-1" : "ml-1"}`}>
           {senderName}
         </span>
-        <div className={`flex items-start gap-2 ${isMe ? "flex-row-reverse" : ""}`}>
+        <div className={`flex items-center gap-2 ${isMe ? "justify-end" : "justify-start"}`}>
+          {isMe ? <MessageHoverMeta message={message} isMe={isMe} /> : null}
           <div
             className={`rounded-[22px] px-4 py-2.5 text-left text-sm leading-relaxed shadow-sm transition hover:shadow ${isMe
               ? "rounded-br-md bg-brand-primary text-white"
@@ -112,6 +147,7 @@ const MessageBubble = memo(function MessageBubble({
             {message.pinned ? <Pin className="mr-1 inline size-3.5" /> : null}
             <FormattedMessageText text={message.text} />
           </div>
+          {!isMe ? <MessageHoverMeta message={message} isMe={isMe} /> : null}
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -162,19 +198,6 @@ const MessageBubble = memo(function MessageBubble({
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
-
-        <div className={`mt-1 flex items-center gap-1.5 ${isMe ? "flex-row-reverse" : ""}`}>
-          <span className={`text-[11px] ${message.failed ? "text-red-500" : "text-gray-400"}`}>
-            {message.failed ? "Failed" : message.time}
-          </span>
-          {isMe ? (
-            message.isPending ? (
-              <span className="size-1.5 rounded-full bg-gray-300" />
-            ) : message.failed ? null : (
-              <CheckCheck className="size-3.5 text-brand-primary" />
-            )
-          ) : null}
         </div>
 
         {message.reactions?.length ? (

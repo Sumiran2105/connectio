@@ -22,7 +22,7 @@ import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import { formatStatusLabel, normalizePresence } from "@/features/user-dashboard/components/presence-panel";
 import {
-  formatMessageTime,
+  formatMessageDateTime,
   getChatStorageKey,
   getInitialChatState,
   getMessageTimestamp,
@@ -289,12 +289,13 @@ export function useChatWorkspace(initialTargetUser = null) {
       return response.data;
     },
     onMutate: ({ targetUserId, text }) => {
+      const sentAt = Date.now();
       const optimisticMessage = {
-        id: `pending-${Date.now()}`,
+        id: `pending-${sentAt}`,
         from: "me",
         text,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        timestamp: Date.now(),
+        time: formatMessageDateTime(sentAt),
+        timestamp: sentAt,
         read: false,
         isPending: true,
         reactions: [],
@@ -332,7 +333,7 @@ export function useChatWorkspace(initialTargetUser = null) {
       return { optimisticMessage };
     },
     onSuccess: (data, variables, context) => {
-      const sentAt = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const sentAt = Date.now();
       const channelId =
         data?.channel_id ||
         data?.channel?.id ||
@@ -345,9 +346,9 @@ export function useChatWorkspace(initialTargetUser = null) {
             id: data?.id || data?.message_id || Date.now(),
             from: "me",
             text: data?.content || variables.text,
-            time: formatMessageTime(data?.created_at) || sentAt,
+            time: data?.created_at ? formatMessageDateTime(data.created_at) : formatMessageDateTime(sentAt),
             timestamp: getMessageTimestamp({
-              created_at: data?.created_at || new Date().toISOString(),
+              created_at: data?.created_at || sentAt,
             }),
             read: false,
           };
