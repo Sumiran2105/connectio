@@ -15,7 +15,7 @@ import {
 import { ChatAvatar } from '@/chat/components/chat-avatar'
 import { Button } from '@/components/ui/button'
 import { UserLayout } from '../components/user-layout'
-import { MENTIONS_ALL, MENTIONS_UNREAD } from '@/config/api'
+import { MENTIONS_ALL, MENTIONS_UNREAD, MEETING_CALLS_HISTORY } from '@/config/api'
 import { apiClient } from '@/lib/client'
 
 const ACTIVITY_TYPES = {
@@ -59,6 +59,80 @@ const transformMentionToActivity = (mention) => {
   }
 }
 
+// Helper to transform call history data to activity format
+const transformCallToActivity = (call) => {
+  const createdDate = new Date(call.created_at || call.createdAt || call.timestamp || Date.now())
+  
+  // Get direction
+  const direction = call.direction || 'outgoing'
+  
+  // Get receiver/caller name with multiple fallback options
+  let receiverName = 'Unknown'
+  let userId = null
+  
+  if (direction === 'incoming') {
+    receiverName = call.caller?.name || 
+                   call.caller_name || 
+                   call.caller?.full_name || 
+                   call.callerName ||
+                   'Unknown Caller'
+    userId = call.caller?.id || call.caller_id || call.callerId
+  } else {
+    receiverName = call.receiver?.name || 
+                   call.receiver_name || 
+                   call.receiver?.full_name || 
+                   call.receiverName || 
+                   'Unknown Recipient'
+    userId = call.receiver?.id || call.receiver_id || call.receiverId
+  }
+  
+  // Get call type - normalize to audio/video with multiple fallbacks
+  let callType = 'audio' // default
+  const typeValue = call.call_type || call.type || call.callType || ''
+  
+  if (typeValue && typeof typeValue === 'string') {
+    const lowerType = typeValue.toLowerCase()
+    if (lowerType.includes('video')) {
+      callType = 'video'
+    } else if (lowerType.includes('audio')) {
+      callType = 'audio'
+    }
+  }
+  
+  // Log for debugging
+  console.log('Call type data:', { call_type: call.call_type, type: call.type, callType: call.callType, determined: callType })
+  
+  // Get call duration if available
+  const duration = call.duration || call.call_duration || 0
+  
+  return {
+    id: call.id || call._id || call.call_id,
+    type: ACTIVITY_TYPES.CALL,
+    user: {
+      name: receiverName,
+      initials: receiverName
+        .split(' ')
+        .filter(n => n)
+        .map(n => n[0])
+        .join('')
+        .toUpperCase(),
+      avatar: null,
+      userId: userId,
+    },
+    action: direction === 'incoming' ? 'called you' : 'you called',
+    content: callType === 'video' ? ' Video call' : ' Audio call',
+    contextId: call.id,
+    contextType: 'call',
+    timestamp: createdDate.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit' }),
+    date: createdDate,
+    icon: 'call',
+    read: true,
+    direction: direction,
+    callType: callType,
+    duration: duration,
+  }
+}
+
 const ActivityItem = ({
   activity,
   onNavigate,
@@ -69,7 +143,7 @@ const ActivityItem = ({
     const iconConfig = {
       mention: { icon: AtSign, color: 'text-brand-tertiary' },
       reaction: { icon: Heart, color: 'text-brand-tertiary' },
-      call: { icon: Phone, color: 'text-brand-tertiary' },
+      call: { icon: Phone, color: 'text-green-600' },
       message: { icon: MessageCircle, color: 'text-brand-tertiary' },
     }
 
@@ -77,6 +151,27 @@ const ActivityItem = ({
     const IconComponent = config.icon
 
     return <IconComponent className={`size-4 ${config.color}`} />
+  }
+
+  // Add visual indicator for call direction
+  const getDirectionIndicator = (activity) => {
+    if (activity.direction === 'incoming') {
+      return <span className="text-xs font-medium text-green-600 flex items-center gap-1"> Incoming</span>
+    } else if (activity.direction === 'outgoing') {
+      return <span className="text-xs font-medium text-blue-600 flex items-center gap-1"> Outgoing</span>
+    }
+    return null
+  }
+
+  // Format duration for calls
+  const formatDuration = (seconds) => {
+    if (!seconds || seconds === 0) return null
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    if (mins > 0) {
+      return `${mins}m ${secs}s`
+    }
+    return `${secs}s`
   }
 
   return (
@@ -123,12 +218,28 @@ const ActivityItem = ({
             )}
 
             {activity.content && (
-              <p className="mt-2 text-sm text-brand-secondary line-clamp-2">
+              <p className="mt-2 text-sm font-medium text-brand-ink">
                 {activity.content}
               </p>
             )}
 
-            {activity.context && (
+            {activity.direction && (
+              <div className="mt-2 flex flex-wrap items-center gap-3">
+                {getDirectionIndicator(activity)}
+                {activity.callType && (
+                  <span className="text-xs font-medium text-brand-secondary capitalize bg-blue-50 px-2 py-1 rounded">
+                    {activity.callType} 
+                  </span>
+                )}
+                {activity.duration > 0 && (
+                  <span className="text-xs font-medium text-brand-secondary bg-gray-50 px-2 py-1 rounded">
+                    {formatDuration(activity.duration)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {activity.context && !activity.direction && (
               <p className="mt-1.5 text-xs font-medium text-brand-secondary">
                 {activity.context}
               </p>
@@ -176,36 +287,68 @@ export const ActivityPage = () => {
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [showOnlyUnread, setShowOnlyUnread] = useState(false)
 
-  // Fetch mentions from API
+  // Fetch mentions and calls from API
   useEffect(() => {
-    const fetchMentions = async () => {
+    const fetchActivities = async () => {
       try {
         setLoading(true)
         setError(null)
-        const response = await apiClient.get(MENTIONS_ALL)
         
-        if (response.data && Array.isArray(response.data)) {
-          const transformedActivities = response.data.map((mention) =>
-            transformMentionToActivity(mention)
-          )
-          setActivities(transformedActivities)
-        } else if (response.data) {
-          // Handle case where data is wrapped in an object
-          const mentions = response.data.data || response.data.mentions || []
-          const transformedActivities = Array.isArray(mentions) 
-            ? mentions.map((mention) => transformMentionToActivity(mention))
-            : []
-          setActivities(transformedActivities)
+        let allActivities = []
+        
+        // Fetch mentions
+        try {
+          const mentionsResponse = await apiClient.get(MENTIONS_ALL)
+          if (mentionsResponse.data && Array.isArray(mentionsResponse.data)) {
+            const transformedMentions = mentionsResponse.data.map((mention) =>
+              transformMentionToActivity(mention)
+            )
+            allActivities.push(...transformedMentions)
+          } else if (mentionsResponse.data) {
+            const mentions = mentionsResponse.data.data || mentionsResponse.data.mentions || []
+            const transformedMentions = Array.isArray(mentions)
+              ? mentions.map((mention) => transformMentionToActivity(mention))
+              : []
+            allActivities.push(...transformedMentions)
+          }
+        } catch (err) {
+          console.error('Failed to fetch mentions:', err)
         }
+        
+        // Fetch call history
+        try {
+          const callsResponse = await apiClient.get(MEETING_CALLS_HISTORY)
+          if (callsResponse.data) {
+            let calls = []
+            if (Array.isArray(callsResponse.data)) {
+              calls = callsResponse.data
+            } else if (callsResponse.data.data && Array.isArray(callsResponse.data.data)) {
+              calls = callsResponse.data.data
+            } else if (callsResponse.data.calls && Array.isArray(callsResponse.data.calls)) {
+              calls = callsResponse.data.calls
+            }
+            
+            const transformedCalls = calls.map((call) => transformCallToActivity(call))
+            allActivities.push(...transformedCalls)
+          }
+        } catch (err) {
+          console.error('Failed to fetch call history:', err)
+          // Don't fail the whole page if calls fail to load
+        }
+        
+        // Sort all activities by date (newest first)
+        allActivities.sort((a, b) => b.date - a.date)
+        
+        setActivities(allActivities)
       } catch (err) {
-        console.error('Failed to fetch mentions:', err)
+        console.error('Failed to fetch activities:', err)
         setError('Failed to load activities. Please try again.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchMentions()
+    fetchActivities()
   }, [])
 
   const filteredActivities = useMemo(() => {

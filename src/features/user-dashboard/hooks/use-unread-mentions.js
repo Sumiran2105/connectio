@@ -40,8 +40,8 @@ export function useUnreadMentions() {
     },
     staleTime: 10 * 1000, // 10 seconds
     gcTime: 30 * 60 * 1000, // 30 minutes
-    refetchInterval: 30 * 1000, // Refetch every 30 seconds
-    refetchOnWindowFocus: true,
+    refetchInterval: false, // Disabled auto-refetch
+    refetchOnWindowFocus: false, // Disabled refetch on focus
   });
 
   return {

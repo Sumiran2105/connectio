@@ -101,6 +101,7 @@ export const MEETING_LEAVE = (meetingId) => `/api/v1/meetings/${meetingId}/leave
 export const MEETING_CHAT = (meetingId) => `/api/v1/meetings/${meetingId}/chat`;
 export const MEETING_ACCEPT = (meetingId) => `/api/v1/meetings/${meetingId}/accept`;
 export const MEETING_DECLINE = (meetingId) => `/api/v1/meetings/${meetingId}/decline`;
+export const MEETING_CALLS_HISTORY = "/api/v1/meetings/calls/history";
 
 function buildWebSocketBasePath() {
   const explicitWsBase = import.meta.env.VITE_WS_BASE_URL?.replace(/\/$/, "");
