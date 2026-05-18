@@ -1,17 +1,62 @@
-# React + Vite
+# Conectio
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Conectio is a React + Vite collaboration platform with company administration, user workspaces, channels, chat, meetings, calls, files, settings, and super-admin controls.
 
-Currently, two official plugins are available:
+## Quick Start
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+npm run dev
+```
 
-## React Compiler
+Useful scripts:
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm run build
+npm run lint
+```
 
-## Expanding the ESLint configuration
+## Folder Structure
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
-# connectio
+```text
+src/
+  app/                    App shell, providers, and route composition
+  components/             Shared reusable UI components
+    ui/                   Primitive UI building blocks
+  config/                 API endpoint constants and runtime config
+  lib/                    Shared framework-agnostic helpers
+  store/                  Global client state
+
+  features/               Route-level product areas
+    auth/                 User auth pages and forms
+    admin-auth/           Admin auth and MFA
+    super-admin-auth/     Super-admin auth
+    admin-dashboard/      Company admin dashboard routes and layout
+    super-admin-dashboard/Super-admin dashboard routes and layout
+    user-dashboard/       User workspace routes and layout
+    meetings/             Shared meeting, call, and LiveKit flows
+    landing/              Public landing experience
+
+  chat/                   Shared direct-message chat domain
+    components/           Chat UI components
+    hooks/                Chat data and interaction hooks
+    pages/                Shared chat page wrappers
+    utils/                Chat normalization and storage helpers
+
+  channels/               Shared channel messaging domain
+    components/           Channel UI components
+    hooks/                Channel data hooks
+    utils/                Channel normalization and schema helpers
+    admin/                Admin-specific channel composition
+```
+
+## Architecture Rules
+
+- Put route pages and layouts inside `src/features/<area>/`.
+- Put shared product domains that are used by more than one feature at `src/<domain>/`, such as `src/chat` and `src/channels`.
+- Put generic UI primitives in `src/components/ui`.
+- Put app-wide helpers in `src/lib`; avoid importing React from this folder.
+- Put API paths in `src/config/api.js`; do not hard-code endpoints in components.
+- Keep backend code in `Collabration_Teams_backend/`; do not mix backend modules into `src`.
+
+For more detail, see [docs/architecture.md](docs/architecture.md).

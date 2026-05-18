@@ -124,7 +124,7 @@ export function useMeetingLauncher(variant) {
         MEETINGS_CREATE,
         {
           title: `${channelName} call`,
-          meeting_type: "public",
+          meeting_type: "call",
           scheduled_at: new Date().toISOString(),
           channel_id: channelId,
           call_type: requestedCallType,
