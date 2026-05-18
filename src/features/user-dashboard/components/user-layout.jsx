@@ -107,6 +107,8 @@ export function UserLayout({
       return normalizePresence(response.data);
     },
     enabled: Boolean(session?.accessToken),
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   const sidebarItems = [

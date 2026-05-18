@@ -170,6 +170,8 @@ export function useChatWorkspace(initialTargetUser = null) {
     },
     enabled: Boolean(session?.accessToken && activeContact?.id),
     staleTime: 15 * 1000,
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   const unreadCountQueries = useQueries({

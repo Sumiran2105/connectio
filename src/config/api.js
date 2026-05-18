@@ -47,6 +47,7 @@ export const PRESENCE_ME = "/api/v1/presence/me";
 export const PRESENCE_USER = (userId) => `/api/v1/presence/${userId}`;
 export const PRESENCE_STATUS = "/api/v1/presence/status";
 export const PRESENCE_CUSTOM_STATUS = "/api/v1/presence/custom-status";
+export const PRESENCE_HEARTBEAT = "/api/v1/presence/heartbeat";
 
 export const DM_USERS_SEARCH = "/api/v1/dm/users/search";
 export const DM_CHANNELS = "/api/v1/dm";
@@ -89,6 +90,7 @@ export const CHANNEL_UNREAD_COUNT = (channelId) =>
   `/api/v1/messages/channels/${channelId}/unread-count`;
 
 export const MEETINGS_CREATE = "/api/v1/meetings";
+export const MEETING_CHANNEL_CALL = "/api/v1/meetings/channel-call";
 export const MEETING_DETAILS = (meetingId) => `/api/v1/meetings/${meetingId}`;
 export const MEETING_CALL = (targetUserId) => `/api/v1/meetings/call/${targetUserId}`;
 export const MEETING_JOIN = (meetingId) => `/api/v1/meetings/${meetingId}/join`;

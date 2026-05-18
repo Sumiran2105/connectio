@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { MEETING_CALL, MEETINGS_CREATE } from "@/config/api";
+import { MEETING_CALL, MEETING_CHANNEL_CALL } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import {
@@ -121,14 +121,13 @@ export function useMeetingLauncher(variant) {
       const requestedCallType = options.mode === "audio" ? "audio" : "video";
       const channelName = channel?.name || channel?.channel_name || "Channel";
       const response = await apiClient.post(
-        MEETINGS_CREATE,
+        MEETING_CHANNEL_CALL,
         {
           title: `${channelName} call`,
-          meeting_type: "call",
-          scheduled_at: new Date().toISOString(),
           channel_id: channelId,
           call_type: requestedCallType,
           is_channel_call: true,
+          scheduled_at: new Date().toISOString(),
         },
         { headers: buildAuthHeaders(session.accessToken) }
       );

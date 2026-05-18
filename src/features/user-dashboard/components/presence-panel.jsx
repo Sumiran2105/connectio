@@ -161,6 +161,8 @@ export function PresencePanel({ session }) {
       return normalizePresence(response.data);
     },
     enabled: Boolean(session?.accessToken),
+    refetchInterval: 60 * 1000,
+    refetchOnWindowFocus: true,
   });
 
   const updateStatusMutation = useMutation({
