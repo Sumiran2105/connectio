@@ -15,9 +15,11 @@ import { Button } from "@/components/ui/button";
 import { AdminLayout } from "@/features/admin-dashboard/components/admin-layout";
 import { UserLayout } from "@/features/user-dashboard/components/user-layout";
 import {
+  MEETING_DETAILS,
   MEETING_JOIN,
   MEETING_LEAVE,
   MEETING_LIVEKIT_TOKEN,
+  USER_EVENTS_WEBSOCKET,
 } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
@@ -31,6 +33,21 @@ const FALLBACK_LIVEKIT_URL = import.meta.env.VITE_LIVEKIT_URL || "";
 
 function buildAuthHeaders(accessToken) {
   return accessToken ? { Authorization: `Bearer ${accessToken}` } : {};
+}
+
+function getSessionUserId(session) {
+  return session?.userId || session?.user_id || session?.id || null;
+}
+
+function parseSocketPayload(rawPayload) {
+  if (!rawPayload) return null;
+  if (typeof rawPayload === "object") return rawPayload;
+  if (typeof rawPayload !== "string") return null;
+  try {
+    return JSON.parse(rawPayload);
+  } catch {
+    return null;
+  }
 }
 
 function CallMonitor({ isDirect, onLeave }) {
@@ -72,6 +89,10 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
   const Layout = layout === "admin" ? AdminLayout : UserLayout;
   const { backLabel, homePath } = getMeetingVariantConfig(layout);
   const callMode = searchParams.get("mode") === "audio" ? "audio" : "video";
+  const userId = getSessionUserId(session);
+  const socketRef = useRef(null);
+  const heartbeatRef = useRef(null);
+  const reconnectRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -243,6 +264,151 @@ export function SharedMeetingRoomPage({ layout = "user" }) {
         {},
         { headers: buildAuthHeaders(session.accessToken) }
       );
+    };
+  }, [meetingId, session?.accessToken]);
+
+  // Handle Real-Time Call Cancellation/Declining via WebSockets
+  useEffect(() => {
+    if (!userId || !meetingId) return;
+
+    let disposed = false;
+
+    function clearTimers() {
+      if (heartbeatRef.current) {
+        window.clearInterval(heartbeatRef.current);
+        heartbeatRef.current = null;
+      }
+      if (reconnectRef.current) {
+        window.clearTimeout(reconnectRef.current);
+        reconnectRef.current = null;
+      }
+    }
+
+    function startHeartbeat() {
+      clearTimers();
+      heartbeatRef.current = window.setInterval(() => {
+        if (socketRef.current?.readyState === WebSocket.OPEN) {
+          socketRef.current.send(JSON.stringify({ event: "heartbeat" }));
+        }
+      }, 20000);
+    }
+
+    function connectSocket() {
+      if (disposed) return;
+      const socketUrl = USER_EVENTS_WEBSOCKET(userId);
+      if (!socketUrl) return;
+
+      const socket = new WebSocket(socketUrl);
+      socketRef.current = socket;
+
+      socket.onopen = () => {
+        if (disposed) {
+          socket.close();
+          return;
+        }
+        startHeartbeat();
+      };
+
+      socket.onmessage = (event) => {
+        const payload = parseSocketPayload(event.data);
+        if (!payload) return;
+
+        const eventStr = String(payload.event || "").toLowerCase();
+        const isTermination = 
+          eventStr.includes("cancel") || 
+          eventStr.includes("end") || 
+          eventStr.includes("decline") || 
+          eventStr.includes("reject");
+
+        if (isTermination) {
+          const targetId = 
+            payload.meeting_id || 
+            payload.meetingId || 
+            payload.id || 
+            payload.meeting?.id || 
+            payload.data?.meeting_id || 
+            payload.data?.id;
+
+          if (targetId && String(targetId) === String(meetingId)) {
+            toast.info("The call has ended or was declined.");
+            void leaveMeeting(true);
+          }
+        }
+      };
+
+      socket.onerror = () => undefined;
+
+      socket.onclose = () => {
+        clearTimers();
+        if (disposed) return;
+        reconnectRef.current = window.setTimeout(() => connectSocket(), 2000);
+      };
+    }
+
+    connectSocket();
+
+    return () => {
+      disposed = true;
+      clearTimers();
+      if (
+        socketRef.current &&
+        (socketRef.current.readyState === WebSocket.OPEN ||
+          socketRef.current.readyState === WebSocket.CONNECTING)
+      ) {
+        socketRef.current.close();
+      }
+      socketRef.current = null;
+    };
+  }, [userId, meetingId]);
+
+  // Robust Polling Fallback to ensure call closes even if WebSockets fail
+  useEffect(() => {
+    if (!meetingId || !session?.accessToken) return;
+
+    let disposed = false;
+    const headers = buildAuthHeaders(session.accessToken);
+
+    const pollInterval = window.setInterval(async () => {
+      if (disposed) return;
+
+      try {
+        const response = await apiClient.get(MEETING_DETAILS(meetingId), { headers });
+        const rawStatus = 
+          response.data?.status || 
+          response.data?.meeting?.status || 
+          response.data?.state || 
+          response.data?.meeting?.state;
+          
+        const isInactive = 
+          response.data?.is_active === false || 
+          response.data?.meeting?.is_active === false ||
+          response.data?.active === false ||
+          response.data?.meeting?.active === false;
+          
+        if (isInactive) {
+          toast.info("The call has ended or was declined.");
+          void leaveMeeting(true);
+          return;
+        }
+          
+        if (typeof rawStatus === "string") {
+          const status = rawStatus.toLowerCase();
+          if (status === "declined" || status === "ended" || status === "cancelled" || status === "rejected") {
+            toast.info("The call has ended or was declined.");
+            void leaveMeeting(true);
+          }
+        }
+      } catch (error) {
+        if (error.response?.status === 404 || error.response?.status === 403) {
+          toast.info("The call is no longer available.");
+          void leaveMeeting(true);
+        }
+      }
+    }, 3000);
+
+    return () => {
+      disposed = true;
+      window.clearInterval(pollInterval);
     };
   }, [meetingId, session?.accessToken]);
 
