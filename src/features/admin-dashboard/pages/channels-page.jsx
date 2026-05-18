@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useChannelMessages } from "@/channels/hooks/use-channel-messages";
 import { useAuthStore } from "@/store/auth-store";
+import { useMeetingLauncher } from "@/features/meetings/hooks/use-meeting-launcher";
 import { AdminLayout } from "../components/admin-layout";
 import { ChannelChat } from "@/channels/admin/components/channel-chat";
 import { ChannelSidebar } from "@/channels/admin/components/channel-sidebar";
@@ -18,6 +19,7 @@ import { Button } from "@/components/ui/button";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);
+  const meetings = useMeetingLauncher("admin");
   const [activeTab, setActiveTab] = useState("chat");
   const [messageInput, setMessageInput] = useState("");
   const [editingMessageId, setEditingMessageId] = useState(null);
@@ -148,6 +150,7 @@ export function ChannelsPage() {
           isLoading={isLoading || isMessagesLoading}
           onOpenSidebar={() => setIsSidebarOpen(true)}
           onOpenMembers={actions.openMembersPanel}
+          onStartChannelCall={() => meetings.startChannelCall(selectedChannel, { mode: "video" })}
           onDeleteChannel={() => deleteDialog.onOpenChange(true)}
           onOpenSettings={actions.openSettings}
           activeTab={activeTab}

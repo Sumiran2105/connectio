@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { SquarePen } from "lucide-react";
+import { PhoneCall, SquarePen, Users } from "lucide-react";
 import { ChannelComposer } from "@/channels/components/channel-composer";
 import { ChannelMessagePanel } from "@/channels/components/channel-message-panel";
 import { SharedChannelSidebar } from "@/channels/components/channel-sidebar";
@@ -9,9 +9,11 @@ import { useAuthStore } from "@/store/auth-store";
 import { UserLayout } from "../components/user-layout";
 import { useUserChannels } from "@/channels/hooks/use-user-channels";
 import { getSessionUserIdentifiers } from "@/chat/utils/chat-utils";
+import { useMeetingLauncher } from "@/features/meetings/hooks/use-meeting-launcher";
 
 export function ChannelsPage() {
   const session = useAuthStore((state) => state.session);
+  const meetings = useMeetingLauncher("user");
   const [activeTab, setActiveTab] = useState("chat");
   const [messageInput, setMessageInput] = useState("");
   const currentUserIdentifiers = useMemo(() => getSessionUserIdentifiers(session), [session]);
@@ -115,6 +117,28 @@ export function ChannelsPage() {
             }}
             headerAvatar={activeChannel?.avatar_url || activeChannel?.image}
             headerMeta={(channel) => channel?.visibilityLabel || "Channel"}
+            headerActions={
+              <>
+                <button
+                  type="button"
+                  className="rounded-xl p-2 text-brand-secondary transition hover:bg-brand-primary/5 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => setActiveTab("members")}
+                  disabled={!activeChannel}
+                  title="Channel members"
+                >
+                  <Users className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  className="rounded-xl p-2 text-brand-secondary transition hover:bg-brand-primary/5 hover:text-brand-primary disabled:cursor-not-allowed disabled:opacity-40"
+                  onClick={() => meetings.startChannelCall(activeChannel, { mode: "video" })}
+                  disabled={!activeChannel}
+                  title="Start channel call"
+                >
+                  <PhoneCall className="size-4" />
+                </button>
+              </>
+            }
             tabs={[
               { value: "chat", label: "Chat" },
               { value: "members", label: "Members" },

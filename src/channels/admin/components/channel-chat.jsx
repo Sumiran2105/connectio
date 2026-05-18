@@ -1,4 +1,4 @@
-import { Settings, Trash2, Users } from "lucide-react";
+import { PhoneCall, Settings, Trash2, Users } from "lucide-react";
 import { useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ export function ChannelChat({
   isLoading,
   onOpenSidebar,
   onOpenMembers,
+  onStartChannelCall,
   onDeleteChannel,
   onOpenSettings,
   activeTab,
@@ -60,6 +61,16 @@ export function ChannelChat({
             title="Channel members"
           >
             <Users className="size-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="rounded-xl text-brand-secondary hover:bg-brand-primary/5 hover:text-brand-primary"
+            onClick={onStartChannelCall}
+            disabled={!selectedChannel}
+            title="Start channel call"
+          >
+            <PhoneCall className="size-4" />
           </Button>
           <Button
             variant="ghost"

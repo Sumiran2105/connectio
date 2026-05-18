@@ -1,7 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
-import { MEETING_CALL } from "@/config/api";
+import { MEETING_CALL, MEETINGS_CREATE } from "@/config/api";
 import { apiClient } from "@/lib/client";
 import { useAuthStore } from "@/store/auth-store";
 import {
@@ -100,10 +100,70 @@ export function useMeetingLauncher(variant) {
     }
   }
 
+  async function startChannelCall(channel, options = {}) {
+    const channelId =
+      channel?.channel_id ||
+      channel?.id ||
+      channel?.uuid ||
+      null;
+
+    if (!session?.accessToken) {
+      toast.error("Please sign in again to start a channel call.");
+      return null;
+    }
+
+    if (!channelId) {
+      toast.error("Select a channel before starting a call.");
+      return null;
+    }
+
+    try {
+      const requestedCallType = options.mode === "audio" ? "audio" : "video";
+      const channelName = channel?.name || channel?.channel_name || "Channel";
+      const response = await apiClient.post(
+        MEETINGS_CREATE,
+        {
+          title: `${channelName} call`,
+          meeting_type: "public",
+          scheduled_at: new Date().toISOString(),
+          channel_id: channelId,
+          call_type: requestedCallType,
+          is_channel_call: true,
+        },
+        { headers: buildAuthHeaders(session.accessToken) }
+      );
+      const meeting = normalizeMeetingRecord(response.data);
+
+      if (!meeting.id) {
+        throw new Error("Channel call response did not include a meeting ID.");
+      }
+
+      const baseUrl = buildMeetingRoomPath(variant, meeting.id, requestedCallType, true);
+      const nextPath = baseUrl.includes("?")
+        ? `${baseUrl}&standalone=true`
+        : `${baseUrl}?standalone=true`;
+
+      window.open(nextPath, "_blank", "width=1280,height=720,noopener,noreferrer");
+      toast.success(`Calling #${channelName}. Channel members can join the room.`);
+
+      return meeting;
+    } catch (error) {
+      toast.error(
+        error.response?.data?.message ||
+          error.response?.data?.detail ||
+          error.message ||
+          "Unable to start the channel call."
+      );
+
+      return null;
+    }
+  }
+
   return {
     homePath,
     openMeetingsHome,
     openMeetingRoom,
     startDirectCall,
+    startChannelCall,
   };
 }
